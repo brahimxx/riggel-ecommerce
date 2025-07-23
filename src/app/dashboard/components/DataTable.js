@@ -1,30 +1,18 @@
 import React, { useState, useMemo } from "react";
-import { DownOutlined } from "@ant-design/icons";
-import { Form, Radio, Space, Switch, Table } from "antd";
-
-const actionColumn = {
-  title: "Action",
-  key: "action",
-  sorter: true,
-  render: () => (
-    <Space size="middle">
-      <a>Delete</a>
-      <a>
-        <Space>
-          More actions
-          <DownOutlined />
-        </Space>
-      </a>
-    </Space>
-  ),
-};
+import {
+  EditOutlined,
+  DeleteOutlined,
+  AppstoreAddOutlined,
+} from "@ant-design/icons";
+import { Button, Form, Radio, Space, Switch, Table } from "antd";
+import DeletePopConfirm from "./DeletePopConfirm";
 
 const defaultExpandable = {
   expandedRowRender: (record) => <p>{record.description}</p>,
 };
 const defaultTitle = () => "Here is title";
 const defaultFooter = () => "Here is footer";
-const DataTable = ({ data, loading, setLoading }) => {
+const DataTable = ({ data, loading, setIsModalOpen, setEditingProduct }) => {
   const [bordered, setBordered] = useState(false);
   const [size, setSize] = useState("large");
   const [expandable, setExpandable] = useState(defaultExpandable);
@@ -34,6 +22,35 @@ const DataTable = ({ data, loading, setLoading }) => {
   const [ellipsis, setEllipsis] = useState(false);
   const [yScroll, setYScroll] = useState(false);
   const [xScroll, setXScroll] = useState("unset");
+
+  const showModal = (record = null) => {
+    if (setEditingProduct) {
+      setEditingProduct(record); // can be null → "Add", or actual record → "Edit"
+    }
+    setIsModalOpen(true);
+  };
+
+  const actionColumn = {
+    title: "Action",
+    key: "action",
+    sorter: true,
+    render: (text, record) => (
+      <Space size="middle">
+        <Button
+          type="primary"
+          icon={<EditOutlined />}
+          onClick={() => showModal(record)} // Pass record to modal
+        >
+          Edit
+        </Button>
+        <DeletePopConfirm
+          title={"Delete"}
+          description="Are you sure you want to delete this item?"
+          icon={<DeleteOutlined />}
+        />
+      </Space>
+    ),
+  };
 
   const columns = useMemo(() => {
     if (!data || data.length === 0) return [actionColumn];
@@ -108,63 +125,76 @@ const DataTable = ({ data, loading, setLoading }) => {
     rowSelection,
     scroll,
     tableLayout: "unset",
+    setIsModalOpen,
   };
   return (
     <>
-      <Form
-        layout="inline"
-        className="table-demo-control-bar"
-        style={{ marginBottom: 16 }}
-      >
-        <Form.Item label="Bordered">
-          <Switch checked={bordered} onChange={handleBorderChange} />
-        </Form.Item>
-        <Form.Item label="Title">
-          <Switch checked={showTitle} onChange={handleTitleChange} />
-        </Form.Item>
-        <Form.Item label="Footer">
-          <Switch checked={showFooter} onChange={handleFooterChange} />
-        </Form.Item>
-        <Form.Item label="Expandable">
-          <Switch checked={!!expandable} onChange={handleExpandChange} />
-        </Form.Item>
-        <Form.Item label="Checkbox">
-          <Switch
-            checked={!!rowSelection}
-            onChange={handleRowSelectionChange}
-          />
-        </Form.Item>
+      <div className="flex flex-col">
+        <Form
+          layout="inline"
+          className="table-demo-control-bar"
+          style={{ marginBottom: 16 }}
+        >
+          <Form.Item label="Bordered">
+            <Switch checked={bordered} onChange={handleBorderChange} />
+          </Form.Item>
+          <Form.Item label="Title">
+            <Switch checked={showTitle} onChange={handleTitleChange} />
+          </Form.Item>
+          <Form.Item label="Footer">
+            <Switch checked={showFooter} onChange={handleFooterChange} />
+          </Form.Item>
+          <Form.Item label="Expandable">
+            <Switch checked={!!expandable} onChange={handleExpandChange} />
+          </Form.Item>
+          <Form.Item label="Checkbox">
+            <Switch
+              checked={!!rowSelection}
+              onChange={handleRowSelectionChange}
+            />
+          </Form.Item>
 
-        <Form.Item label="Ellipsis">
-          <Switch checked={!!ellipsis} onChange={handleEllipsisChange} />
-        </Form.Item>
-        <Form.Item label="Size">
-          <Radio.Group value={size} onChange={handleSizeChange}>
-            <Radio.Button value="large">Large</Radio.Button>
-            <Radio.Button value="middle">Middle</Radio.Button>
-            <Radio.Button value="small">Small</Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-        <Form.Item label="Table Scroll">
-          <Radio.Group value={xScroll} onChange={handleXScrollChange}>
-            <Radio.Button value="unset">Unset</Radio.Button>
-            <Radio.Button value="scroll">Scroll</Radio.Button>
-            <Radio.Button value="fixed">Fixed Columns</Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-      </Form>
-      <Table
-        {...tableProps}
-        pagination={{ position: ["bottomRight"] }}
-        columns={columns}
-        dataSource={data}
-        rowKey={(record) => {
-          // Use first property as row key
-          const keys = Object.keys(record);
-          return record[keys[0]];
-        }}
-        scroll={scroll}
-      />
+          <Form.Item label="Ellipsis">
+            <Switch checked={!!ellipsis} onChange={handleEllipsisChange} />
+          </Form.Item>
+          <Form.Item label="Size">
+            <Radio.Group value={size} onChange={handleSizeChange}>
+              <Radio.Button value="large">Large</Radio.Button>
+              <Radio.Button value="middle">Middle</Radio.Button>
+              <Radio.Button value="small">Small</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item label="Table Scroll">
+            <Radio.Group value={xScroll} onChange={handleXScrollChange}>
+              <Radio.Button value="unset">Unset</Radio.Button>
+              <Radio.Button value="scroll">Scroll</Radio.Button>
+              <Radio.Button value="fixed">Fixed Columns</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+        </Form>
+        <div className="w-[80px] mb-5 self-end mr-4">
+          <Button
+            type="primary"
+            icon={<AppstoreAddOutlined />}
+            onClick={() => showModal(null)} // Add Mode → editingProduct = null
+          >
+            Add
+          </Button>
+        </div>
+
+        <Table
+          {...tableProps}
+          pagination={{ position: ["bottomRight"] }}
+          columns={columns}
+          dataSource={data}
+          rowKey={(record) => {
+            // Use first property as row key
+            const keys = Object.keys(record);
+            return record[keys[0]];
+          }}
+          scroll={scroll}
+        />
+      </div>
     </>
   );
 };
