@@ -12,7 +12,7 @@ const Products = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  useEffect(() => {
+  const fetchData = () => {
     setLoading(true);
 
     Promise.all([
@@ -20,14 +20,16 @@ const Products = () => {
       fetch("/api/categories").then((res) => res.json()),
     ])
       .then(([products, categories]) => {
-        setData(products); // Update your products state
-        setCategories(categories); // <-- You’ll need this state too!
+        setData(products);
+        setCategories(categories);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  };
 
-  console.log("Products data:", data);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const handleOk = () => {
     setIsModalOpen(false);
@@ -61,6 +63,7 @@ const Products = () => {
         open={isModalOpen}
         onOk={handleOk}
         onCancel={handleCancel}
+        footer={null}
       >
         <ProductForm
           product={editingProduct}

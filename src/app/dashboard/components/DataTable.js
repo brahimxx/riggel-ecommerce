@@ -21,7 +21,7 @@ const DataTable = ({ data, loading, setIsModalOpen, setEditingProduct }) => {
   const [rowSelection, setRowSelection] = useState({});
   const [ellipsis, setEllipsis] = useState(false);
   const [yScroll, setYScroll] = useState(false);
-  const [xScroll, setXScroll] = useState("unset");
+  const [xScroll, setXScroll] = useState("scroll");
 
   const showModal = (record = null) => {
     if (setEditingProduct) {

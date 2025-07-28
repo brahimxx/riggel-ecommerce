@@ -1,6 +1,14 @@
 import React, { useEffect } from "react";
 import { PlusOutlined } from "@ant-design/icons";
-import { Button, Form, Input, InputNumber, Select, Upload } from "antd";
+import {
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Upload,
+  message,
+} from "antd";
 
 const { TextArea } = Input;
 
@@ -9,46 +17,50 @@ const normFile = (e) => {
   return e?.fileList || [];
 };
 
-const ProductForm = ({ product = null, categories }) => {
+const ProductForm = ({ product = null, categories, onSuccess }) => {
   const [form] = Form.useForm();
 
   useEffect(() => {
     if (product && categories.length > 0) {
       form.setFieldsValue({
         name: product.name || "",
-        category: product.category_id || "", // must be number/string that matches Select value
+        category_id: product.category_id || "",
         price: product.price || 0,
         description: product.description || "",
         images: product.images || [],
       });
-    } else if (!product) {
+    } else if (!product && categories.length > 0) {
       form.resetFields();
     }
   }, [product, categories, form]);
 
   const onFinish = async (values) => {
     try {
+      // Handle images: extract URLs (after upload), or actual files
+      const images = (values.images || []).map(
+        (file) => file.url || (file.response && file.response.url)
+      );
+
+      const payload = {
+        ...values,
+        images,
+      };
+
       const res = await fetch(
-        product ? `/api/products/${product.id}` : `/api/products`,
+        product ? `/api/products/${product.product_id}` : `/api/products`,
         {
           method: product ? "PUT" : "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(values),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
         }
       );
 
-      if (!res.ok) {
-        throw new Error("API request failed");
-      }
+      if (!res.ok) throw new Error("API request failed");
 
       message.success(
         `Product ${product ? "updated" : "created"} successfully`
       );
-
-      if (onSuccess) onSuccess(); // Notify parent
-
+      onSuccess && onSuccess();
       form.resetFields();
     } catch (err) {
       console.error(err);
@@ -72,18 +84,19 @@ const ProductForm = ({ product = null, categories }) => {
       >
         <Input />
       </Form.Item>
-
       <Form.Item
-        name="category"
+        name="category_id"
         label="Category"
         rules={[{ required: true, message: "Select a category" }]}
       >
         <Select placeholder="Select a category">
-          {categories.map((cat) => (
-            <Select.Option key={cat.id} value={cat.id}>
-              {cat.name}
-            </Select.Option>
-          ))}
+          {categories
+            .filter((cat) => cat.category_id != null)
+            .map((cat) => (
+              <Select.Option key={cat.category_id} value={cat.category_id}>
+                {cat.name}
+              </Select.Option>
+            ))}
         </Select>
       </Form.Item>
 
@@ -94,25 +107,22 @@ const ProductForm = ({ product = null, categories }) => {
       >
         <InputNumber min={0} style={{ width: "100%" }} />
       </Form.Item>
-
       <Form.Item name="description" label="Description">
         <TextArea rows={4} />
       </Form.Item>
-
       <Form.Item
         name="images"
         label="Images"
         valuePropName="fileList"
         getValueFromEvent={normFile}
       >
-        <Upload action="/upload.do" listType="picture-card">
+        <Upload action="/api/upload" listType="picture-card">
           <button type="button" style={{ border: 0, background: "none" }}>
             <PlusOutlined />
             <div style={{ marginTop: 8 }}>Upload</div>
           </button>
         </Upload>
       </Form.Item>
-
       <Form.Item wrapperCol={{ offset: 4, span: 14 }}>
         <Button type="primary" htmlType="submit">
           {product ? "Update Product" : "Create Product"}

@@ -17,8 +17,6 @@ const Orders = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  console.log("Orders data:", data);
-
   return (
     <div>
       <DataTable data={data} loading={loading} setLoading={setLoading} />
