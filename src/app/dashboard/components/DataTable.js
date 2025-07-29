@@ -12,7 +12,13 @@ const defaultExpandable = {
 };
 const defaultTitle = () => "Here is title";
 const defaultFooter = () => "Here is footer";
-const DataTable = ({ data, loading, setIsModalOpen, setEditingProduct }) => {
+const DataTable = ({
+  data,
+  loading,
+  setIsModalOpen,
+  onEdit,
+  setEditingProduct,
+}) => {
   const [bordered, setBordered] = useState(false);
   const [size, setSize] = useState("large");
   const [expandable, setExpandable] = useState(defaultExpandable);
@@ -24,10 +30,20 @@ const DataTable = ({ data, loading, setIsModalOpen, setEditingProduct }) => {
   const [xScroll, setXScroll] = useState("scroll");
 
   const showModal = (record = null) => {
-    if (setEditingProduct) {
-      setEditingProduct(record); // can be null → "Add", or actual record → "Edit"
+    if (record) {
+      // Call the parent's edit handler to fetch full product and open modal
+      if (typeof onEdit === "function") {
+        onEdit(record);
+      } else {
+        // fallback: if no onEdit handler, just setEditingProduct and open modal directly
+        if (setEditingProduct) setEditingProduct(record);
+        if (setIsModalOpen) setIsModalOpen(true);
+      }
+    } else {
+      // For adding new item
+      if (setEditingProduct) setEditingProduct(null);
+      if (setIsModalOpen) setIsModalOpen(true);
     }
-    setIsModalOpen(true);
   };
 
   const actionColumn = {

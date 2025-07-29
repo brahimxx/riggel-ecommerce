@@ -27,6 +27,21 @@ const Products = () => {
       .finally(() => setLoading(false));
   };
 
+  const openEditModal = async (product) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/products/${product.product_id}`);
+      if (!res.ok) throw new Error("Failed to fetch product details");
+      const fullProduct = await res.json();
+      setEditingProduct(fullProduct);
+      setIsModalOpen(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -45,6 +60,21 @@ const Products = () => {
     setEditingProduct(null); // Reset form
   };
 
+  const handleEditProduct = async (product) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/products/${product.product_id}`);
+      if (!res.ok) throw new Error("Failed to fetch product details");
+      const fullProduct = await res.json();
+      setEditingProduct(fullProduct);
+      setIsModalOpen(true);
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       {error && (
@@ -56,7 +86,7 @@ const Products = () => {
         loading={loading}
         setLoading={setLoading}
         setIsModalOpen={setIsModalOpen}
-        setEditingProduct={setEditingProduct}
+        onEdit={handleEditProduct}
       />
       <Modal
         title={editingProduct ? "Edit Product" : "Add Product"}
