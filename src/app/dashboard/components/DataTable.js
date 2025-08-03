@@ -12,54 +12,51 @@ const defaultExpandable = {
 };
 const defaultTitle = () => "Here is title";
 const defaultFooter = () => "Here is footer";
+
 const DataTable = ({
   data,
   loading,
   setIsModalOpen,
   onEdit,
-  setEditingProduct,
   onDeleteSuccess,
+  apiBaseUrl, // e.g. "products", "categories"
+  rowKeyField = "id", // e.g. "product_id", "category_id"
+  expandable = defaultExpandable,
+  showTitle = false,
+  showFooter = true,
 }) => {
   const [bordered, setBordered] = useState(false);
   const [size, setSize] = useState("large");
-  const [expandable, setExpandable] = useState(defaultExpandable);
-  const [showTitle, setShowTitle] = useState(false);
-  const [showFooter, setShowFooter] = useState(true);
-  const [rowSelection, setRowSelection] = useState({});
   const [ellipsis, setEllipsis] = useState(false);
+  const [rowSelection, setRowSelection] = useState({});
   const [yScroll, setYScroll] = useState(false);
   const [xScroll, setXScroll] = useState("scroll");
+  const [expandableState, setExpandable] = useState(expandable);
 
   const showModal = (record = null) => {
     if (record) {
-      // Call the parent's edit handler to fetch full product and open modal
       if (typeof onEdit === "function") {
         onEdit(record);
-      } else {
-        // fallback: if no onEdit handler, just setEditingProduct and open modal directly
-        if (setEditingProduct) setEditingProduct(record);
-        if (setIsModalOpen) setIsModalOpen(true);
       }
     } else {
-      // For adding new item
-      if (setEditingProduct) setEditingProduct(null);
       if (setIsModalOpen) setIsModalOpen(true);
     }
   };
 
-  // Define the delete handler:
   const handleDelete = async (record) => {
     try {
-      const res = await fetch(`/api/products/${record.product_id}`, {
+      const id = record[rowKeyField];
+      if (!id) throw new Error("Invalid record id for deletion");
+
+      const res = await fetch(`/api/${apiBaseUrl}/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Delete failed");
       }
-      message.success("Product deleted successfully");
+      message.success(`${apiBaseUrl.slice(0, -1)} deleted successfully`);
 
-      // Call onDeleteSuccess callback if provided
       if (typeof onDeleteSuccess === "function") {
         onDeleteSuccess();
       }
@@ -85,7 +82,7 @@ const DataTable = ({
           title="Delete"
           description="Are you sure you want to delete this item?"
           icon={<DeleteOutlined />}
-          onConfirm={() => handleDelete(record)} // pass the actual handler for deletion
+          onConfirm={() => handleDelete(record)}
         />
       </Space>
     ),
@@ -93,51 +90,35 @@ const DataTable = ({
 
   const columns = useMemo(() => {
     if (!data || data.length === 0) return [actionColumn];
-    // Generate one column for every property in the data except "key"
     const baseCols = Object.keys(data[0])
       .filter((key) => key !== "key")
       .map((key) => ({
-        title: key.charAt(0).toUpperCase() + key.slice(1),
+        title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
         dataIndex: key,
         key,
         sorter: (a, b) => {
-          // You can customize this logic as needed
-          return String(a[key]).localeCompare(String(b[key]));
+          const aVal = a[key] ?? "";
+          const bVal = b[key] ?? "";
+          if (typeof aVal === "number" && typeof bVal === "number") {
+            return aVal - bVal;
+          }
+          return String(aVal).localeCompare(String(bVal));
         },
       }));
-    // Add your custom action column at the end
     return [...baseCols, actionColumn];
   }, [data]);
 
-  const handleBorderChange = (enable) => {
-    setBordered(enable);
-  };
-
-  const handleSizeChange = (e) => {
-    setSize(e.target.value);
-  };
-  const handleExpandChange = (enable) => {
-    setExpandable(enable ? defaultExpandable : undefined);
-  };
-  const handleEllipsisChange = (enable) => {
-    setEllipsis(enable);
-  };
-  const handleTitleChange = (enable) => {
-    setShowTitle(enable);
-  };
-
-  const handleFooterChange = (enable) => {
-    setShowFooter(enable);
-  };
-  const handleRowSelectionChange = (enable) => {
-    setRowSelection(enable ? {} : undefined);
-  };
-  const handleYScrollChange = (enable) => {
-    setYScroll(enable);
-  };
-  const handleXScrollChange = (e) => {
-    setXScroll(e.target.value);
-  };
+  const handleBorderChange = (checked) => setBordered(checked);
+  const handleSizeChange = (e) => setSize(e.target.value);
+  const handleExpandChange = (checked) =>
+    setExpandable(checked ? defaultExpandable : undefined);
+  const handleEllipsisChange = (checked) => setEllipsis(checked);
+  const handleTitleChange = (checked) => setShowTitle(checked);
+  const handleFooterChange = (checked) => setShowFooter(checked);
+  const handleRowSelectionChange = (checked) =>
+    setRowSelection(checked ? {} : undefined);
+  const handleYScrollChange = (checked) => setYScroll(checked);
+  const handleXScrollChange = (e) => setXScroll(e.target.value);
 
   const scroll = {};
   if (yScroll) {
@@ -146,95 +127,88 @@ const DataTable = ({
   if (xScroll !== "unset") {
     scroll.x = "100vw";
   }
-  const tableColumns = columns.map((item) =>
-    Object.assign(Object.assign({}, item), { ellipsis })
-  );
+  const tableColumns = columns.map((col) => ({ ...col, ellipsis }));
   if (xScroll === "fixed") {
     tableColumns[0].fixed = true;
     tableColumns[tableColumns.length - 1].fixed = "right";
   }
+
   const tableProps = {
     bordered,
     loading,
     size,
-    expandable,
+    expandable: expandableState,
     title: showTitle ? defaultTitle : undefined,
-    showHeader: "true",
     footer: showFooter ? defaultFooter : undefined,
     rowSelection,
     scroll,
     tableLayout: "unset",
-    setIsModalOpen,
   };
+
   return (
-    <>
-      <div className="flex flex-col">
-        <Form
-          layout="inline"
-          className="table-demo-control-bar"
-          style={{ marginBottom: 16 }}
+    <div className="flex flex-col">
+      <Form
+        layout="inline"
+        className="table-demo-control-bar"
+        style={{ marginBottom: 16 }}
+      >
+        <Form.Item label="Bordered">
+          <Switch checked={bordered} onChange={handleBorderChange} />
+        </Form.Item>
+        <Form.Item label="Title">
+          <Switch checked={showTitle} onChange={handleTitleChange} />
+        </Form.Item>
+        <Form.Item label="Footer">
+          <Switch checked={showFooter} onChange={handleFooterChange} />
+        </Form.Item>
+        <Form.Item label="Expandable">
+          <Switch checked={!!expandableState} onChange={handleExpandChange} />
+        </Form.Item>
+        <Form.Item label="Checkbox">
+          <Switch
+            checked={!!rowSelection}
+            onChange={handleRowSelectionChange}
+          />
+        </Form.Item>
+
+        <Form.Item label="Ellipsis">
+          <Switch checked={!!ellipsis} onChange={handleEllipsisChange} />
+        </Form.Item>
+        <Form.Item label="Size">
+          <Radio.Group value={size} onChange={handleSizeChange}>
+            <Radio.Button value="large">Large</Radio.Button>
+            <Radio.Button value="middle">Middle</Radio.Button>
+            <Radio.Button value="small">Small</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
+        <Form.Item label="Table Scroll">
+          <Radio.Group value={xScroll} onChange={handleXScrollChange}>
+            <Radio.Button value="unset">Unset</Radio.Button>
+            <Radio.Button value="scroll">Scroll</Radio.Button>
+            <Radio.Button value="fixed">Fixed Columns</Radio.Button>
+          </Radio.Group>
+        </Form.Item>
+      </Form>
+      <div className="w-[80px] mb-5 self-end mr-4">
+        <Button
+          type="primary"
+          icon={<AppstoreAddOutlined />}
+          onClick={() => showModal(null)}
         >
-          <Form.Item label="Bordered">
-            <Switch checked={bordered} onChange={handleBorderChange} />
-          </Form.Item>
-          <Form.Item label="Title">
-            <Switch checked={showTitle} onChange={handleTitleChange} />
-          </Form.Item>
-          <Form.Item label="Footer">
-            <Switch checked={showFooter} onChange={handleFooterChange} />
-          </Form.Item>
-          <Form.Item label="Expandable">
-            <Switch checked={!!expandable} onChange={handleExpandChange} />
-          </Form.Item>
-          <Form.Item label="Checkbox">
-            <Switch
-              checked={!!rowSelection}
-              onChange={handleRowSelectionChange}
-            />
-          </Form.Item>
-
-          <Form.Item label="Ellipsis">
-            <Switch checked={!!ellipsis} onChange={handleEllipsisChange} />
-          </Form.Item>
-          <Form.Item label="Size">
-            <Radio.Group value={size} onChange={handleSizeChange}>
-              <Radio.Button value="large">Large</Radio.Button>
-              <Radio.Button value="middle">Middle</Radio.Button>
-              <Radio.Button value="small">Small</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item label="Table Scroll">
-            <Radio.Group value={xScroll} onChange={handleXScrollChange}>
-              <Radio.Button value="unset">Unset</Radio.Button>
-              <Radio.Button value="scroll">Scroll</Radio.Button>
-              <Radio.Button value="fixed">Fixed Columns</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-        </Form>
-        <div className="w-[80px] mb-5 self-end mr-4">
-          <Button
-            type="primary"
-            icon={<AppstoreAddOutlined />}
-            onClick={() => showModal(null)} // Add Mode → editingProduct = null
-          >
-            Add
-          </Button>
-        </div>
-
-        <Table
-          {...tableProps}
-          pagination={{ position: ["bottomRight"] }}
-          columns={columns}
-          dataSource={data}
-          rowKey={(record) => {
-            // Use first property as row key
-            const keys = Object.keys(record);
-            return record[keys[0]];
-          }}
-          scroll={scroll}
-        />
+          Add
+        </Button>
       </div>
-    </>
+
+      <Table
+        {...tableProps}
+        pagination={{ position: ["bottomRight"] }}
+        columns={tableColumns}
+        dataSource={data}
+        rowKey={(record) => record[rowKeyField]}
+        scroll={scroll}
+      />
+    </div>
   );
 };
+
 export default DataTable;

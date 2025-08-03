@@ -242,16 +242,20 @@ export async function DELETE(req, { params }) {
 
     // Delete files from disk after successful commit
     for (const url of imagesToDelete) {
-      try {
-        const filePath = path.join(
-          process.cwd(),
-          "public",
-          url.replace(/^\//, "")
-        );
-        await fs.unlink(filePath);
-      } catch (err) {
-        // Log but don't disrupt flow
-        console.error(`Failed to delete image file: ${url}`, err);
+      if (typeof url === "string" && url.length && url.startsWith("/")) {
+        try {
+          const filePath = path.join(
+            process.cwd(),
+            "public",
+            url.replace(/^\//, "")
+          );
+          await fs.unlink(filePath);
+        } catch (err) {
+          // Keep log for failed deletions
+          console.error(`Failed to delete image file: ${url}`, err);
+        }
+      } else {
+        console.warn("Skipping invalid or empty image URL:", url);
       }
     }
 

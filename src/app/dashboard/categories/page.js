@@ -1,82 +1,62 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Alert } from "antd";
 import DataTable from "../components/DataTable";
 import OrderForm from "../components/OrderForm";
 
 const Orders = () => {
-  const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]); // renamed for clarity
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]); // For product selection inside order items
 
-  const isMounted = useRef(true);
-
+  // Fetch orders and products (needed for order items)
   const fetchData = () => {
     setLoading(true);
+
     Promise.all([
       fetch("/api/orders").then((res) => res.json()),
       fetch("/api/products").then((res) => res.json()),
     ])
-      .then(([ordersData, productsData]) => {
-        if (isMounted.current) {
-          setOrders(ordersData);
-          setProducts(productsData);
-        }
+      .then(([orders, products]) => {
+        setOrders(orders);
+        setProducts(products);
       })
-      .catch((err) => {
-        if (isMounted.current) {
-          setError(err.message);
-        }
-      })
-      .finally(() => {
-        if (isMounted.current) {
-          setLoading(false);
-        }
-      });
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
-    isMounted.current = true;
     fetchData();
-
-    return () => {
-      isMounted.current = false;
-    };
   }, []);
 
   const handleCancel = () => {
-    if (!isMounted.current) return;
     setIsModalOpen(false);
     setEditingOrder(null);
     setError(null);
   };
 
   const handleSuccess = () => {
-    if (!isMounted.current) return;
-    fetchData();
+    fetchData(); // Refresh orders list after add/update
     setIsModalOpen(false);
     setEditingOrder(null);
     setError(null);
   };
 
   const handleEditOrder = async (order) => {
-    if (!isMounted.current) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/orders/${order.order_id}`);
       if (!res.ok) throw new Error("Failed to fetch order details");
       const fullOrder = await res.json();
-      if (isMounted.current) {
-        setEditingOrder(fullOrder);
-        setIsModalOpen(true);
-      }
+      setEditingOrder(fullOrder);
+      setIsModalOpen(true);
     } catch (error) {
-      if (isMounted.current) setError(error.message);
+      setError(error.message);
     } finally {
-      if (isMounted.current) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -101,12 +81,12 @@ const Orders = () => {
         open={isModalOpen}
         onCancel={handleCancel}
         footer={null}
-        width={800}
+        width={800} // wider modal for order form
       >
         <OrderForm
           order={editingOrder}
           onSuccess={handleSuccess}
-          products={products}
+          products={products} // needed for order item selection
         />
       </Modal>
     </div>

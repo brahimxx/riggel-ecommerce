@@ -5,7 +5,7 @@ import DataTable from "../components/DataTable";
 import ProductForm from "../components/ProductForm";
 
 const Products = () => {
-  const [data, setData] = useState([]); // For products
+  const [products, setProducts] = useState([]); // For products
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,7 +20,7 @@ const Products = () => {
       fetch("/api/categories").then((res) => res.json()),
     ])
       .then(([products, categories]) => {
-        setData(products);
+        setProducts(products);
         setCategories(categories);
       })
       .catch((err) => setError(err.message))
@@ -36,7 +36,8 @@ const Products = () => {
   };
   const handleCancel = () => {
     setIsModalOpen(false);
-    setEditingProduct(null); // Reset
+    setEditingProduct(null);
+    setError(null); // clear error on modal close
   };
 
   const handleSuccess = () => {
@@ -68,19 +69,19 @@ const Products = () => {
       )}
 
       <DataTable
-        data={data}
+        data={products}
         loading={loading}
-        setLoading={setLoading}
         setIsModalOpen={setIsModalOpen}
         onEdit={handleEditProduct}
         onDeleteSuccess={fetchData}
+        apiBaseUrl="products"
+        rowKeyField="product_id"
       />
+
       <Modal
         title={editingProduct ? "Edit Product" : "Add Product"}
         open={isModalOpen}
-        onOk={handleOk}
         onCancel={handleCancel}
-        onDeleteSuccess={fetchData}
         footer={null}
       >
         <ProductForm

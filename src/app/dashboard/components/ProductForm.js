@@ -29,6 +29,9 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
   // Upload progress as percentage
   const [uploadProgress, setUploadProgress] = useState(null);
 
+  // Track productName to control Upload disabled state
+  const [productName, setProductName] = useState(product?.name || "");
+
   // Initialize images state when product changes
   useEffect(() => {
     if (product && product.images) {
@@ -47,16 +50,23 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         price: product.price || 0,
         quantity: product.quantity ?? 0,
         description: product.description || "",
-        // Note: images not set here to avoid form warnings/conflicts
       });
+      setProductName(product.name || "");
     } else if (!product && categories.length > 0) {
       form.resetFields();
+      setProductName("");
     }
   }, [product, categories, form]);
 
+  // Update productName state when form values change
+  const onValuesChange = (changedValues, allValues) => {
+    if (changedValues.name !== undefined) {
+      setProductName(changedValues.name);
+    }
+  };
+
   // Helper: get productId or fallback
-  const getProductId = () =>
-    product?.product_id || form.getFieldValue("name") || "new";
+  const getProductId = () => product?.product_id || productName || "new";
 
   // Upload validation
   const beforeUpload = (file) => {
@@ -148,12 +158,12 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
   // Form submit handler
   const onFinish = async (values) => {
     try {
-      const productName = values.name || "product";
+      const productNameFinal = values.name || "product";
       const payload = {
         ...values,
         images: images.map((img, idx) => ({
           ...img,
-          alt_text: `Image of ${productName}`,
+          alt_text: `Image of ${productNameFinal}`,
           is_primary: idx === 0,
           sort_order: idx,
         })),
@@ -182,6 +192,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       // Reset form and images
       form.resetFields();
       setImages([]);
+      setProductName("");
     } catch (err) {
       console.error(err);
       message.error(
@@ -198,6 +209,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       layout="horizontal"
       style={{ maxWidth: 800 }}
       onFinish={onFinish}
+      onValuesChange={onValuesChange}
     >
       <Form.Item
         name="name"
@@ -242,7 +254,6 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       >
         <InputNumber min={0} style={{ width: "100%" }} />
       </Form.Item>
-
       <Form.Item name="description" label="Description">
         <TextArea rows={4} placeholder="Product Description" />
       </Form.Item>
@@ -254,24 +265,27 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           beforeUpload={beforeUpload}
           multiple
           accept={ALLOWED_IMAGE_TYPES.join(",")}
-          disabled={!form.getFieldValue("name") && !product?.product_id}
+          disabled={!productName && !product?.product_id}
         >
           <button
             type="button"
             style={{ border: 0, background: "none" }}
-            disabled={!form.getFieldValue("name") && !product?.product_id}
+            disabled={!productName && !product?.product_id}
           >
             <PlusOutlined />
             <div style={{ marginTop: 8 }}>Upload</div>
           </button>
         </Upload>
-        {/* Upload progress bar */}
+        {!productName && !product?.product_id && (
+          <div style={{ color: "#faad14", marginTop: 6 }}>
+            Please enter a product name before uploading images.
+          </div>
+        )}
         {uploadProgress !== null && (
           <div style={{ marginTop: 8 }}>
             <Progress percent={Math.round(uploadProgress)} size="small" />
           </div>
         )}
-        {/* Render images preview with reorder and remove buttons */}
         <div style={{ marginTop: 16 }}>
           {images.map((img, idx) => (
             <div
