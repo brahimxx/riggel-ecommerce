@@ -50,13 +50,15 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, description, price, category_id, images } = body;
+    const { name, description, price, category_id, quantity, images } = body;
 
     if (
       typeof name !== "string" ||
       typeof description !== "string" ||
       typeof price !== "number" ||
-      !category_id
+      !category_id ||
+      typeof quantity !== "number" ||
+      quantity < 0
     ) {
       return Response.json(
         { error: "Missing or invalid required fields." },
@@ -66,9 +68,9 @@ export async function POST(req) {
 
     // Insert product
     const [prodRes] = await pool.query(
-      `INSERT INTO products (name, description, price, category_id)
-       VALUES (?, ?, ?, ?)`,
-      [name, description, price, category_id]
+      `INSERT INTO products (name, description, price, category_id, quantity)
+   VALUES (?, ?, ?, ?, ?)`,
+      [name, description, price, category_id, quantity]
     );
     const product_id = prodRes.insertId;
 

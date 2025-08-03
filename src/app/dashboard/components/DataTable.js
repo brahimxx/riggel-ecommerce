@@ -4,7 +4,7 @@ import {
   DeleteOutlined,
   AppstoreAddOutlined,
 } from "@ant-design/icons";
-import { Button, Form, Radio, Space, Switch, Table } from "antd";
+import { Button, Form, Radio, Space, Switch, Table, message } from "antd";
 import DeletePopConfirm from "./DeletePopConfirm";
 
 const defaultExpandable = {
@@ -18,6 +18,7 @@ const DataTable = ({
   setIsModalOpen,
   onEdit,
   setEditingProduct,
+  onDeleteSuccess,
 }) => {
   const [bordered, setBordered] = useState(false);
   const [size, setSize] = useState("large");
@@ -46,6 +47,27 @@ const DataTable = ({
     }
   };
 
+  // Define the delete handler:
+  const handleDelete = async (record) => {
+    try {
+      const res = await fetch(`/api/products/${record.product_id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Delete failed");
+      }
+      message.success("Product deleted successfully");
+
+      // Call onDeleteSuccess callback if provided
+      if (typeof onDeleteSuccess === "function") {
+        onDeleteSuccess();
+      }
+    } catch (error) {
+      message.error(error.message);
+    }
+  };
+
   const actionColumn = {
     title: "Action",
     key: "action",
@@ -55,14 +77,15 @@ const DataTable = ({
         <Button
           type="primary"
           icon={<EditOutlined />}
-          onClick={() => showModal(record)} // Pass record to modal
+          onClick={() => showModal(record)}
         >
           Edit
         </Button>
         <DeletePopConfirm
-          title={"Delete"}
+          title="Delete"
           description="Are you sure you want to delete this item?"
           icon={<DeleteOutlined />}
+          onConfirm={() => handleDelete(record)} // pass the actual handler for deletion
         />
       </Space>
     ),

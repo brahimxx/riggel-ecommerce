@@ -27,21 +27,6 @@ const Products = () => {
       .finally(() => setLoading(false));
   };
 
-  const openEditModal = async (product) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/products/${product.product_id}`);
-      if (!res.ok) throw new Error("Failed to fetch product details");
-      const fullProduct = await res.json();
-      setEditingProduct(fullProduct);
-      setIsModalOpen(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchData();
   }, []);
@@ -68,6 +53,7 @@ const Products = () => {
       const fullProduct = await res.json();
       setEditingProduct(fullProduct);
       setIsModalOpen(true);
+      console.log(fullProduct);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -87,12 +73,14 @@ const Products = () => {
         setLoading={setLoading}
         setIsModalOpen={setIsModalOpen}
         onEdit={handleEditProduct}
+        onDeleteSuccess={fetchData}
       />
       <Modal
         title={editingProduct ? "Edit Product" : "Add Product"}
         open={isModalOpen}
         onOk={handleOk}
         onCancel={handleCancel}
+        onDeleteSuccess={fetchData}
         footer={null}
       >
         <ProductForm

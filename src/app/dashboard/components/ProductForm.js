@@ -7,10 +7,11 @@ import {
   InputNumber,
   Select,
   message,
+  Progress,
 } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 
-// Allowed types & size (same as backend)
+// Allowed image types and max size (5MB)
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
@@ -21,15 +22,14 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 const { TextArea } = Input;
 
-const normFile = (e) => {
-  if (Array.isArray(e)) return e;
-  return e?.fileList || [];
-};
-
 const ProductForm = ({ product = null, categories, onSuccess }) => {
   const [form] = Form.useForm();
   const [images, setImages] = useState([]);
 
+  // Upload progress as percentage
+  const [uploadProgress, setUploadProgress] = useState(null);
+
+  // Initialize images state when product changes
   useEffect(() => {
     if (product && product.images) {
       setImages(product.images);
@@ -38,54 +38,27 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     }
   }, [product]);
 
+  // Initialize other form fields (without images)
   useEffect(() => {
     if (product && categories.length > 0) {
       form.setFieldsValue({
         name: product.name || "",
         category_id: product.category_id || "",
         price: product.price || 0,
+        quantity: product.quantity ?? 0,
         description: product.description || "",
-        images: product.images
-          ? product.images.map((url, idx) => ({
-              uid: `img-${idx}`,
-              name: url.split("/").pop(),
-              status: "done",
-              url,
-            }))
-          : [],
+        // Note: images not set here to avoid form warnings/conflicts
       });
     } else if (!product && categories.length > 0) {
       form.resetFields();
     }
   }, [product, categories, form]);
 
-  // Reordering handlers
-  const moveImage = (from, to) => {
-    setImages((imgs) => {
-      const arr = [...imgs];
-      const [img] = arr.splice(from, 1);
-      arr.splice(to, 0, img);
-      return arr;
-    });
-  };
-
-  // Add uploaded image to the end
-  const handleUploadSuccess = (response) => {
-    setImages((imgs) => [
-      ...imgs,
-      {
-        id: null,
-        url: response.url,
-        // Other metadata will be auto-filled on submit
-      },
-    ]);
-  };
-
-  // Pass productId to uploader, fallback to a tempId if not editing (creation)
+  // Helper: get productId or fallback
   const getProductId = () =>
     product?.product_id || form.getFieldValue("name") || "new";
 
-  // AntD Upload "beforeUpload" method
+  // Upload validation
   const beforeUpload = (file) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       message.error("Only JPG, PNG, GIF, or WEBP images are allowed.");
@@ -98,8 +71,22 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     return true;
   };
 
-  // Custom request so we can send productId in FormData
-  const customRequest = async (options) => {
+  // Add uploaded image to images state once
+  const handleUploadSuccess = (response) => {
+    setImages((imgs) => [
+      ...imgs,
+      {
+        id: null,
+        url: response.url,
+        alt_text: "",
+        sort_order: imgs.length,
+        is_primary: imgs.length === 0, // first image is primary by default
+      },
+    ]);
+  };
+
+  // Upload handler: send productId along with file
+  const customRequest = (options) => {
     const { file, onSuccess, onError, onProgress } = options;
     try {
       const productId = getProductId();
@@ -115,34 +102,50 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
 
       xhr.upload.onprogress = (event) => {
         if (event.lengthComputable) {
-          onProgress({ percent: (event.loaded / event.total) * 100 });
+          const percent = (event.loaded / event.total) * 100;
+          setUploadProgress(percent);
+          onProgress({ percent });
         }
       };
 
       xhr.onload = () => {
+        setUploadProgress(null);
         if (xhr.status < 200 || xhr.status >= 300) {
           onError(new Error(xhr.statusText));
-        } else {
-          const response = JSON.parse(xhr.responseText);
-          // Only use one image-appending function:
-          handleUploadSuccess(response); // This is YOUR function that calls setImages
-          onSuccess(response);
+          return;
         }
+        const response = JSON.parse(xhr.responseText);
+        handleUploadSuccess(response);
+        onSuccess(response);
       };
 
       xhr.onerror = () => {
+        setUploadProgress(null);
         onError(new Error(xhr.statusText));
       };
+
       xhr.send(formData);
     } catch (err) {
       onError(err);
+      setUploadProgress(null);
     }
   };
 
-  // Remove image handler
+  // Remove image from state by index
   const removeImage = (idx) =>
     setImages((imgs) => imgs.filter((_, i) => i !== idx));
 
+  // Reorder images: move from one index to another
+  const moveImage = (from, to) => {
+    setImages((imgs) => {
+      const arr = [...imgs];
+      const [img] = arr.splice(from, 1);
+      arr.splice(to, 0, img);
+      return arr;
+    });
+  };
+
+  // Form submit handler
   const onFinish = async (values) => {
     try {
       const productName = values.name || "product";
@@ -155,22 +158,32 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           sort_order: idx,
         })),
       };
-      const res = await fetch(
-        product ? `/api/products/${product.product_id}` : `/api/products`,
-        {
-          method: product ? "PUT" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-      if (!res.ok) throw new Error("API request failed");
+
+      const url = product
+        ? `/api/products/${product.product_id}`
+        : `/api/products`;
+
+      const res = await fetch(url, {
+        method: product ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errorRes = await res.json().catch(() => ({}));
+        throw new Error(errorRes.error || "API request failed");
+      }
+
       message.success(
         `Product ${product ? "updated" : "created"} successfully`
       );
       onSuccess && onSuccess();
+
+      // Reset form and images
       form.resetFields();
       setImages([]);
     } catch (err) {
+      console.error(err);
       message.error(
         err.message || "Something went wrong while submitting the form."
       );
@@ -191,7 +204,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         label="Name"
         rules={[{ required: true, message: "Product name is required" }]}
       >
-        <Input />
+        <Input placeholder="Product Name" />
       </Form.Item>
       <Form.Item
         name="category_id"
@@ -208,7 +221,6 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
             ))}
         </Select>
       </Form.Item>
-
       <Form.Item
         name="price"
         label="Price"
@@ -216,8 +228,23 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       >
         <InputNumber min={0} style={{ width: "100%" }} />
       </Form.Item>
+      <Form.Item
+        name="quantity"
+        label="Quantity"
+        rules={[
+          { required: true, message: "Quantity is required" },
+          {
+            type: "number",
+            min: 0,
+            message: "Quantity must be zero or more",
+          },
+        ]}
+      >
+        <InputNumber min={0} style={{ width: "100%" }} />
+      </Form.Item>
+
       <Form.Item name="description" label="Description">
-        <TextArea rows={4} />
+        <TextArea rows={4} placeholder="Product Description" />
       </Form.Item>
       <Form.Item label="Images">
         <Upload
@@ -227,13 +254,24 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           beforeUpload={beforeUpload}
           multiple
           accept={ALLOWED_IMAGE_TYPES.join(",")}
+          disabled={!form.getFieldValue("name") && !product?.product_id}
         >
-          <button type="button" style={{ border: 0, background: "none" }}>
+          <button
+            type="button"
+            style={{ border: 0, background: "none" }}
+            disabled={!form.getFieldValue("name") && !product?.product_id}
+          >
             <PlusOutlined />
             <div style={{ marginTop: 8 }}>Upload</div>
           </button>
         </Upload>
-        {/* Render uploaded images with reordering UI */}
+        {/* Upload progress bar */}
+        {uploadProgress !== null && (
+          <div style={{ marginTop: 8 }}>
+            <Progress percent={Math.round(uploadProgress)} size="small" />
+          </div>
+        )}
+        {/* Render images preview with reorder and remove buttons */}
         <div style={{ marginTop: 16 }}>
           {images.map((img, idx) => (
             <div
@@ -247,12 +285,16 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
             >
               <img
                 src={img.url}
-                alt={`Image of ${form.getFieldValue("name") || "product"}`}
+                alt={`Image of ${
+                  form.getFieldValue("name") || product?.name || "product"
+                }`}
                 style={{ width: 90, height: 90, objectFit: "cover" }}
               />
               <span style={{ width: 130 }}>
                 {idx === 0 && (
-                  <span style={{ color: "green" }}>Main Image</span>
+                  <span style={{ color: "green", fontWeight: "bold" }}>
+                    Main Image
+                  </span>
                 )}
               </span>
               <Button
@@ -276,9 +318,12 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           ))}
         </div>
       </Form.Item>
-
       <Form.Item wrapperCol={{ offset: 4, span: 14 }}>
-        <Button type="primary" htmlType="submit">
+        <Button
+          type="primary"
+          htmlType="submit"
+          disabled={uploadProgress !== null}
+        >
           {product ? "Update Product" : "Create Product"}
         </Button>
       </Form.Item>

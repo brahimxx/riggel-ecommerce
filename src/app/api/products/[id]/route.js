@@ -4,26 +4,30 @@ import path from "path";
 
 // GET /api/products/[id]
 export async function GET(req, { params }) {
-  const id = Number(params.id);
+  const resolvedParams = await params;
+  const id = Number(resolvedParams.id);
   if (!id) {
     return Response.json({ error: "Invalid product id." }, { status: 400 });
   }
   try {
+    // 1. Fetch product data
     const [rows] = await pool.query(
-      `SELECT p.*, (
-        SELECT url
-        FROM product_images pi
-        WHERE pi.product_id = p.product_id AND pi.is_primary = TRUE
-        LIMIT 1
-      ) AS main_image
-      FROM products p
-      WHERE p.product_id = ?`,
+      `SELECT * FROM products WHERE product_id = ?`,
       [id]
     );
     if (rows.length === 0) {
       return Response.json({ error: "Product not found" }, { status: 404 });
     }
-    return Response.json(rows[0]);
+    const product = rows[0];
+
+    // 2. Fetch all images for the product with metadata
+    const [images] = await pool.query(
+      `SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC`,
+      [id]
+    );
+
+    // 3. Return combined product + images
+    return Response.json({ ...product, images });
   } catch (error) {
     return Response.json(
       { error: "Failed to fetch product." },
@@ -34,14 +38,16 @@ export async function GET(req, { params }) {
 
 // PUT /api/products/[id]
 export async function PUT(req, { params }) {
-  const id = Number(params.id);
+  const resolvedParams = await params;
+  const id = Number(resolvedParams.id);
   if (!id) {
     return Response.json({ error: "Invalid product id." }, { status: 400 });
   }
   const conn = await pool.getConnection();
+  let imagesToDelete = [];
   try {
     const body = await req.json();
-    const { name, description, price, category_id, images } = body;
+    const { name, description, price, category_id, quantity, images } = body;
 
     // Check product exists
     const [existing] = await conn.query(
@@ -53,7 +59,9 @@ export async function PUT(req, { params }) {
       return Response.json({ error: "Product not found." }, { status: 404 });
     }
 
-    // Update product fields
+    await conn.beginTransaction();
+
+    // Update product fields if provided
     const updates = [];
     const values = [];
     if (typeof name === "string") {
@@ -72,6 +80,10 @@ export async function PUT(req, { params }) {
       updates.push("category_id = ?");
       values.push(category_id);
     }
+    if (typeof quantity === "number") {
+      updates.push("quantity = ?");
+      values.push(quantity);
+    }
     if (updates.length > 0) {
       values.push(id);
       await conn.query(
@@ -80,28 +92,33 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // Handle images update if images array provided
+    // Handle images if array provided
     if (Array.isArray(images)) {
-      await conn.beginTransaction();
-
-      // Fetch existing images from DB
+      // Fetch current images
       const [existingImages] = await conn.query(
         "SELECT * FROM product_images WHERE product_id = ?",
         [id]
       );
-
-      // Build map for easy lookup by id and by url
       const existingById = new Map();
       existingImages.forEach((img) => existingById.set(img.id, img));
 
-      // IDs sent from frontend
+      // IDs sent from client
       const sentIds = images.filter((img) => img.id).map((img) => img.id);
 
-      // Delete images removed by user
+      // Identify deleted images, collect their URLs
       if (existingImages.length > 0) {
         const existingIds = existingImages.map((img) => img.id);
         const idsToDelete = existingIds.filter((eid) => !sentIds.includes(eid));
         if (idsToDelete.length > 0) {
+          // Fetch URLs for these images before deleting from DB
+          const [rowsToDelete] = await conn.query(
+            `SELECT url FROM product_images WHERE id IN (${idsToDelete
+              .map(() => "?")
+              .join(",")}) AND product_id = ?`,
+            [...idsToDelete, id]
+          );
+          imagesToDelete = rowsToDelete.map((row) => row.url);
+
           await conn.query(
             `DELETE FROM product_images WHERE id IN (${idsToDelete
               .map(() => "?")
@@ -111,7 +128,7 @@ export async function PUT(req, { params }) {
         }
       }
 
-      // Validate only one image is primary
+      // Validate only 1 primary image
       const primaryCount = images.filter(
         (img) => img.is_primary === true
       ).length;
@@ -123,29 +140,25 @@ export async function PUT(req, { params }) {
           { status: 400 }
         );
       }
-
-      // If none is primary, optionally set first image as primary
       if (primaryCount === 0 && images.length > 0) {
-        images[0].is_primary = true;
+        images[0].is_primary = true; // default first image to primary
       }
 
-      // Insert new or update existing images
+      // Insert or update images
       for (const [index, img] of images.entries()) {
-        // Validate image object minimal requirements
         if (!img.url) continue; // skip invalid
-
         const alt_text = img.alt_text || "";
         const sort_order = img.sort_order ?? index;
         const is_primary = img.is_primary === true;
 
         if (img.id && existingById.has(img.id)) {
-          // Update existing image
+          // update existing
           await conn.query(
             `UPDATE product_images SET url = ?, alt_text = ?, sort_order = ?, is_primary = ? WHERE id = ? AND product_id = ?`,
             [img.url, alt_text, sort_order, is_primary, img.id, id]
           );
         } else {
-          // Insert new image
+          // insert new
           await conn.query(
             `INSERT INTO product_images (product_id, url, alt_text, sort_order, is_primary)
              VALUES (?, ?, ?, ?, ?)`,
@@ -153,11 +166,28 @@ export async function PUT(req, { params }) {
           );
         }
       }
-
-      await conn.commit();
     }
 
-    // Fetch updated product with images to return
+    await conn.commit();
+
+    // After commit, delete the files for orphaned images
+    for (const imgUrl of imagesToDelete) {
+      try {
+        const filePath = path.join(
+          process.cwd(),
+          "public",
+          imgUrl.replace(/^\//, "")
+        );
+        await fs.unlink(filePath);
+      } catch (err) {
+        console.error(
+          `Failed to delete image file during update: ${imgUrl}`,
+          err
+        );
+      }
+    }
+
+    // Fetch updated product + images to return
     const [updatedProducts] = await conn.query(
       `SELECT * FROM products WHERE product_id = ?`,
       [id]
@@ -181,24 +211,27 @@ export async function PUT(req, { params }) {
 
 // DELETE /api/products/[id]
 export async function DELETE(req, { params }) {
-  const id = Number(params.id);
+  const resolvedParams = await params;
+  const id = Number(resolvedParams.id);
   if (!id) {
     return Response.json({ error: "Invalid product id." }, { status: 400 });
   }
   const conn = await pool.getConnection();
+  let imagesToDelete = [];
   try {
     await conn.beginTransaction();
 
-    // Get image URLs before deletion to know which files to remove
+    // Get image URLs before deletion to delete their files
     const [images] = await conn.query(
       "SELECT url FROM product_images WHERE product_id = ?",
       [id]
     );
+    imagesToDelete = images.map((img) => img.url);
 
-    // Delete images from database
+    // Delete product images records
     await conn.query("DELETE FROM product_images WHERE product_id = ?", [id]);
 
-    // Delete the product
+    // Delete product record
     const [result] = await conn.query(
       "DELETE FROM products WHERE product_id = ?",
       [id]
@@ -207,19 +240,18 @@ export async function DELETE(req, { params }) {
     await conn.commit();
     conn.release();
 
-    // Delete the image files from disk asynchronously (fire and forget)
-    for (const img of images) {
+    // Delete files from disk after successful commit
+    for (const url of imagesToDelete) {
       try {
-        // Assuming URLs are like '/images/products_images/filename.ext'
         const filePath = path.join(
           process.cwd(),
           "public",
-          img.url.replace(/^\//, "")
+          url.replace(/^\//, "")
         );
         await fs.unlink(filePath);
       } catch (err) {
-        // Log error but don't interrupt flow if a single file is missing or deletion fails
-        console.error(`Failed to delete image file: ${img.url}`, err);
+        // Log but don't disrupt flow
+        console.error(`Failed to delete image file: ${url}`, err);
       }
     }
 
