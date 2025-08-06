@@ -2,6 +2,7 @@
 import "./dashboard.css";
 import "@ant-design/v5-patch-for-react-19";
 import Link from "next/link";
+import { usePathname } from "next/navigation"; // 1. Import usePathname
 
 import React, { useState } from "react";
 import {
@@ -16,9 +17,12 @@ const { Header, Sider, Content } = Layout;
 
 const DashboardLayout = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
+
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Sider trigger={null} collapsible collapsed={collapsed}>
@@ -26,22 +30,22 @@ const DashboardLayout = ({ children }) => {
         <Menu
           theme="dark"
           mode="inline"
-          defaultSelectedKeys={["1"]}
+          selectedKeys={[pathname]}
           items={[
             {
-              key: "1",
+              key: "/dashboard/products",
               icon: <UserOutlined />,
               label: <Link href="/dashboard/products">Products</Link>,
             },
             {
-              key: "2",
+              key: "/dashboard/orders",
               icon: <VideoCameraOutlined />,
               label: <Link href="/dashboard/orders">Orders</Link>,
             },
             {
-              key: "3",
+              key: "/dashboard/categories",
               icon: <UploadOutlined />,
-              label: "Uploads",
+              label: <Link href="/dashboard/categories">Categories</Link>,
             },
           ]}
         />

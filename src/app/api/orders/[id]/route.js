@@ -193,10 +193,24 @@ export async function DELETE(req, { params }) {
   try {
     await conn.beginTransaction();
 
-    // Delete order items first (foreign key or manual)
+    // Fetch existing order items to restore stock
+    const [orderItems] = await conn.query(
+      "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
+      [id]
+    );
+
+    // Restore stock for each item
+    for (const item of orderItems) {
+      await conn.query(
+        "UPDATE products SET quantity = quantity + ? WHERE product_id = ?",
+        [item.quantity, item.product_id]
+      );
+    }
+
+    // Delete order items
     await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [id]);
 
-    // Delete order
+    // Delete order itself
     const [result] = await conn.query(`DELETE FROM orders WHERE order_id = ?`, [
       id,
     ]);
@@ -209,13 +223,13 @@ export async function DELETE(req, { params }) {
     }
 
     return Response.json(
-      { message: "Order and items deleted." },
+      { message: "Order and items deleted and stock restored." },
       { status: 200 }
     );
   } catch (error) {
     await conn.rollback();
     conn.release();
-    console.log("DELETE /api/orders/[id] error:", error);
+    console.log("DELETE /api/orders error:", error);
     return Response.json({ error: "Failed to delete order." }, { status: 500 });
   }
 }

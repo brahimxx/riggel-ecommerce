@@ -2,27 +2,27 @@
 import { useEffect, useState } from "react";
 import { Modal, Alert } from "antd";
 import DataTable from "../components/DataTable";
-import OrderForm from "../components/OrderForm";
+import CategoryForm from "../components/CategoryForm"; // Assumes you have a CategoryForm component
 
-const Orders = () => {
-  const [orders, setOrders] = useState([]); // renamed for clarity
+const Categories = () => {
+  const [categories, setCategories] = useState([]); // State for categories
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState(null);
-  const [products, setProducts] = useState([]); // For product selection inside order items
+  const [editingCategory, setEditingCategory] = useState(null); // State for the category being edited
 
-  // Fetch orders and products (needed for order items)
+  // Fetch categories data
   const fetchData = () => {
     setLoading(true);
-
-    Promise.all([
-      fetch("/api/orders").then((res) => res.json()),
-      fetch("/api/products").then((res) => res.json()),
-    ])
-      .then(([orders, products]) => {
-        setOrders(orders);
-        setProducts(products);
+    fetch("/api/categories")
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch categories");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setCategories(data);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -34,30 +34,22 @@ const Orders = () => {
 
   const handleCancel = () => {
     setIsModalOpen(false);
-    setEditingOrder(null);
+    setEditingCategory(null);
     setError(null);
   };
 
   const handleSuccess = () => {
-    fetchData(); // Refresh orders list after add/update
+    fetchData(); // Refresh categories list after add/update
     setIsModalOpen(false);
-    setEditingOrder(null);
+    setEditingCategory(null);
     setError(null);
   };
 
-  const handleEditOrder = async (order) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/orders/${order.order_id}`);
-      if (!res.ok) throw new Error("Failed to fetch order details");
-      const fullOrder = await res.json();
-      setEditingOrder(fullOrder);
-      setIsModalOpen(true);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleEditCategory = (category) => {
+    // For a simple entity like a category, you might already have all the data.
+    // If not, you could fetch full details like in the Orders component.
+    setEditingCategory(category);
+    setIsModalOpen(true);
   };
 
   return (
@@ -67,30 +59,29 @@ const Orders = () => {
       )}
 
       <DataTable
-        data={orders}
+        data={categories}
         loading={loading}
         setIsModalOpen={setIsModalOpen}
-        onEdit={handleEditOrder}
+        onEdit={handleEditCategory}
         onDeleteSuccess={fetchData}
-        apiBaseUrl="orders"
-        rowKeyField="order_id"
+        apiBaseUrl="categories" // API endpoint for deletion
+        rowKeyField="category_id" // Primary key field for the category
       />
 
       <Modal
-        title={editingOrder ? "Edit Order" : "Add Order"}
+        title={editingCategory ? "Edit Category" : "Add Category"}
         open={isModalOpen}
         onCancel={handleCancel}
         footer={null}
-        width={800} // wider modal for order form
       >
-        <OrderForm
-          order={editingOrder}
+        <CategoryForm
+          category={editingCategory}
           onSuccess={handleSuccess}
-          products={products} // needed for order item selection
+          categories={categories}
         />
       </Modal>
     </div>
   );
 };
 
-export default Orders;
+export default Categories;

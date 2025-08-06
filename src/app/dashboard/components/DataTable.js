@@ -30,7 +30,7 @@ const DataTable = ({
   const [ellipsis, setEllipsis] = useState(false);
   const [rowSelection, setRowSelection] = useState({});
   const [yScroll, setYScroll] = useState(false);
-  const [xScroll, setXScroll] = useState("scroll");
+  const [xScroll, setXScroll] = useState("unset");
   const [expandableState, setExpandable] = useState(expandable);
 
   const showModal = (record = null) => {
