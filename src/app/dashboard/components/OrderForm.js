@@ -7,7 +7,6 @@ import {
   DatePicker,
   Select,
   Table,
-  Space,
   message,
 } from "antd";
 import dayjs from "dayjs";
@@ -25,46 +24,58 @@ const statusOptions = [
 const OrderForm = ({ order = null, products = [], onSuccess }) => {
   const [form] = Form.useForm();
 
-  // Track order items separately for dynamic rows
-  const [orderItems, setOrderItems] = useState(order?.order_items || []);
+  // For generating unique keys for new order items (client-only before saved)
+  const [tempIdCounter, setTempIdCounter] = useState(0);
 
-  // Initialize form fields on order change
+  // Order items state with keys (order_item_id or temp keys)
+  const [orderItems, setOrderItems] = useState([]);
+
+  // Initialize form and order items on order load/change
   useEffect(() => {
-    if (order) {
+    if (order && order.order_items) {
+      const itemsWithKeys = order.order_items.map((item) => ({
+        ...item,
+        key: item.order_item_id.toString(), // use DB id as key
+      }));
+      setOrderItems(itemsWithKeys);
+
       form.setFieldsValue({
         client_name: order.client_name || "",
         email: order.email || "",
         phone: order.phone || "",
-        shipping_adresse: order.shipping_adresse || "",
+        shipping_address: order.shipping_address || "",
         order_date: order.order_date ? dayjs(order.order_date) : null,
         status: order.status || "pending",
         total_amount: order.total_amount ?? 0,
       });
-      setOrderItems(order.order_items || []);
     } else {
       form.resetFields();
       setOrderItems([]);
     }
+    // reset tempIdCounter for new items if you want
+    setTempIdCounter(0);
   }, [order, form]);
 
-  // Handlers for order items table
-
+  // Add new order item with temporary key
   const addOrderItem = () => {
-    setOrderItems([
-      ...orderItems,
+    setTempIdCounter((prev) => prev + 1);
+    setOrderItems((items) => [
+      ...items,
       {
+        key: `temp-${tempIdCounter + 1}`,
         product_id: null,
         quantity: 1,
         price: 0,
-        key: Date.now(), // unique key for React list
       },
     ]);
   };
 
+  // Remove order item by key
   const removeOrderItem = (key) => {
-    setOrderItems(orderItems.filter((item) => item.key !== key));
+    setOrderItems((items) => items.filter((item) => item.key !== key));
   };
 
+  // Update order item field by key
   const updateOrderItem = (key, field, value) => {
     setOrderItems((items) =>
       items.map((item) =>
@@ -73,23 +84,13 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
     );
   };
 
-  // Calculate total_amount automatically from order items
-  const calcTotalAmount = () => {
-    return orderItems.reduce(
-      (sum, item) => sum + (item.quantity || 0) * (item.price || 0),
-      0
-    );
-  };
-
-  // Form submit handler
+  // Submit handler
   const onFinish = async (values) => {
-    // Must have at least one order item
     if (orderItems.length === 0) {
       message.error("At least one order item is required");
       return;
     }
 
-    // Basic validation for order items
     for (const item of orderItems) {
       if (!item.product_id) {
         message.error("All order items must have a product selected");
@@ -103,17 +104,40 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
         message.error("Price cannot be negative");
         return;
       }
+      const product = products.find((p) => p.product_id === item.product_id);
+      if (product) {
+        // Find previous reserved quantity for this product in the order
+        const originalItem = order?.order_items?.find(
+          (oi) => oi.product_id === item.product_id
+        );
+        const reservedQty = originalItem ? originalItem.quantity : 0;
+
+        // Effective available stock is current stock + reserved quantity
+        const effectiveAvailable = product.quantity + reservedQty;
+
+        if (item.quantity > effectiveAvailable) {
+          message.error(
+            `Not enough stock for "${product.name}". Available: ${effectiveAvailable}, requested: ${item.quantity}`
+          );
+          return;
+        }
+      }
     }
+
+    const sanitizedOrderItems = orderItems.map((item) => ({
+      ...item,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+    }));
 
     const payload = {
       ...values,
       order_date: values.order_date ? values.order_date.toISOString() : null,
       total_amount: calcTotalAmount(),
-      order_items: orderItems.map(({ key, ...rest }) => rest), // remove React keys
+      order_items: sanitizedOrderItems.map(({ key, ...rest }) => rest), // omit React keys
     };
 
-    const url = order ? `/api/orders/${order.order_id}` : `/api/orders`;
-
+    const url = order ? `/api/orders/${order.order_id}` : "/api/orders";
     const method = order ? "PUT" : "POST";
 
     try {
@@ -132,15 +156,14 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
 
       form.resetFields();
       setOrderItems([]);
+      setTempIdCounter(0);
     } catch (err) {
       console.error(err);
-      message.error(
-        err.message || "Something went wrong while submitting the form."
-      );
+      message.error(err.message || "Error submitting order.");
     }
   };
 
-  // Columns for order items table
+  // Table columns as you already have
   const orderItemColumns = [
     {
       title: "Product",
@@ -151,7 +174,19 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
           showSearch
           placeholder="Select product"
           value={value}
-          onChange={(val) => updateOrderItem(record.key, "product_id", val)}
+          onChange={(val) => {
+            updateOrderItem(record.key, "product_id", val);
+
+            // Find selected product price
+            const selectedProduct = products.find((p) => p.product_id === val);
+            if (selectedProduct) {
+              // Update the price for the same order item
+              updateOrderItem(record.key, "price", selectedProduct.price);
+            } else {
+              // Optionally reset price if product not found
+              updateOrderItem(record.key, "price", 0);
+            }
+          }}
           filterOption={(input, option) =>
             (option?.children ?? "").toLowerCase().includes(input.toLowerCase())
           }
@@ -164,21 +199,31 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
           ))}
         </Select>
       ),
-      rules: [{ required: true, message: "Please select a product" }],
     },
+    ,
     {
       title: "Quantity",
       dataIndex: "quantity",
       key: "quantity",
-      render: (value, record) => (
-        <InputNumber
-          min={1}
-          value={value}
-          onChange={(val) => updateOrderItem(record.key, "quantity", val)}
-          style={{ width: 100 }}
-        />
-      ),
+      render: (value, record) => {
+        // Find the selected product for this row
+        const selectedProduct = products.find(
+          (p) => p.product_id === record.product_id
+        );
+
+        return (
+          <InputNumber
+            min={1}
+            value={value}
+            onChange={(val) => {
+              updateOrderItem(record.key, "quantity", val);
+            }}
+            style={{ width: 100 }}
+          />
+        );
+      },
     },
+    ,
     {
       title: "Price",
       dataIndex: "price",
@@ -198,7 +243,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
     {
       title: "Total",
       key: "total",
-      render: (text, record) => {
+      render: (_, record) => {
         const total = (record.quantity || 0) * (record.price || 0);
         return <span>${total.toFixed(2)}</span>;
       },
@@ -214,13 +259,23 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
     },
   ];
 
+  const calcTotalAmount = () =>
+    orderItems.reduce(
+      (sum, item) =>
+        sum + (Number(item.quantity) || 0) * (Number(item.price) || 0),
+      0
+    );
+
+  useEffect(() => {
+    form.setFieldsValue({ total_amount: calcTotalAmount() });
+  }, [orderItems, form]);
+
   return (
     <Form
       form={form}
       labelCol={{ span: 6 }}
       wrapperCol={{ span: 16 }}
       layout="horizontal"
-      style={{ maxWidth: 700 }}
       onFinish={onFinish}
     >
       <Form.Item
@@ -252,7 +307,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
 
       <Form.Item
         label="Shipping Address"
-        name="shipping_adresse"
+        name="shipping_address"
         rules={[{ required: true, message: "Shipping address is required" }]}
       >
         <TextArea rows={3} placeholder="Shipping Address" />
@@ -280,19 +335,46 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
         </Select>
       </Form.Item>
 
-      <Form.Item label="Order Items" wrapperCol={{ offset: 6, span: 16 }}>
-        <Button type="dashed" onClick={addOrderItem} block>
-          + Add Item
-        </Button>
-        <Table
-          dataSource={orderItems.map((item) => ({ ...item }))}
-          columns={orderItemColumns}
-          pagination={false}
-          rowKey="key"
-          style={{ marginTop: 16 }}
-          locale={{ emptyText: "No order items. Please add." }}
-        />
+      <Form.Item
+        labelCol={{ span: 0 }}
+        wrapperCol={{ span: 24 }}
+        colon={false}
+        className="!mb-0 w-full"
+      >
+        <div className="flex flex-col w-full">
+          <span className="font-semibold mb-2 pl-1">Order Items</span>
+          <Button
+            type="dashed"
+            onClick={addOrderItem}
+            className="mb-3 max-w-xs"
+          >
+            + Add Item
+          </Button>
+          <div className="rounded border border-gray-200 bg-gray-50 overflow-x-auto overflow-y-auto max-h-80 p-0">
+            <Table
+              dataSource={orderItems}
+              columns={orderItemColumns}
+              pagination={false}
+              rowKey="key"
+              size="small"
+              scroll={{ x: "max-content", y: 280 }}
+              style={{ minWidth: 600 }}
+              locale={{ emptyText: "No order items. Please add." }}
+            />
+          </div>
+        </div>
       </Form.Item>
+
+      <div className="w-full flex !justify-end items-center mt-5 px-6">
+        <Form.Item label="Total " wrapperCol={{ offset: 6, span: 16 }}>
+          <InputNumber
+            value={calcTotalAmount()}
+            disabled
+            formatter={(value) => `$ ${Number(value || 0).toFixed(2)}`}
+            parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+          />
+        </Form.Item>
+      </div>
 
       <Form.Item wrapperCol={{ offset: 6, span: 16 }}>
         <Button type="primary" htmlType="submit">

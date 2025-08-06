@@ -22,6 +22,7 @@ export async function GET(req, { params }) {
 
     return Response.json({ ...orders[0], order_items: orderItems });
   } catch (error) {
+    console.log("GET /api/orders/[id] error:", error);
     return Response.json({ error: "Failed to fetch order." }, { status: 500 });
   }
 }
@@ -39,21 +40,30 @@ export async function PUT(req, { params }) {
       client_name,
       email,
       phone,
-      shipping_adresse,
+      shipping_address,
       order_date,
       status,
       total_amount,
       order_items,
     } = body;
 
-    // Validate required fields as in POST
+    const parsedDate = new Date(order_date);
+    if (isNaN(parsedDate.getTime())) {
+      conn.release();
+      return Response.json(
+        { error: "Invalid order_date format" },
+        { status: 400 }
+      );
+    }
+    const mysqlDate = parsedDate.toISOString().slice(0, 19).replace("T", " ");
+
     if (
       typeof client_name !== "string" ||
       client_name.trim() === "" ||
       typeof email !== "string" ||
       typeof phone !== "string" ||
-      typeof shipping_adresse !== "string" ||
-      !order_date || // expects valid ISO string or timestamp
+      typeof shipping_address !== "string" ||
+      !order_date ||
       typeof status !== "string" ||
       typeof total_amount !== "number" ||
       !Array.isArray(order_items) ||
@@ -66,7 +76,6 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // Check if order exists
     const [existing] = await conn.query(
       "SELECT 1 FROM orders WHERE order_id = ? LIMIT 1",
       [id]
@@ -78,27 +87,41 @@ export async function PUT(req, { params }) {
 
     await conn.beginTransaction();
 
+    // Refund stock from old order items before clearing them
+    const [oldItems] = await conn.query(
+      "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
+      [id]
+    );
+
+    for (const oldItem of oldItems) {
+      await conn.query(
+        "UPDATE products SET quantity = quantity + ? WHERE product_id = ?",
+        [oldItem.quantity, oldItem.product_id]
+      );
+    }
+
     // Update order master record
     await conn.query(
-      `UPDATE orders SET client_name = ?, email = ?, phone = ?, shipping_adresse = ?, order_date = ?, status = ?, total_amount = ? WHERE order_id = ?`,
+      `UPDATE orders SET client_name = ?, email = ?, phone = ?, shipping_address = ?, order_date = ?, status = ?, total_amount = ? WHERE order_id = ?`,
       [
         client_name.trim(),
         email.trim(),
         phone.trim(),
-        shipping_adresse.trim(),
-        order_date,
+        shipping_address.trim(),
+        mysqlDate,
         status.trim(),
         total_amount,
         id,
       ]
     );
 
-    // Delete existing order items to simplify sync
+    // Delete old order items
     await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [id]);
 
-    // Insert new order items
+    // Validate, deduct stock, insert new order items
     for (let i = 0; i < order_items.length; i++) {
       const item = order_items[i];
+
       if (
         typeof item.product_id !== "number" ||
         typeof item.quantity !== "number" ||
@@ -113,6 +136,24 @@ export async function PUT(req, { params }) {
           { status: 400 }
         );
       }
+
+      const [updateResult] = await conn.query(
+        `UPDATE products 
+         SET quantity = quantity - ? 
+         WHERE product_id = ? AND quantity >= ?`,
+        [item.quantity, item.product_id, item.quantity]
+      );
+      if (updateResult.affectedRows === 0) {
+        await conn.rollback();
+        conn.release();
+        return Response.json(
+          {
+            error: `Insufficient stock for product ID ${item.product_id}. Requested: ${item.quantity}`,
+          },
+          { status: 400 }
+        );
+      }
+
       await conn.query(
         `INSERT INTO order_items (order_id, product_id, quantity, price)
          VALUES (?, ?, ?, ?)`,
@@ -122,7 +163,6 @@ export async function PUT(req, { params }) {
 
     await conn.commit();
 
-    // Fetch updated order + items
     const [orderRows] = await conn.query(
       `SELECT * FROM orders WHERE order_id = ?`,
       [id]
@@ -138,6 +178,7 @@ export async function PUT(req, { params }) {
   } catch (error) {
     await conn.rollback();
     conn.release();
+    console.log("PUT /api/orders/[id] error:", error);
     return Response.json({ error: "Failed to update order." }, { status: 500 });
   }
 }
@@ -174,6 +215,7 @@ export async function DELETE(req, { params }) {
   } catch (error) {
     await conn.rollback();
     conn.release();
+    console.log("DELETE /api/orders/[id] error:", error);
     return Response.json({ error: "Failed to delete order." }, { status: 500 });
   }
 }

@@ -39,6 +39,7 @@ export async function GET(req) {
     );
     return Response.json(products);
   } catch (error) {
+    console.log("GET /api/products error:", error);
     return Response.json(
       { error: "Failed to fetch products." },
       { status: 500 }
@@ -104,6 +105,7 @@ export async function POST(req) {
     );
     return Response.json({ ...rows[0], images: imgs }, { status: 201 });
   } catch (error) {
+    console.log("POST /api/products error:", error);
     return Response.json(
       { error: "Failed to create product." },
       { status: 500 }
