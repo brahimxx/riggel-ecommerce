@@ -47,6 +47,11 @@ const DashboardLayout = ({ children }) => {
               icon: <UploadOutlined />,
               label: <Link href="/dashboard/categories">Categories</Link>,
             },
+            {
+              key: "/dashboard/users",
+              icon: <UploadOutlined />,
+              label: <Link href="/dashboard/users">Users</Link>,
+            },
           ]}
         />
       </Sider>
