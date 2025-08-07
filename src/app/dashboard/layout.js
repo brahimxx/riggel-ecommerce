@@ -3,6 +3,7 @@ import "./dashboard.css";
 import "@ant-design/v5-patch-for-react-19";
 import Link from "next/link";
 import { usePathname } from "next/navigation"; // 1. Import usePathname
+import ProfileMenu from "./components/ProfileMenu";
 
 import React, { useState } from "react";
 import {
@@ -56,7 +57,10 @@ const DashboardLayout = ({ children }) => {
         />
       </Sider>
       <Layout>
-        <Header style={{ padding: 0, background: colorBgContainer }}>
+        <Header
+          style={{ padding: 0, background: colorBgContainer }}
+          className="flex justify-between !pr-5"
+        >
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -67,6 +71,7 @@ const DashboardLayout = ({ children }) => {
               height: 64,
             }}
           />
+          <ProfileMenu />
         </Header>
         <Content
           style={{

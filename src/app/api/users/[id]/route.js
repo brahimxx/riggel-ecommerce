@@ -3,7 +3,8 @@ import bcrypt from "bcrypt";
 
 // -- GET /api/users/[id]
 export async function GET(req, { params }) {
-  const userId = Number(params.id);
+  const { id } = await params;
+  const userId = Number(id);
   if (!userId) {
     return Response.json({ error: "Invalid user ID." }, { status: 400 });
   }
@@ -35,7 +36,8 @@ export async function GET(req, { params }) {
 
 // -- PUT /api/users/[id]
 export async function PUT(req, { params }) {
-  const userId = Number(params.id);
+  const { id } = await params;
+  const userId = Number(id);
   if (!userId) {
     return Response.json({ error: "Invalid user ID." }, { status: 400 });
   }
@@ -101,7 +103,8 @@ export async function PUT(req, { params }) {
 
 // -- DELETE /api/users/[id]
 export async function DELETE(req, { params }) {
-  const userId = Number(params.id);
+  const { id } = await params;
+  const userId = Number(id);
   if (!userId) {
     return Response.json({ error: "Invalid user ID." }, { status: 400 });
   }

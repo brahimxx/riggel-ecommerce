@@ -24,7 +24,8 @@ const UserForm = ({ user, onSuccess }) => {
   const onFinish = (values) => {
     setSubmitting(true);
 
-    const apiEndpoint = isEditing ? `/api/users/${user.user_id}` : "/api/users";
+    const apiEndpoint = isEditing ? `/api/users/${user.id}` : "/api/users";
+
     const method = isEditing ? "PUT" : "POST";
 
     // When editing, if the password field is empty, don't send it in the request
