@@ -77,7 +77,7 @@ model products {
   price          Decimal          @db.Decimal(10, 2)
   category_id    Int?
   created_at     DateTime?        @default(now()) @db.DateTime(0)
-  quantity       Int?             @default(0)
+  quantity       Int              @default(0)
   order_items    order_items[]
   product_images product_images[]
   categories     categories?      @relation(fields: [category_id], references: [category_id], onDelete: NoAction, onUpdate: NoAction, map: "products_ibfk_1")
@@ -100,10 +100,10 @@ model reviews {
 }
 
 model users {
-  id         BigInt   @id @unique(map: "id") @default(autoincrement()) @db.UnsignedBigInt
-  username   String   @db.VarChar(50)
-  email      String   @unique(map: "email") @db.VarChar(100)
-  password   String   @db.VarChar(255)
-  role       String   @db.VarChar(50)
-  created_at DateTime @default(now()) @db.Timestamp(0)
+  id         Int       @id @default(autoincrement())
+  username   String    @db.VarChar(50)
+  email      String    @db.VarChar(100)
+  password   String    @db.VarChar(255)
+  role       String    @default("admin") @db.VarChar(20)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
 }

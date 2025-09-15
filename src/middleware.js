@@ -46,6 +46,5 @@ export async function middleware(req) {
 
 // Config to specify which paths the middleware should run on.
 export const config = {
-  // Match all paths except for static files, API routes, and image optimization files.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/dashboard/:path*"],
 };

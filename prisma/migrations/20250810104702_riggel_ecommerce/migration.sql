@@ -70,7 +70,7 @@ CREATE TABLE `products` (
     `price` DECIMAL(10, 2) NOT NULL,
     `category_id` INTEGER NULL,
     `created_at` DATETIME(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
-    `quantity` INTEGER NULL DEFAULT 0,
+    `quantity` INTEGER NOT NULL DEFAULT 0,
 
     INDEX `category_id`(`category_id`),
     PRIMARY KEY (`product_id`)
@@ -91,15 +91,13 @@ CREATE TABLE `reviews` (
 
 -- CreateTable
 CREATE TABLE `users` (
-    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
     `username` VARCHAR(50) NOT NULL,
     `email` VARCHAR(100) NOT NULL,
     `password` VARCHAR(255) NOT NULL,
-    `role` VARCHAR(50) NOT NULL,
-    `created_at` TIMESTAMP(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+    `role` VARCHAR(20) NOT NULL DEFAULT 'admin',
+    `created_at` TIMESTAMP(0) NULL DEFAULT CURRENT_TIMESTAMP(0),
 
-    UNIQUE INDEX `id`(`id`),
-    UNIQUE INDEX `email`(`email`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
