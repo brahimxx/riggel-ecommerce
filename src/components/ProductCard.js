@@ -1,6 +1,7 @@
 import Image from "next/image";
+import { Rate } from "antd";
 
-const ProductCard = () => {
+const ProductCard = ({ product }) => {
   return (
     <div className="flex flex-col gap-1">
       <div className="relative w-[295px] h-[295px] rounded-3xl overflow-hidden ">
@@ -13,15 +14,9 @@ const ProductCard = () => {
         />
       </div>
       <p className="text-[20px] font-bold">T-shirt with Tape Details</p>
-      <div className="flex flex-row items-center gap-1 ">
-        <div className="relative w-[104px] h-[18px] ">
-          <Image
-            src="/images/products_images/rating_test.png"
-            alt="product rating"
-            quality={100}
-            fill
-            className="object-contain "
-          />
+      <div className="flex flex-row items-center gap-2 ">
+        <div className="relative  ">
+          <Rate disabled defaultValue={2} starSize={10} />
         </div>
         <p className="text-[14]">4.5/5</p>
       </div>
