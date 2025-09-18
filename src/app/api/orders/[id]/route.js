@@ -182,24 +182,32 @@ export async function PUT(req, { params }) {
     return Response.json({ error: "Failed to update order." }, { status: 500 });
   }
 }
-
 export async function DELETE(req, { params }) {
   const resolvedParams = await params;
   const id = Number(resolvedParams.id);
   if (!id) {
-    return Response.json({ error: "Invalid order id." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid order id." }, { status: 400 });
   }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // Fetch existing order items to restore stock
+    // Ensure order exists
+    const [[exists]] = await conn.query(
+      "SELECT 1 AS ok FROM orders WHERE order_id = ? LIMIT 1",
+      [id]
+    );
+    if (!exists) {
+      await conn.rollback();
+      return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    }
+
+    // Restore stock from order items
     const [orderItems] = await conn.query(
       "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
       [id]
     );
-
-    // Restore stock for each item
     for (const item of orderItems) {
       await conn.query(
         "UPDATE products SET quantity = quantity + ? WHERE product_id = ?",
@@ -207,29 +215,37 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // Delete order items
-    await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [id]);
+    // Delete dependents (order matters)
+    await conn.query("DELETE FROM payments WHERE order_id = ?", [id]);
+    // If using shipments or other dependents, delete them here:
+    // await conn.query('DELETE FROM shipments WHERE order_id = ?', [id]);
+    await conn.query("DELETE FROM order_items WHERE order_id = ?", [id]);
 
-    // Delete order itself
-    const [result] = await conn.query(`DELETE FROM orders WHERE order_id = ?`, [
+    // Delete order
+    const [result] = await conn.query("DELETE FROM orders WHERE order_id = ?", [
       id,
     ]);
 
     await conn.commit();
-    conn.release();
 
     if (result.affectedRows === 0) {
-      return Response.json({ error: "Order not found." }, { status: 404 });
+      return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
 
-    return Response.json(
-      { message: "Order and items deleted and stock restored." },
+    return NextResponse.json(
+      { message: "Order, payments, and items deleted; stock restored." },
       { status: 200 }
     );
   } catch (error) {
-    await conn.rollback();
+    try {
+      await conn.rollback();
+    } catch {}
+    console.error("DELETE /api/orders error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete order." },
+      { status: 500 }
+    );
+  } finally {
     conn.release();
-    console.log("DELETE /api/orders error:", error);
-    return Response.json({ error: "Failed to delete order." }, { status: 500 });
   }
 }

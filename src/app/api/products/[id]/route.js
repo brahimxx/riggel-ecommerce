@@ -261,14 +261,49 @@ export async function DELETE(req, { params }) {
   try {
     await conn.beginTransaction();
 
+    // 0) Exists check
+    const [[exists]] = await conn.query(
+      "SELECT 1 AS ok FROM products WHERE product_id = ? LIMIT 1",
+      [id]
+    );
+    if (!exists) {
+      await conn.rollback();
+      conn.release();
+      return NextResponse.json(
+        { error: "Product not found." },
+        { status: 404 }
+      );
+    }
+
+    // 1) Block deletion if product is part of any order items
+    const [[inOrder]] = await conn.query(
+      "SELECT 1 AS used FROM order_items WHERE product_id = ? LIMIT 1",
+      [id]
+    );
+    if (inOrder) {
+      await conn.rollback();
+      conn.release();
+      return NextResponse.json(
+        { error: "Cannot delete: product is referenced in orders." },
+        { status: 409 } // Conflict
+      );
+    }
+
+    // 2) Collect image URLs for filesystem cleanup after commit
     const [images] = await conn.query(
       "SELECT url FROM product_images WHERE product_id = ?",
       [id]
     );
     imagesToDelete = images.map((img) => img.url);
 
+    // 3) Delete dependents that are safe to remove
+    await conn.query("DELETE FROM reviews WHERE product_id = ?", [id]);
     await conn.query("DELETE FROM product_images WHERE product_id = ?", [id]);
+    // If you also have carts/wishlists and want to clean them:
+    // await conn.query('DELETE FROM cart_items WHERE product_id = ?', [id]);
+    // await conn.query('DELETE FROM wishlist_items WHERE product_id = ?', [id]);
 
+    // 4) Delete the product
     const [result] = await conn.query(
       "DELETE FROM products WHERE product_id = ?",
       [id]
@@ -277,6 +312,7 @@ export async function DELETE(req, { params }) {
     await conn.commit();
     conn.release();
 
+    // 5) Delete files from disk after successful commit
     for (const url of imagesToDelete) {
       if (typeof url === "string" && url.length && url.startsWith("/")) {
         try {
@@ -289,8 +325,6 @@ export async function DELETE(req, { params }) {
         } catch (err) {
           console.error(`Failed to delete image file: ${url}`, err);
         }
-      } else {
-        console.warn("Skipping invalid or empty image URL:", url);
       }
     }
 
@@ -301,7 +335,7 @@ export async function DELETE(req, { params }) {
       );
     }
     return NextResponse.json(
-      { message: "Product and images deleted." },
+      { message: "Product and related records deleted." },
       { status: 200 }
     );
   } catch (error) {

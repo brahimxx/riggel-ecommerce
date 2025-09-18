@@ -52,14 +52,38 @@ const DataTable = ({
       if (!id) throw new Error("Invalid record id for deletion");
 
       const res = await fetch(`/api/${apiBaseUrl}/${id}`, { method: "DELETE" });
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Delete failed");
+        let errMsg = `Delete failed (${res.status})`;
+        try {
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            const data = await res.json();
+            if (data?.error) errMsg = data.error;
+          } else {
+            const text = await res.text();
+            if (text) errMsg = text;
+          }
+        } catch {}
+        throw new Error(errMsg);
       }
-      message.success(`${apiBaseUrl.slice(0, -1)} deleted successfully`);
-      if (typeof onDeleteSuccess === "function") onDeleteSuccess();
+
+      let msg = `${apiBaseUrl.slice(0, -1)} deleted successfully`;
+      try {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const data = await res.json();
+          msg = data?.message || msg;
+        }
+      } catch {}
+
+      message.success(msg);
+
+      if (typeof onDeleteSuccess === "function") {
+        onDeleteSuccess();
+      }
     } catch (error) {
-      message.error(error.message);
+      message.error(error.message || "Delete failed");
     }
   };
 

@@ -4,12 +4,19 @@ import pool from "@/lib/db";
 // Revalidate this component every 5 minutes (works even without fetch)
 export const revalidate = 300; // ISR for non-fetch data [web:92]
 
-async function getNewArrivals() {
+export async function getNewArrivals() {
   // kayen two options here, first is to use a base api url and use the api, because the api call in the server side needs an absolute url, second is to query DB in the component directly
   const [rows] = await pool.query(
-    `SELECT product_id, name, description, price, category_id, created_at, quantity
-     FROM products
-     ORDER BY created_at DESC
+    `SELECT p.product_id, p.name, p.slug, p.description, p.price, p.category_id, p.created_at, p.quantity, p.rating,
+            (
+              SELECT pi.url
+              FROM product_images pi
+              WHERE pi.product_id = p.product_id
+              ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
+              LIMIT 1
+            ) AS main_image
+     FROM products p
+     ORDER BY p.created_at DESC
      LIMIT 4;`
   );
   return rows;
