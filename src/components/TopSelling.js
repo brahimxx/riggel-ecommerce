@@ -4,7 +4,7 @@ import pool from "@/lib/db";
 // Revalidate this component every 5 minutes (works even without fetch)
 export const revalidate = 300; // ISR for non-fetch data [web:92]
 
-export async function getNewArrivals() {
+export async function getTopSelling() {
   // kayen two options here, first is to use a base api url and use the api, because the api call in the server side needs an absolute url, second is to query DB in the component directly
   const [rows] = await pool.query(
     `SELECT p.product_id, p.name, p.slug, p.description, p.price, p.category_id, p.created_at, p.quantity, p.rating,
@@ -22,13 +22,13 @@ export async function getNewArrivals() {
   return rows;
 }
 
-export default async function NewArrivals() {
-  const products = await getNewArrivals();
+export default async function TopSelling() {
+  const products = await getTopSelling();
 
   return (
-    <div className="flex flex-col py-[72px] max-w-screen-2xl mx-auto">
+    <div className="flex flex-col py-[72px] max-w-screen-2xl mx-auto border-gray-400/10 border-t-[3px]">
       <h2 className="self-center font-integral leading-none text-[48px] font-extrabold">
-        New Arrivals
+        Top Selling
       </h2>
 
       <div className="flex justify-between py-[55px]">

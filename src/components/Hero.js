@@ -19,18 +19,18 @@ const Hero = () => {
           >
             Shop now
           </button>
-          <div className="flex  items-center text-left">
-            <div className="relative pr-8 text-center min-w-[220px]">
+          <div className="flex items-center text-left">
+            <div className="relative pr-8 ">
               <p className="text-[40px] font-bold">200+</p>
               <p className="text-[16px] text-black/60">International Brands</p>
               <div className="absolute top-1/4 right-0 h-1/2 border-r border-gray-300"></div>
             </div>
-            <div className="relative px-8 text-center min-w-[220px]">
+            <div className="relative px-8 ">
               <p className="text-[40px] font-bold">2,000+</p>
               <p className="text-[16px] text-black/60">High-Quality Products</p>
               <div className="absolute top-1/4 right-0 h-1/2 border-r border-gray-300"></div>
             </div>
-            <div className="px-8 text-center min-w-[220px]">
+            <div className="px-8 ">
               <p className="text-[40px] font-bold">30,000+</p>
               <p className="text-[16px] text-black/60">Happy Customers</p>
             </div>
