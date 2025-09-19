@@ -2,7 +2,6 @@ import Image from "next/image";
 import { Rate } from "antd";
 
 const ProductCard = ({ product }) => {
-  console.log("Product in ProductCard:", product);
   return (
     <div className="flex flex-col gap-1 ">
       <div className="relative w-[295px] h-[295px] rounded-3xl overflow-hidden ">

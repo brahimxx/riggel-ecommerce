@@ -1,0 +1,67 @@
+import Image from "next/image";
+
+const CategoriesBanner = () => {
+  return (
+    <div className="flex flex-col h-[870px] bg-[#F0F0F0] rounded-3xl max-w-screen-2xl mx-auto py-[70px] px-[64px] gap-[64px]">
+      <h2 className="self-center font-integral leading-none text-[48px] font-extrabold">
+        Browse by dress style
+      </h2>
+      <div className="flex flex-col gap-[20px]">
+        <div className="flex gap-[20px]">
+          <div className="relative h-[290px] w-[40%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+              Casual
+            </p>
+            <Image
+              src="/images/decorative_images/casual.png"
+              alt="Casual category image"
+              quality={100}
+              fill
+              className="object-cover "
+            />
+          </div>
+          <div className="relative h-[290px]  w-[60%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+              Formal
+            </p>
+            <Image
+              src="/images/decorative_images/formal.png"
+              alt="Formal category image"
+              quality={100}
+              fill
+              className="object-cover "
+            />
+          </div>
+        </div>
+        <div className="flex gap-[20px]">
+          <div className="relative h-[290px]  w-[60%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+              Party
+            </p>
+            <Image
+              src="/images/decorative_images/party.png"
+              alt="Party category image"
+              quality={100}
+              fill
+              className="object-cover "
+            />
+          </div>
+          <div className="relative h-[290px]  w-[40%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+              Gym
+            </p>
+            <Image
+              src="/images/decorative_images/gym.png"
+              alt="Gym category image"
+              quality={100}
+              fill
+              className="object-cover "
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CategoriesBanner;

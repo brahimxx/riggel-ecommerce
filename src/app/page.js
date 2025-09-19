@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import Separater from "@/components/Separater";
 import NewArrivals from "@/components/NewArrivals";
 import TopSelling from "@/components/TopSelling";
+import CategoriesBanner from "@/components/CategoriesBanner";
 
 export default function Home() {
   return (
@@ -11,7 +12,8 @@ export default function Home() {
       <Hero />
       <Separater />
       <NewArrivals />
-      <TopSelling />
+      {/* <TopSelling /> */}
+      <CategoriesBanner />
     </>
   );
 }
