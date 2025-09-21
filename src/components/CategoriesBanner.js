@@ -2,14 +2,14 @@ import Image from "next/image";
 
 const CategoriesBanner = () => {
   return (
-    <div className="flex flex-col h-[870px] bg-[#F0F0F0] rounded-3xl max-w-screen-2xl mx-auto py-[70px] px-[64px] gap-[64px]">
-      <h2 className="self-center font-integral leading-none text-[48px] font-extrabold">
+    <div className="flex flex-col lg:h-[870px] mx-4 bg-[#F0F0F0] rounded-3xl max-w-screen-2xl lg:mx-auto pt-[70px] pb-[20px] lg:pb-auto lg:pt-auto lg:py-[70px] px-[24px] lg:px-[64px] gap-[64px]">
+      <h2 className="self-center font-integral leading-none text-[32px] lg:text-[48px] font-extrabold">
         Browse by dress style
       </h2>
       <div className="flex flex-col gap-[20px]">
-        <div className="flex gap-[20px]">
-          <div className="relative h-[290px] w-[40%] rounded-4xl overflow-hidden">
-            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+        <div className="flex lg:flex-row flex-col gap-[20px]">
+          <div className="relative lg:h-[290px] h-[190px] lg:w-[40%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[24px] lg:text-[36px] font-bold p-[35px]">
               Casual
             </p>
             <Image
@@ -20,8 +20,8 @@ const CategoriesBanner = () => {
               className="object-cover "
             />
           </div>
-          <div className="relative h-[290px]  w-[60%] rounded-4xl overflow-hidden">
-            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+          <div className="relative lg:h-[290px] h-[190px] lg:w-[60%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[24px] lg:text-[36px] font-bold p-[35px]">
               Formal
             </p>
             <Image
@@ -33,9 +33,9 @@ const CategoriesBanner = () => {
             />
           </div>
         </div>
-        <div className="flex gap-[20px]">
-          <div className="relative h-[290px]  w-[60%] rounded-4xl overflow-hidden">
-            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+        <div className="flex lg:flex-row flex-col gap-[20px]">
+          <div className="relative lg:h-[290px] h-[190px] lg:w-[60%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[24px] lg:text-[36px] font-bold p-[35px]">
               Party
             </p>
             <Image
@@ -46,8 +46,8 @@ const CategoriesBanner = () => {
               className="object-cover "
             />
           </div>
-          <div className="relative h-[290px]  w-[40%] rounded-4xl overflow-hidden">
-            <p className="relative z-1 text-[36px] font-semibold p-[35px]">
+          <div className="relative lg:h-[290px] h-[190px] lg:w-[40%] rounded-4xl overflow-hidden">
+            <p className="relative z-1 text-[24px] lg:text-[36px] font-bold p-[35px]">
               Gym
             </p>
             <Image

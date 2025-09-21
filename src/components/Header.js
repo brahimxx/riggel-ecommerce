@@ -4,7 +4,7 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 const Header = () => {
   return (
     <nav className="bg-white border-gray-200 ">
-      <div className=" flex flex-wrap items-center justify-between max-w-screen-2xl mx-auto py-6">
+      <div className=" flex flex-wrap items-center justify-between max-w-screen-2xl mx-auto py-6 px-4 lg:px-0">
         <a
           href="https://flowbite.com/"
           className="flex items-center space-x-3 rtl:space-x-reverse"

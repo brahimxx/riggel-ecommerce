@@ -3,25 +3,25 @@ import { Input } from "antd";
 
 const NewSletter = () => {
   return (
-    <div className="relative">
-      <div className="flex font-integral justify-between py-[36px] px-[64px] bg-black rounded-3xl max-w-screen-2xl mx-auto h-[180px] z-10">
-        <h2 className="text-white font-integral text-[40px] font-extrabold w-[50%]">
+    <div className=" relative">
+      <div className="mx-4 flex flex-col lg:flex-row font-integral justify-between py-[32px] lg:py-[36px] px-[24px] lg:px-[64px] bg-black rounded-3xl max-w-screen-2xl lg:mx-auto h-[300px] lg:h-[180px] z-10">
+        <h2 className="text-white font-integral text-[26px] lg:text-[40px] font-extrabold lg:w-[50%]">
           Stay up to date about our latest offers
         </h2>
-        <form className="flex flex-col w-[349px] h-[108px] justify-between">
+        <form className="flex flex-col w-full lg:w-[349px] h-[108px] justify-between">
           <Input
             id="newsletter-email"
             type="email"
             required
             prefix={
-              <MailOutlined className="mx-[10px] flex items-center text-2xl !text-gray-500 " />
+              <MailOutlined className="mx-[10px] flex  text-[16px] lg:text-2xl !text-gray-400 " />
             }
             placeholder="Enter your email address"
-            className="w-full h-[48px] text-[22px] text-gray-800 bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 !rounded-3xl"
+            className="w-full h-[48px] text-[10px] lg:text-[22px] text-gray-800 bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 !rounded-3xl"
           />
 
           <button
-            className="cursor-pointer w-full text-[16px] h-[46px]  bg-white rounded-3xl"
+            className="cursor-pointer w-full text-[10px] lg:text-[16px] h-[46px] bg-white rounded-3xl "
             type="submit"
           >
             Subscribe to Newsletter

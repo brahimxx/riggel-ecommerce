@@ -3,7 +3,11 @@ import { useState, useEffect } from "react";
 import Carousel from "react-multi-carousel";
 import "react-multi-carousel/lib/styles.css";
 
-const MyCarousel = ({ items }) => {
+const MyCarousel = ({
+  items,
+  partialVisible = false,
+  numberOfItems = [5, 3, 2, 1],
+}) => {
   const [isMobile, setIsMobile] = useState(false); // Default to false
 
   useEffect(() => {
@@ -26,19 +30,21 @@ const MyCarousel = ({ items }) => {
   const responsive = {
     largedesktop: {
       breakpoint: { max: 3000, min: 1440 },
-      items: 4,
+      items: numberOfItems[0],
     },
     desktop: {
       breakpoint: { max: 1440, min: 1280 },
-      items: 3,
+      items: numberOfItems[1],
     },
     tablet: {
       breakpoint: { max: 1280, min: 768 },
-      items: 2,
+      items: numberOfItems[2],
+      partialVisibilityGutter: 30,
     },
     mobile: {
       breakpoint: { max: 768, min: 0 },
-      items: 1,
+      items: numberOfItems[3],
+      partialVisibilityGutter: 20,
     },
   };
 
@@ -50,6 +56,7 @@ const MyCarousel = ({ items }) => {
       responsive={responsive}
       ssr={true}
       removeArrowOnDeviceType={["tablet", "mobile"]}
+      partialVisible={partialVisible}
     >
       {items}
     </Carousel>

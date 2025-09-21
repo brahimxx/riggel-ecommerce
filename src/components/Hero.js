@@ -2,41 +2,48 @@ import Image from "next/image";
 const Hero = () => {
   return (
     <div className=" bg-[#F2F0F1] overflow-hidden">
-      <div className="relative flex  max-w-screen-2xl mx-auto ">
-        <div className=" flex flex-col gap-6 py-[100px] z-1">
-          <h1 className="font-integral leading-none text-[64px] font-extrabold">
+      <div className="relative flex lg:flex-row flex-col h-[850px] lg:h-full max-w-screen-2xl mx-auto px-4 lg:px-0">
+        <div className=" flex flex-col gap-6 py-10 lg:py-[100px] z-1">
+          <h1 className="font-integral leading-none text-[36px] lg:text-[64px] font-extrabold">
             Find clothes
             <br /> that matches your style
           </h1>
-          <p className="text-4 text-black/60">
+          <p className="text-[14px] lg:text-4 text-black/60">
             Browse through our diverse range of meticulously crafted garments,
             designed to bring out your individuality and cater to your sense of
             style.
           </p>
           <button
             type="button"
-            className="text-white bg-black hover:bg-black/90 cursor-pointer w-[180px]  focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm  py-3 text-center me-2 mb-2 "
+            className="text-white bg-black hover:bg-black/90 cursor-pointer w-full lg:w-[180px]  focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm  py-3 text-center me-2 mb-2 "
           >
             Shop now
           </button>
-          <div className="flex items-center text-left">
+          <div className="flex flex-wrap justify-center gap-4 lg:justify-start items-center text-left">
             <div className="relative pr-8 ">
-              <p className="text-[40px] font-bold">200+</p>
-              <p className="text-[16px] text-black/60">International Brands</p>
+              <p className="text-[24px] lg:text-[40px] font-bold">200+</p>
+              <p className="text-[11px] lg:text-[16px] text-black/80">
+                International Brands
+              </p>
               <div className="absolute top-1/4 right-0 h-1/2 border-r border-gray-300"></div>
             </div>
-            <div className="relative px-8 ">
-              <p className="text-[40px] font-bold">2,000+</p>
-              <p className="text-[16px] text-black/60">High-Quality Products</p>
-              <div className="absolute top-1/4 right-0 h-1/2 border-r border-gray-300"></div>
+            <div className="relative pl-8 lg:px-8 ">
+              <p className="text-[24px] lg:text-[40px] font-bold">2,000+</p>
+              <p className="text-[11px] lg:text-[16px] text-black/80">
+                High-Quality Products
+              </p>
+              <div className="hidden lg:absolute top-1/4 right-0 h-1/2 border-r border-gray-300"></div>
             </div>
             <div className="px-8 ">
-              <p className="text-[40px] font-bold">30,000+</p>
-              <p className="text-[16px] text-black/60">Happy Customers</p>
+              <p className="text-[24px] lg:text-[40px] font-bold">30,000+</p>
+              <p className="text-[11px] lg:text-[16px] text-black/80">
+                Happy Customers
+              </p>
             </div>
           </div>
         </div>
-        <div className="absolute w-[500px] h-[500px] bottom-0 right-20 ">
+
+        <div className="absolute w-[320px] h-[320px] lg:w-[500px] lg:h-[500px] bottom-0 left-1/2 transform -translate-x-1/2 lg:left-auto lg:transform-none lg:translate-none lg:right-0 ">
           <Image
             src="/images/decorative_images/hero_image.png"
             alt="Hero image"
@@ -44,7 +51,7 @@ const Hero = () => {
             fill
             className="object-contain "
           />
-          <div className="absolute w-[100px] h-[100px] top-5 right-0 ">
+          <div className="absolute lg:w-[100px] lg:h-[100px] w-[60px] h-[60px] lg:top-5 right-0 ">
             <Image
               src="/images/decorative_images/star.png"
               alt="star image"
@@ -53,7 +60,7 @@ const Hero = () => {
               className="object-contain "
             />
           </div>
-          <div className="absolute w-[40px] h-[40px] bottom-50 left-0 ">
+          <div className="absolute w-[30px] h-[30px] bottom-50 lg:left-0 left-5 lg:w-[40px] lg:h-[40px]">
             <Image
               src="/images/decorative_images/star.png"
               alt="star image"

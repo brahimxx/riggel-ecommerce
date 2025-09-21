@@ -15,7 +15,7 @@ export default function Home() {
       <Hero />
       <Separater />
       <NewArrivals />
-      {/* <TopSelling /> */}
+      <TopSelling />
       <CategoriesBanner />
       <ReviewSection />
       <NewSletter />
