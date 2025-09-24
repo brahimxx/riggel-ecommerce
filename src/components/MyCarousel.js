@@ -6,7 +6,7 @@ import "react-multi-carousel/lib/styles.css";
 const MyCarousel = ({
   items,
   partialVisible = false,
-  numberOfItems = [5, 3, 2, 1],
+  numberOfItems = [4, 3, 2, 1],
 }) => {
   const [isMobile, setIsMobile] = useState(false); // Default to false
 
@@ -31,20 +31,22 @@ const MyCarousel = ({
     largedesktop: {
       breakpoint: { max: 3000, min: 1440 },
       items: numberOfItems[0],
+      partialVisibilityGutter: 10,
     },
     desktop: {
-      breakpoint: { max: 1440, min: 1280 },
+      breakpoint: { max: 1439, min: 1024 },
       items: numberOfItems[1],
+      partialVisibilityGutter: 10,
     },
     tablet: {
-      breakpoint: { max: 1280, min: 768 },
+      breakpoint: { max: 1023, min: 550 },
       items: numberOfItems[2],
-      partialVisibilityGutter: 30,
+      partialVisibilityGutter: 10,
     },
     mobile: {
-      breakpoint: { max: 768, min: 0 },
+      breakpoint: { max: 549, min: 0 },
       items: numberOfItems[3],
-      partialVisibilityGutter: 20,
+      partialVisibilityGutter: 10,
     },
   };
 

@@ -4,7 +4,7 @@ import { ShoppingCartOutlined } from "@ant-design/icons";
 const Header = () => {
   return (
     <nav className="bg-white border-gray-200 ">
-      <div className=" flex flex-wrap items-center justify-between max-w-screen-2xl mx-auto py-6 px-4 lg:px-0">
+      <div className=" flex flex-wrap items-center justify-between max-w-screen-2xl mx-auto py-6 px-4">
         <a
           href="https://flowbite.com/"
           className="flex items-center space-x-3 rtl:space-x-reverse"
@@ -68,6 +68,14 @@ const Header = () => {
                 New Arrivals
               </a>
             </li>
+            <li>
+              <a
+                href="#"
+                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 "
+              >
+                Brands
+              </a>
+            </li>
           </ul>
         </div>
         <div className="flex flex-row gap-5">
@@ -118,7 +126,7 @@ const Header = () => {
               <input
                 type="text"
                 id="search-navbar"
-                className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500     "
+                className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500     "
                 placeholder="Search..."
               />
             </div>

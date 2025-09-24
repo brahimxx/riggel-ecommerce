@@ -31,8 +31,8 @@ export default async function TopSelling() {
   ));
 
   return (
-    <div className="flex flex-col py-[50px] mx-4 lg:px-0 border-t-2 border-gray-300/50 lg:py-[72px] max-w-screen-2xl lg:mx-auto">
-      <h2 className="self-center font-integral leading-none  text-[32px] lg:text-[48px] font-extrabold">
+    <div className="flex flex-col py-[50px] px-4 lg:py-[72px] max-w-screen-2xl mx-auto">
+      <h2 className="self-center font-integral leading-none text-[32px] lg:text-[40px] xl:text-[48px] font-extrabold">
         Top Selling
       </h2>
 

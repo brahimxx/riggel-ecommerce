@@ -31,12 +31,14 @@ const ReviewSection = () => {
 
   return (
     <>
-      <div className="flex flex-col mx-4 py-[50px] lg:py-[80px] max-w-screen-2xl lg:mx-auto gap-[24px] lg:gap-10">
-        <h2 className="self-center font-integral leading-none text-[32px] lg:text-[48px] font-extrabold">
-          Our happy Customers
-        </h2>
+      <div className="mx-4">
+        <div className="flex flex-col  py-[50px] lg:py-[80px] max-w-screen-2xl lg:mx-auto gap-[24px] lg:gap-10">
+          <h2 className="self-center font-integral leading-none text-[32px] lg:text-[40px] xl:text-[48px] font-extrabold">
+            Our happy Customers
+          </h2>
 
-        <MyCarousel items={feedbackItems} numberOfItems={[4, 3, 2, 1]} />
+          <MyCarousel items={feedbackItems} numberOfItems={[4, 3, 2, 1]} />
+        </div>
       </div>
     </>
   );

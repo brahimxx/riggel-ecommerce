@@ -3,14 +3,14 @@ import { Rate } from "antd";
 
 const ProductCard = ({ product }) => {
   return (
-    <div className="flex flex-col gap-1 w-[250px] ">
-      <div className="relative w-[250px] h-[240px] lg:w-[295px] lg:h-[295px] rounded-3xl overflow-hidden ">
+    <div className="flex flex-col gap-1 w-[95%] ">
+      <div className="relative w-full h-[270px] xl:w-[340px] xl:h-[295px] rounded-3xl overflow-hidden ">
         <Image
           src={product.main_image || "/images/products_images/product_test.png"}
           alt="product image"
           quality={100}
           fill
-          className="object-cover lg:object-contain "
+          className="object-fill  "
         />
       </div>
       <p className="text-[16px] lg:text-[20px] font-bold pt-2 lg:pt-0 lg:py-2">

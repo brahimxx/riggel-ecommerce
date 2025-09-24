@@ -5,7 +5,7 @@ import NewArrivals from "@/components/NewArrivals";
 import TopSelling from "@/components/TopSelling";
 import CategoriesBanner from "@/components/CategoriesBanner";
 import ReviewSection from "@/components/ReviewSection";
-import NewSletter from "@/components/NewSletter";
+import NewsLetter from "@/components/NewsLetter";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -18,7 +18,7 @@ export default function Home() {
       <TopSelling />
       <CategoriesBanner />
       <ReviewSection />
-      <NewSletter />
+      <NewsLetter />
       <Footer />
     </>
   );
