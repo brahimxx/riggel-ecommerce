@@ -5,7 +5,7 @@ import DataTable from "../components/DataTable";
 import ProductForm from "../components/ProductForm";
 
 const Products = () => {
-  const [products, setProducts] = useState([]); // For products
+  const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +14,6 @@ const Products = () => {
 
   const fetchData = () => {
     setLoading(true);
-
     Promise.all([
       fetch("/api/products").then((res) => res.json()),
       fetch("/api/categories").then((res) => res.json()),
@@ -31,19 +30,16 @@ const Products = () => {
     fetchData();
   }, []);
 
-  const handleOk = () => {
-    setIsModalOpen(false);
-  };
   const handleCancel = () => {
     setIsModalOpen(false);
     setEditingProduct(null);
-    setError(null); // clear error on modal close
+    setError(null);
   };
 
   const handleSuccess = () => {
-    fetchData(); // Refresh product list
-    setIsModalOpen(false); // Close modal
-    setEditingProduct(null); // Reset form
+    fetchData();
+    setIsModalOpen(false);
+    setEditingProduct(null);
   };
 
   const handleEditProduct = async (product) => {
@@ -54,7 +50,6 @@ const Products = () => {
       const fullProduct = await res.json();
       setEditingProduct(fullProduct);
       setIsModalOpen(true);
-      console.log(fullProduct);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -76,6 +71,16 @@ const Products = () => {
         onDeleteSuccess={fetchData}
         apiBaseUrl="products"
         rowKeyField="product_id"
+        columnsOverride={[
+          { key: "product_id", title: "ID" },
+          { key: "name", title: "Name" },
+          { key: "slug", title: "Slug" }, // explicit
+          { key: "price", title: "Price" },
+          { key: "quantity", title: "Qty" },
+          { key: "rating", title: "Rating" }, // explicit
+          { key: "category_id", title: "Category" },
+          { key: "created_at", title: "Created" },
+        ]}
       />
 
       <Modal

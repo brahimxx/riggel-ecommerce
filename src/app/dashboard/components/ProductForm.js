@@ -50,6 +50,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         price: product.price || 0,
         quantity: product.quantity ?? 0,
         description: product.description || "",
+        rating: typeof product.rating === "number" ? product.rating : 0,
       });
       setProductName(product.name || "");
     } else if (!product && categories.length > 0) {
@@ -256,6 +257,21 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       </Form.Item>
       <Form.Item name="description" label="Description">
         <TextArea rows={4} placeholder="Product Description" />
+      </Form.Item>
+      <Form.Item
+        name="rating"
+        label="Rating"
+        rules={[
+          { type: "number", min: 0, max: 5, message: "Rating must be 0–5" },
+        ]}
+      >
+        <InputNumber
+          min={0}
+          max={5}
+          step={0.1}
+          precision={1}
+          style={{ width: "100%" }}
+        />
       </Form.Item>
       <Form.Item label="Images">
         <Upload

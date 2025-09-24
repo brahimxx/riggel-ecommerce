@@ -24,6 +24,7 @@ const DataTable = ({
   expandable = defaultExpandable,
   showTitle = false,
   showFooter = true,
+  columnsOverride, // [{ key, title }]
 }) => {
   const [bordered, setBordered] = useState(false);
   const [size, setSize] = useState("large");
@@ -33,11 +34,13 @@ const DataTable = ({
   const [xScroll, setXScroll] = useState("unset");
   const [expandableState, setExpandable] = useState(expandable);
 
+  // Rename internal UI toggles to avoid collision with props
+  const [showTitleUI, setShowTitleUI] = useState(showTitle);
+  const [showFooterUI, setShowFooterUI] = useState(showFooter);
+
   const showModal = (record = null) => {
     if (record) {
-      if (typeof onEdit === "function") {
-        onEdit(record);
-      }
+      if (typeof onEdit === "function") onEdit(record);
     } else {
       if (setIsModalOpen) setIsModalOpen(true);
     }
@@ -48,20 +51,39 @@ const DataTable = ({
       const id = record[rowKeyField];
       if (!id) throw new Error("Invalid record id for deletion");
 
-      const res = await fetch(`/api/${apiBaseUrl}/${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/${apiBaseUrl}/${id}`, { method: "DELETE" });
+
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Delete failed");
+        let errMsg = `Delete failed (${res.status})`;
+        try {
+          const ct = res.headers.get("content-type") || "";
+          if (ct.includes("application/json")) {
+            const data = await res.json();
+            if (data?.error) errMsg = data.error;
+          } else {
+            const text = await res.text();
+            if (text) errMsg = text;
+          }
+        } catch {}
+        throw new Error(errMsg);
       }
-      message.success(`${apiBaseUrl.slice(0, -1)} deleted successfully`);
+
+      let msg = `${apiBaseUrl.slice(0, -1)} deleted successfully`;
+      try {
+        const ct = res.headers.get("content-type") || "";
+        if (ct.includes("application/json")) {
+          const data = await res.json();
+          msg = data?.message || msg;
+        }
+      } catch {}
+
+      message.success(msg);
 
       if (typeof onDeleteSuccess === "function") {
         onDeleteSuccess();
       }
     } catch (error) {
-      message.error(error.message);
+      message.error(error.message || "Delete failed");
     }
   };
 
@@ -69,7 +91,7 @@ const DataTable = ({
     title: "Action",
     key: "action",
     sorter: true,
-    render: (text, record) => (
+    render: (_, record) => (
       <Space size="middle">
         <Button
           type="primary"
@@ -88,45 +110,49 @@ const DataTable = ({
     ),
   };
 
+  const makeCol = (key, titleLabel) => ({
+    title:
+      titleLabel ||
+      key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
+    dataIndex: key,
+    key,
+    sorter: (a, b) => {
+      const aVal = a[key] ?? "";
+      const bVal = b[key] ?? "";
+      if (typeof aVal === "number" && typeof bVal === "number")
+        return aVal - bVal;
+      return String(aVal).localeCompare(String(bVal));
+    },
+  });
+
   const columns = useMemo(() => {
+    if (columnsOverride && columnsOverride.length) {
+      const mapped = columnsOverride.map((c) => makeCol(c.key, c.title));
+      return [...mapped, actionColumn];
+    }
     if (!data || data.length === 0) return [actionColumn];
     const baseCols = Object.keys(data[0])
       .filter((key) => key !== "key")
-      .map((key) => ({
-        title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
-        dataIndex: key,
-        key,
-        sorter: (a, b) => {
-          const aVal = a[key] ?? "";
-          const bVal = b[key] ?? "";
-          if (typeof aVal === "number" && typeof bVal === "number") {
-            return aVal - bVal;
-          }
-          return String(aVal).localeCompare(String(bVal));
-        },
-      }));
+      .map((key) => makeCol(key));
     return [...baseCols, actionColumn];
-  }, [data]);
+  }, [data, columnsOverride]);
 
   const handleBorderChange = (checked) => setBordered(checked);
   const handleSizeChange = (e) => setSize(e.target.value);
   const handleExpandChange = (checked) =>
     setExpandable(checked ? defaultExpandable : undefined);
   const handleEllipsisChange = (checked) => setEllipsis(checked);
-  const handleTitleChange = (checked) => setShowTitle(checked);
-  const handleFooterChange = (checked) => setShowFooter(checked);
+  const handleTitleChange = (checked) => setShowTitleUI(checked);
+  const handleFooterChange = (checked) => setShowFooterUI(checked);
   const handleRowSelectionChange = (checked) =>
     setRowSelection(checked ? {} : undefined);
   const handleYScrollChange = (checked) => setYScroll(checked);
   const handleXScrollChange = (e) => setXScroll(e.target.value);
 
   const scroll = {};
-  if (yScroll) {
-    scroll.y = 240;
-  }
-  if (xScroll !== "unset") {
-    scroll.x = "100vw";
-  }
+  if (yScroll) scroll.y = 240;
+  if (xScroll !== "unset") scroll.x = "100vw";
+
   const tableColumns = columns.map((col) => ({ ...col, ellipsis }));
   if (xScroll === "fixed") {
     tableColumns[0].fixed = true;
@@ -138,8 +164,8 @@ const DataTable = ({
     loading,
     size,
     expandable: expandableState,
-    title: showTitle ? defaultTitle : undefined,
-    footer: showFooter ? defaultFooter : undefined,
+    title: showTitleUI ? defaultTitle : undefined,
+    footer: showFooterUI ? defaultFooter : undefined,
     rowSelection,
     scroll,
     tableLayout: "unset",
@@ -156,10 +182,10 @@ const DataTable = ({
           <Switch checked={bordered} onChange={handleBorderChange} />
         </Form.Item>
         <Form.Item label="Title">
-          <Switch checked={showTitle} onChange={handleTitleChange} />
+          <Switch checked={showTitleUI} onChange={handleTitleChange} />
         </Form.Item>
         <Form.Item label="Footer">
-          <Switch checked={showFooter} onChange={handleFooterChange} />
+          <Switch checked={showFooterUI} onChange={handleFooterChange} />
         </Form.Item>
         <Form.Item label="Expandable">
           <Switch checked={!!expandableState} onChange={handleExpandChange} />
@@ -170,7 +196,6 @@ const DataTable = ({
             onChange={handleRowSelectionChange}
           />
         </Form.Item>
-
         <Form.Item label="Ellipsis">
           <Switch checked={!!ellipsis} onChange={handleEllipsisChange} />
         </Form.Item>
@@ -189,11 +214,12 @@ const DataTable = ({
           </Radio.Group>
         </Form.Item>
       </Form>
+
       <div className="w-[80px] mb-5 self-end mr-4">
         <Button
           type="primary"
           icon={<AppstoreAddOutlined />}
-          onClick={() => showModal(null)}
+          onClick={() => setIsModalOpen && setIsModalOpen(true)}
         >
           Add
         </Button>
