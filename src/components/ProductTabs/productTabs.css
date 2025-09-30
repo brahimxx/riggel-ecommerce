@@ -1,0 +1,30 @@
+.custom-product-tabs .ant-tabs-nav {
+  margin-bottom: 0 !important;
+  border: none !important;
+  background: transparent;
+}
+.custom-product-tabs .ant-tabs-tab {
+  font-size: 1.05rem;
+  color: #aaa;
+  width: 400px;
+  padding-bottom: 8px;
+  transition: all 0.3s ease;
+}
+.ant-tabs-tab {
+  display: flex;
+  justify-content: center;
+}
+.custom-product-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #111 !important;
+  font-weight: 600;
+}
+.custom-product-tabs .ant-tabs-ink-bar {
+  background: #111 !important;
+  height: 2.5px !important;
+  border-radius: 2px;
+}
+.custom-product-tabs .ant-tabs-tab:not(.ant-tabs-tab-active) .ant-tabs-tab-btn {
+  color: #999 !important;
+  font-weight: 400;
+  opacity: 0.7;
+}
