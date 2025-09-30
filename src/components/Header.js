@@ -1,18 +1,19 @@
 import React from "react";
 import { ShoppingCartOutlined } from "@ant-design/icons";
+import Link from "next/link";
 
 const Header = () => {
   return (
     <nav className="bg-white border-gray-200 ">
       <div className=" flex flex-wrap items-center justify-between max-w-screen-2xl mx-auto py-6 px-4">
-        <a
-          href="https://flowbite.com/"
+        <Link
+          href="/"
           className="flex items-center space-x-3 rtl:space-x-reverse"
         >
-          <span className="font-integral self-center text-2xl font-semibold whitespace-nowrap ">
+          <span className="font-integral self-center text-2xl font-semibold whitespace-nowrap">
             SHOP.CO
           </span>
-        </a>
+        </Link>
         <div
           className="items-center justify-between hidden w-full md:flex md:w-auto "
           id="navbar-search"

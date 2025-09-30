@@ -1,9 +1,13 @@
 import Image from "next/image";
 import { Rate } from "antd";
+import Link from "next/link";
 
 const ProductCard = ({ product }) => {
   return (
-    <div className="flex flex-col gap-1 w-[95%] ">
+    <Link
+      href={`/products/${product.slug}`}
+      className="flex flex-col gap-1 w-[95%] "
+    >
       <div className="relative w-full h-[270px] xl:w-[340px] xl:h-[295px] rounded-3xl overflow-hidden ">
         <Image
           src={product.main_image || "/images/products_images/product_test.png"}
@@ -23,7 +27,7 @@ const ProductCard = ({ product }) => {
         <p className="text-[14]">{product.rating}/5</p>
       </div>
       <p className="text-[20px] lg:text-[24px] font-bold">${product.price}</p>
-    </div>
+    </Link>
   );
 };
 

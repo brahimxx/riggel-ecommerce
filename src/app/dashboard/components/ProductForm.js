@@ -171,7 +171,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       };
 
       const url = product
-        ? `/api/products/${product.product_id}`
+        ? `/api/products/by-id/${product.product_id}`
         : `/api/products`;
 
       const res = await fetch(url, {
