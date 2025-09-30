@@ -45,7 +45,7 @@ const Products = () => {
   const handleEditProduct = async (product) => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/products/${product.product_id}`);
+      const res = await fetch(`/api/products/by-id/${product.product_id}`);
       if (!res.ok) throw new Error("Failed to fetch product details");
       const fullProduct = await res.json();
       setEditingProduct(fullProduct);
@@ -69,7 +69,7 @@ const Products = () => {
         setIsModalOpen={setIsModalOpen}
         onEdit={handleEditProduct}
         onDeleteSuccess={fetchData}
-        apiBaseUrl="products"
+        apiBaseUrl="products/by-id"
         rowKeyField="product_id"
         columnsOverride={[
           { key: "product_id", title: "ID" },
