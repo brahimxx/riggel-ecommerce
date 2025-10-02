@@ -1,7 +1,7 @@
 import pool from "@/lib/db";
 
 export async function GET(req, { params }) {
-  const { productId } = params;
+  const { productId } = await params;
 
   if (!productId) {
     return Response.json({ error: "Missing product id" }, { status: 400 });

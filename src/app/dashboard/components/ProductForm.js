@@ -1,3 +1,4 @@
+// app/dashboard/components/ProductForm.js
 import React, { useState, useEffect } from "react";
 import {
   Button,
@@ -8,68 +9,123 @@ import {
   Select,
   message,
   Progress,
+  Space,
+  Divider,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 
-// Allowed image types and max size (5MB)
+// (Keep your ALLOWED_IMAGE_TYPES and MAX_SIZE constants)
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
 ];
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 5 * 1024 * 1024;
 
 const { TextArea } = Input;
 
 const ProductForm = ({ product = null, categories, onSuccess }) => {
   const [form] = Form.useForm();
   const [images, setImages] = useState([]);
-
-  // Upload progress as percentage
   const [uploadProgress, setUploadProgress] = useState(null);
-
-  // Track productName to control Upload disabled state
   const [productName, setProductName] = useState(product?.name || "");
+  const [attributes, setAttributes] = useState([]);
 
-  // Initialize images state when product changes
+  // Fetch all attributes and their values for variants
   useEffect(() => {
-    if (product && product.images) {
-      setImages(product.images);
-    } else {
-      setImages([]);
-    }
-  }, [product]);
+    fetch("/api/attributes")
+      .then((res) => res.json())
+      .then((data) => setAttributes(data))
+      .catch(() => setAttributes([]));
+  }, []);
 
-  // Initialize other form fields (without images)
+  // Set initial form values, including variants
   useEffect(() => {
-    if (product && categories.length > 0) {
+    if (product) {
+      // Transform variant attributes array to object for AntD Form
+      const variants = (product.variants || []).map((v) => ({
+        ...v,
+        attributes: Array.isArray(v.attributes)
+          ? v.attributes.reduce((acc, attr) => {
+              acc[attr.name] = attr.value;
+              return acc;
+            }, {})
+          : v.attributes || {},
+      }));
       form.setFieldsValue({
-        name: product.name || "",
-        category_id: product.category_id || "",
-        price: product.price || 0,
-        quantity: product.quantity ?? 0,
-        description: product.description || "",
-        rating: typeof product.rating === "number" ? product.rating : 0,
+        ...product,
+        variants,
       });
+      setImages(product.images || []);
       setProductName(product.name || "");
-    } else if (!product && categories.length > 0) {
+    } else {
       form.resetFields();
+      form.setFieldsValue({ variants: [{}] }); // Start with one empty variant
+      setImages([]);
       setProductName("");
     }
-  }, [product, categories, form]);
+  }, [product, form]);
 
-  // Update productName state when form values change
-  const onValuesChange = (changedValues, allValues) => {
+  const onValuesChange = (changedValues) => {
     if (changedValues.name !== undefined) {
       setProductName(changedValues.name);
     }
   };
 
-  // Helper: get productId or fallback
+  // (Keep your customRequest, beforeUpload, image handling functions the same)
+  // ...
   const getProductId = () => product?.product_id || productName || "new";
-
-  // Upload validation
+  const handleUploadSuccess = (response) => {
+    setImages((imgs) => [
+      ...imgs,
+      {
+        id: null,
+        url: response.url,
+        alt_text: "",
+        sort_order: imgs.length,
+        is_primary: imgs.length === 0,
+      },
+    ]);
+  };
+  const customRequest = (options) => {
+    const { file, onSuccess, onError, onProgress } = options;
+    try {
+      const productId = getProductId();
+      if (!productId)
+        throw new Error("Product ID or name required before uploading images.");
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("productId", productId);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/upload");
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percent = (event.loaded / event.total) * 100;
+          setUploadProgress(percent);
+          onProgress({ percent });
+        }
+      };
+      xhr.onload = () => {
+        setUploadProgress(null);
+        if (xhr.status < 200 || xhr.status >= 300) {
+          onError(new Error(xhr.statusText));
+          return;
+        }
+        const response = JSON.parse(xhr.responseText);
+        handleUploadSuccess(response);
+        onSuccess(response);
+      };
+      xhr.onerror = () => {
+        setUploadProgress(null);
+        onError(new Error(xhr.statusText));
+      };
+      xhr.send(formData);
+    } catch (err) {
+      onError(err);
+      setUploadProgress(null);
+    }
+  };
   const beforeUpload = (file) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       message.error("Only JPG, PNG, GIF, or WEBP images are allowed.");
@@ -81,72 +137,8 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     }
     return true;
   };
-
-  // Add uploaded image to images state once
-  const handleUploadSuccess = (response) => {
-    setImages((imgs) => [
-      ...imgs,
-      {
-        id: null,
-        url: response.url,
-        alt_text: "",
-        sort_order: imgs.length,
-        is_primary: imgs.length === 0, // first image is primary by default
-      },
-    ]);
-  };
-
-  // Upload handler: send productId along with file
-  const customRequest = (options) => {
-    const { file, onSuccess, onError, onProgress } = options;
-    try {
-      const productId = getProductId();
-      if (!productId)
-        throw new Error("Product ID or name required before uploading images.");
-
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("productId", productId);
-
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/upload");
-
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = (event.loaded / event.total) * 100;
-          setUploadProgress(percent);
-          onProgress({ percent });
-        }
-      };
-
-      xhr.onload = () => {
-        setUploadProgress(null);
-        if (xhr.status < 200 || xhr.status >= 300) {
-          onError(new Error(xhr.statusText));
-          return;
-        }
-        const response = JSON.parse(xhr.responseText);
-        handleUploadSuccess(response);
-        onSuccess(response);
-      };
-
-      xhr.onerror = () => {
-        setUploadProgress(null);
-        onError(new Error(xhr.statusText));
-      };
-
-      xhr.send(formData);
-    } catch (err) {
-      onError(err);
-      setUploadProgress(null);
-    }
-  };
-
-  // Remove image from state by index
   const removeImage = (idx) =>
     setImages((imgs) => imgs.filter((_, i) => i !== idx));
-
-  // Reorder images: move from one index to another
   const moveImage = (from, to) => {
     setImages((imgs) => {
       const arr = [...imgs];
@@ -156,23 +148,39 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     });
   };
 
-  // Form submit handler
+  // Updated submit handler
   const onFinish = async (values) => {
     try {
-      const productNameFinal = values.name || "product";
+      // Transform variants to include attributes array
+      const variants = (values.variants || []).map((variant) => {
+        // attributes: { Color: "Black", Size: "M" } => [{ name: "Color", value: "Black" }, ...]
+        const attrs = attributes.map((attr) => ({
+          name: attr.name,
+          value: variant.attributes?.[attr.name] || "",
+        }));
+        return {
+          ...variant,
+          attributes: attrs,
+        };
+      });
       const payload = {
         ...values,
+        variants,
         images: images.map((img, idx) => ({
           ...img,
-          alt_text: `Image of ${productNameFinal}`,
+          alt_text: `Image of ${values.name}`,
           is_primary: idx === 0,
           sort_order: idx,
         })),
       };
 
+      // Remove the single price/quantity fields if they exist
+      delete payload.price;
+      delete payload.quantity;
+
       const url = product
         ? `/api/products/by-id/${product.product_id}`
-        : `/api/products`;
+        : `/api/products/by-id`;
 
       const res = await fetch(url, {
         method: product ? "PUT" : "POST",
@@ -188,91 +196,121 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       message.success(
         `Product ${product ? "updated" : "created"} successfully`
       );
-      onSuccess && onSuccess();
-
-      // Reset form and images
-      form.resetFields();
-      setImages([]);
-      setProductName("");
+      onSuccess?.();
     } catch (err) {
       console.error(err);
-      message.error(
-        err.message || "Something went wrong while submitting the form."
-      );
+      message.error(err.message || "Something went wrong.");
     }
   };
 
   return (
     <Form
       form={form}
-      labelCol={{ span: 4 }}
-      wrapperCol={{ span: 14 }}
-      layout="horizontal"
-      style={{ maxWidth: 800 }}
+      layout="vertical"
       onFinish={onFinish}
       onValuesChange={onValuesChange}
     >
-      <Form.Item
-        name="name"
-        label="Name"
-        rules={[{ required: true, message: "Product name is required" }]}
-      >
+      <Form.Item name="name" label="Name" rules={[{ required: true }]}>
         <Input placeholder="Product Name" />
       </Form.Item>
       <Form.Item
         name="category_id"
         label="Category"
-        rules={[{ required: true, message: "Select a category" }]}
+        rules={[{ required: true }]}
       >
         <Select placeholder="Select a category">
-          {categories
-            .filter((cat) => cat.category_id != null)
-            .map((cat) => (
-              <Select.Option key={cat.category_id} value={cat.category_id}>
-                {cat.name}
-              </Select.Option>
-            ))}
+          {categories.map((cat) => (
+            <Select.Option key={cat.category_id} value={cat.category_id}>
+              {cat.name}
+            </Select.Option>
+          ))}
         </Select>
       </Form.Item>
-      <Form.Item
-        name="price"
-        label="Price"
-        rules={[{ required: true, message: "Price is required" }]}
-      >
-        <InputNumber min={0} style={{ width: "100%" }} />
-      </Form.Item>
-      <Form.Item
-        name="quantity"
-        label="Quantity"
-        rules={[
-          { required: true, message: "Quantity is required" },
-          {
-            type: "number",
-            min: 0,
-            message: "Quantity must be zero or more",
-          },
-        ]}
-      >
-        <InputNumber min={0} style={{ width: "100%" }} />
-      </Form.Item>
       <Form.Item name="description" label="Description">
-        <TextArea rows={4} placeholder="Product Description" />
+        <TextArea rows={4} />
       </Form.Item>
-      <Form.Item
-        name="rating"
-        label="Rating"
-        rules={[
-          { type: "number", min: 0, max: 5, message: "Rating must be 0–5" },
-        ]}
-      >
-        <InputNumber
-          min={0}
-          max={5}
-          step={0.1}
-          precision={1}
-          style={{ width: "100%" }}
-        />
-      </Form.Item>
+
+      <Divider>Variants</Divider>
+
+      <Form.List name="variants">
+        {(fields, { add, remove }) => (
+          <>
+            {fields.map(({ key, name, ...restField }) => (
+              <Space
+                key={key}
+                style={{
+                  display: "flex",
+                  marginBottom: 8,
+                  border: "1px dashed #ccc",
+                  padding: "12px",
+                  flexWrap: "wrap",
+                }}
+                align="baseline"
+              >
+                <Form.Item
+                  {...restField}
+                  name={[name, "sku"]}
+                  label="SKU"
+                  style={{ flex: 1 }}
+                >
+                  <Input placeholder="SKU" />
+                </Form.Item>
+                <Form.Item
+                  {...restField}
+                  name={[name, "price"]}
+                  label="Price"
+                  rules={[{ required: true }]}
+                  style={{ flex: 1 }}
+                >
+                  <InputNumber min={0} style={{ width: "100%" }} />
+                </Form.Item>
+                <Form.Item
+                  {...restField}
+                  name={[name, "quantity"]}
+                  label="Quantity"
+                  rules={[{ required: true }]}
+                  style={{ flex: 1 }}
+                >
+                  <InputNumber min={0} style={{ width: "100%" }} />
+                </Form.Item>
+                {/* Attribute dropdowns for each attribute */}
+                {attributes.map((attr) => (
+                  <Form.Item
+                    key={attr.attribute_id}
+                    name={[name, "attributes", attr.name]}
+                    label={attr.name}
+                    style={{ flex: 1 }}
+                    rules={[{ required: true, message: `Select ${attr.name}` }]}
+                  >
+                    <Select placeholder={`Select ${attr.name}`}>
+                      {attr.values.map((val) => (
+                        <Select.Option key={val.value_id} value={val.value}>
+                          {val.value}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                ))}
+                <MinusCircleOutlined onClick={() => remove(name)} />
+              </Space>
+            ))}
+            <Form.Item>
+              <Button
+                type="dashed"
+                onClick={() => add()}
+                block
+                icon={<PlusOutlined />}
+              >
+                Add Variant
+              </Button>
+            </Form.Item>
+          </>
+        )}
+      </Form.List>
+
+      <Divider>Images</Divider>
+
+      {/* ... your existing image upload and management JSX ... */}
       <Form.Item label="Images">
         <Upload
           listType="picture-card"
@@ -288,15 +326,10 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
             style={{ border: 0, background: "none" }}
             disabled={!productName && !product?.product_id}
           >
-            <PlusOutlined />
-            <div style={{ marginTop: 8 }}>Upload</div>
+            {" "}
+            <PlusOutlined /> <div style={{ marginTop: 8 }}>Upload</div>{" "}
           </button>
         </Upload>
-        {!productName && !product?.product_id && (
-          <div style={{ color: "#faad14", marginTop: 6 }}>
-            Please enter a product name before uploading images.
-          </div>
-        )}
         {uploadProgress !== null && (
           <div style={{ marginTop: 8 }}>
             <Progress percent={Math.round(uploadProgress)} size="small" />
@@ -321,34 +354,40 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                 style={{ width: 90, height: 90, objectFit: "cover" }}
               />
               <span style={{ width: 130 }}>
+                {" "}
                 {idx === 0 && (
                   <span style={{ color: "green", fontWeight: "bold" }}>
-                    Main Image
+                    {" "}
+                    Main Image{" "}
                   </span>
-                )}
+                )}{" "}
               </span>
               <Button
                 size="small"
                 disabled={idx === 0}
                 onClick={() => moveImage(idx, idx - 1)}
               >
-                ↑
+                {" "}
+                ↑{" "}
               </Button>
               <Button
                 size="small"
                 disabled={idx === images.length - 1}
                 onClick={() => moveImage(idx, idx + 1)}
               >
-                ↓
+                {" "}
+                ↓{" "}
               </Button>
               <Button danger size="small" onClick={() => removeImage(idx)}>
-                Remove
+                {" "}
+                Remove{" "}
               </Button>
             </div>
           ))}
         </div>
       </Form.Item>
-      <Form.Item wrapperCol={{ offset: 4, span: 14 }}>
+
+      <Form.Item>
         <Button
           type="primary"
           htmlType="submit"
