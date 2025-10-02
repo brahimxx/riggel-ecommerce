@@ -1,6 +1,7 @@
+// app/dashboard/products/page.js
 "use client";
 import { useEffect, useState } from "react";
-import { Modal, Alert } from "antd";
+import { Modal, Alert, Table } from "antd"; // Import Table for the sub-table
 import DataTable from "../components/DataTable";
 import ProductForm from "../components/ProductForm";
 
@@ -18,9 +19,14 @@ const Products = () => {
       fetch("/api/products").then((res) => res.json()),
       fetch("/api/categories").then((res) => res.json()),
     ])
-      .then(([products, categories]) => {
-        setProducts(products);
-        setCategories(categories);
+      .then(([productsData, categoriesData]) => {
+        // Ensure variants is always an array
+        const formattedProducts = productsData.map((p) => ({
+          ...p,
+          variants: p.variants || [],
+        }));
+        setProducts(formattedProducts);
+        setCategories(categoriesData);
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -45,6 +51,7 @@ const Products = () => {
   const handleEditProduct = async (product) => {
     setLoading(true);
     try {
+      // Use the correct by-id endpoint
       const res = await fetch(`/api/products/by-id/${product.product_id}`);
       if (!res.ok) throw new Error("Failed to fetch product details");
       const fullProduct = await res.json();
@@ -56,6 +63,27 @@ const Products = () => {
       setLoading(false);
     }
   };
+
+  // Define columns for the nested variants table
+  const variantColumns = [
+    { title: "SKU", dataIndex: "sku", key: "sku" },
+    {
+      title: "Price",
+      dataIndex: "price",
+      key: "price",
+      render: (price) => `$${price}`,
+    },
+    { title: "Quantity", dataIndex: "quantity", key: "quantity" },
+    {
+      title: "Attributes",
+      dataIndex: "attributes",
+      key: "attributes",
+      render: (attributes) =>
+        (attributes || [])
+          .map((attr) => `${attr.name}: ${attr.value}`)
+          .join(", "),
+    },
+  ];
 
   return (
     <div>
@@ -69,15 +97,25 @@ const Products = () => {
         setIsModalOpen={setIsModalOpen}
         onEdit={handleEditProduct}
         onDeleteSuccess={fetchData}
-        apiBaseUrl="products/by-id"
+        apiBaseUrl="products/by-id" // Your API is at /api/products/[id]
         rowKeyField="product_id"
+        // Show variants in an expandable row
+        expandable={{
+          expandedRowRender: (record) => (
+            <Table
+              columns={variantColumns}
+              dataSource={record.variants}
+              rowKey="variant_id"
+              pagination={false}
+            />
+          ),
+          rowExpandable: (record) =>
+            record.variants && record.variants.length > 0,
+        }}
         columnsOverride={[
           { key: "product_id", title: "ID" },
           { key: "name", title: "Name" },
-          { key: "slug", title: "Slug" }, // explicit
-          { key: "price", title: "Price" },
-          { key: "quantity", title: "Qty" },
-          { key: "rating", title: "Rating" }, // explicit
+          { key: "slug", title: "Slug" },
           { key: "category_id", title: "Category" },
           { key: "created_at", title: "Created" },
         ]}
@@ -88,6 +126,7 @@ const Products = () => {
         open={isModalOpen}
         onCancel={handleCancel}
         footer={null}
+        width={800} // Make modal wider for the variants UI
       >
         <ProductForm
           product={editingProduct}

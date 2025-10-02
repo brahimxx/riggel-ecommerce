@@ -1,5 +1,8 @@
+// app/api/orders/route.js
+import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
+// GET: Returns a summary list of all orders
 export async function GET(req) {
   try {
     const [orders] = await pool.query(`
@@ -12,13 +15,17 @@ export async function GET(req) {
       GROUP BY o.order_id
       ORDER BY o.order_date DESC
     `);
-    return Response.json(orders);
+    return NextResponse.json(orders);
   } catch (error) {
     console.log("GET /api/orders error:", error);
-    return Response.json({ error: "Failed to fetch orders." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch orders." },
+      { status: 500 }
+    );
   }
 }
 
+// POST: Creates a new order using product variants
 export async function POST(req) {
   const conn = await pool.getConnection();
   try {
@@ -31,13 +38,13 @@ export async function POST(req) {
       order_date,
       status,
       total_amount,
-      order_items,
+      order_items, // Expected to contain { variant_id, quantity, price }
     } = body;
 
     const parsedDate = new Date(order_date);
     if (isNaN(parsedDate.getTime())) {
       conn.release();
-      return Response.json(
+      return NextResponse.json(
         { error: "Invalid order_date format" },
         { status: 400 }
       );
@@ -46,19 +53,17 @@ export async function POST(req) {
 
     // Basic validation
     if (
-      typeof client_name !== "string" ||
-      client_name.trim() === "" ||
-      typeof email !== "string" ||
-      typeof phone !== "string" ||
-      typeof shipping_address !== "string" ||
+      !client_name?.trim() ||
+      !email?.trim() ||
+      !shipping_address?.trim() ||
       !order_date ||
-      typeof status !== "string" ||
+      !status?.trim() ||
       typeof total_amount !== "number" ||
       !Array.isArray(order_items) ||
       order_items.length === 0
     ) {
       conn.release();
-      return Response.json(
+      return NextResponse.json(
         { error: "Missing or invalid required fields." },
         { status: 400 }
       );
@@ -66,14 +71,14 @@ export async function POST(req) {
 
     await conn.beginTransaction();
 
-    // Insert order master record
+    // 1. Insert the main order record
     const [orderRes] = await conn.query(
       `INSERT INTO orders (client_name, email, phone, shipping_address, order_date, status, total_amount)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         client_name.trim(),
         email.trim(),
-        phone.trim(),
+        phone?.trim(),
         shipping_address.trim(),
         mysqlDate,
         status.trim(),
@@ -82,54 +87,52 @@ export async function POST(req) {
     );
     const order_id = orderRes.insertId;
 
-    // Validate, check stock, and insert order items
-    for (let i = 0; i < order_items.length; i++) {
-      const item = order_items[i];
-
+    // 2. Process each order item, checking variant stock
+    for (const item of order_items) {
       if (
-        typeof item.product_id !== "number" ||
+        typeof item.variant_id !== "number" ||
         typeof item.quantity !== "number" ||
         typeof item.price !== "number" ||
-        item.quantity <= 0 ||
-        item.price < 0
+        item.quantity <= 0
       ) {
         await conn.rollback();
         conn.release();
-        return Response.json(
+        return NextResponse.json(
           { error: "Invalid order item detected." },
           { status: 400 }
         );
       }
 
-      // Deduct stock atomically only if enough stock available
+      // 3. Atomically deduct stock from the product_variants table
       const [updateResult] = await conn.query(
-        `UPDATE products 
+        `UPDATE product_variants 
          SET quantity = quantity - ? 
-         WHERE product_id = ? AND quantity >= ?`,
-        [item.quantity, item.product_id, item.quantity]
+         WHERE variant_id = ? AND quantity >= ?`,
+        [item.quantity, item.variant_id, item.quantity]
       );
+
       if (updateResult.affectedRows === 0) {
         await conn.rollback();
         conn.release();
-        return Response.json(
+        return NextResponse.json(
           {
-            error: `Insufficient stock for product ID ${item.product_id}. Requested: ${item.quantity}`,
+            error: `Insufficient stock for variant ID ${item.variant_id}.`,
           },
-          { status: 400 }
+          { status: 409 } // 409 Conflict is suitable for stock issues
         );
       }
 
-      // Insert order item
+      // 4. Insert the order item with the variant_id
       await conn.query(
-        `INSERT INTO order_items (order_id, product_id, quantity, price)
+        `INSERT INTO order_items (order_id, variant_id, quantity, price)
          VALUES (?, ?, ?, ?)`,
-        [order_id, item.product_id, item.quantity, item.price]
+        [order_id, item.variant_id, item.quantity, item.price]
       );
     }
 
     await conn.commit();
 
-    // Fetch newly created order with items
+    // 5. Return the newly created order with its items
     const [orderRows] = await conn.query(
       `SELECT * FROM orders WHERE order_id = ?`,
       [order_id]
@@ -141,14 +144,19 @@ export async function POST(req) {
 
     conn.release();
 
-    return Response.json(
+    return NextResponse.json(
       { ...orderRows[0], order_items: itemsRows },
       { status: 201 }
     );
   } catch (error) {
-    await conn.rollback();
-    conn.release();
-    console.log("POST /api/orders error:", error);
-    return Response.json({ error: "Failed to create order." }, { status: 500 });
+    if (conn) {
+      await conn.rollback();
+      conn.release();
+    }
+    console.error("POST /api/orders error:", error);
+    return NextResponse.json(
+      { error: "Failed to create order." },
+      { status: 500 }
+    );
   }
 }

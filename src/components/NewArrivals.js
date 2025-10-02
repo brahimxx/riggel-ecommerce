@@ -8,7 +8,22 @@ export const revalidate = 300; // ISR for non-fetch data [web:92]
 export async function getNewArrivals() {
   // kayen two options here, first is to use a base api url and use the api, because the api call in the server side needs an absolute url, second is to query DB in the component directly
   const [rows] = await pool.query(
-    `SELECT p.product_id, p.name, p.slug, p.description, p.price, p.category_id, p.created_at, p.quantity, p.rating,
+    `SELECT p.product_id, p.name, p.slug, p.description, p.category_id, p.created_at,
+            (
+              SELECT AVG(r.rating)
+              FROM reviews r
+              WHERE r.product_id = p.product_id
+            ) AS rating,
+            (
+              SELECT MIN(pv.price)
+              FROM product_variants pv
+              WHERE pv.product_id = p.product_id
+            ) AS price,
+            (
+              SELECT SUM(pv.quantity)
+              FROM product_variants pv
+              WHERE pv.product_id = p.product_id
+            ) AS quantity,
             (
               SELECT pi.url
               FROM product_images pi
