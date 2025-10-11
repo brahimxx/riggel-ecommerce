@@ -28,6 +28,8 @@ const { TextArea } = Input;
 const ProductForm = ({ product = null, categories, onSuccess }) => {
   const [form] = Form.useForm();
   const [images, setImages] = useState([]);
+  const [variantOptions, setVariantOptions] = useState([]);
+  const PRODUCT_IMAGE_VALUE = "product";
   const [uploadProgress, setUploadProgress] = useState(null);
   const [productName, setProductName] = useState(product?.name || "");
   const [attributes, setAttributes] = useState([]);
@@ -59,11 +61,19 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       });
       setImages(product.images || []);
       setProductName(product.name || "");
+      // Set variant options for image assignment
+      setVariantOptions(
+        (product.variants || []).map((v) => ({
+          label: v.sku || `Variant ${v.variant_id}`,
+          value: v.variant_id,
+        }))
+      );
     } else {
       form.resetFields();
       form.setFieldsValue({ variants: [{}] }); // Start with one empty variant
       setImages([]);
       setProductName("");
+      setVariantOptions([]);
     }
   }, [product, form]);
 
@@ -85,6 +95,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         alt_text: "",
         sort_order: imgs.length,
         is_primary: imgs.length === 0,
+        variant_id: null,
       },
     ]);
   };
@@ -171,6 +182,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           alt_text: `Image of ${values.name}`,
           is_primary: idx === 0,
           sort_order: idx,
+          variant_id: img.variant_id || null,
         })),
       };
 
@@ -310,7 +322,6 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
 
       <Divider>Images</Divider>
 
-      {/* ... your existing image upload and management JSX ... */}
       <Form.Item label="Images">
         <Upload
           listType="picture-card"
@@ -326,8 +337,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
             style={{ border: 0, background: "none" }}
             disabled={!productName && !product?.product_id}
           >
-            {" "}
-            <PlusOutlined /> <div style={{ marginTop: 8 }}>Upload</div>{" "}
+            <PlusOutlined /> <div style={{ marginTop: 8 }}>Upload</div>
           </button>
         </Upload>
         {uploadProgress !== null && (
@@ -354,33 +364,59 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                 style={{ width: 90, height: 90, objectFit: "cover" }}
               />
               <span style={{ width: 130 }}>
-                {" "}
                 {idx === 0 && (
                   <span style={{ color: "green", fontWeight: "bold" }}>
-                    {" "}
-                    Main Image{" "}
+                    Main Image
                   </span>
-                )}{" "}
+                )}
               </span>
+              <Select
+                style={{ width: 160 }}
+                value={
+                  img.variant_id === null || img.variant_id === undefined
+                    ? PRODUCT_IMAGE_VALUE
+                    : img.variant_id
+                }
+                onChange={(val) => {
+                  setImages((images) =>
+                    images.map((im, i) =>
+                      i === idx
+                        ? {
+                            ...im,
+                            variant_id:
+                              val === PRODUCT_IMAGE_VALUE ? null : val,
+                          }
+                        : im
+                    )
+                  );
+                }}
+                placeholder="Assign to Variant"
+              >
+                <Select.Option value={PRODUCT_IMAGE_VALUE}>
+                  Product (All Variants)
+                </Select.Option>
+                {variantOptions.map((opt) => (
+                  <Select.Option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </Select.Option>
+                ))}
+              </Select>
               <Button
                 size="small"
                 disabled={idx === 0}
                 onClick={() => moveImage(idx, idx - 1)}
               >
-                {" "}
-                ↑{" "}
+                ↑
               </Button>
               <Button
                 size="small"
                 disabled={idx === images.length - 1}
                 onClick={() => moveImage(idx, idx + 1)}
               >
-                {" "}
-                ↓{" "}
+                ↓
               </Button>
               <Button danger size="small" onClick={() => removeImage(idx)}>
-                {" "}
-                Remove{" "}
+                Remove
               </Button>
             </div>
           ))}

@@ -10,14 +10,14 @@ const ProductGallery = ({ images }) => {
   return (
     <div className="flex gap-8 items-start h-full p-1 max-h-[530px]">
       {/* Sidebar thumbnails */}
-      <div className="flex flex-col w-[24%] gap-4 min-h-[530px] overflow-y-scroll hide-scrollbar">
+      <div className="flex flex-col w-[24%] gap-4 overflow-y-scroll hide-scrollbar">
         {images.map((image, idx) => (
           <button
             type="button"
             key={image.id}
             onClick={() => setSelected(idx)}
             aria-label={`Thumbnail ${idx + 1}`}
-            className={`w-full h-[164px] rounded-2xl border ${
+            className={`w-full !h-[164px] rounded-2xl border cursor-pointer ${
               selected === idx ? "border-black shadow-lg" : "border-gray-200"
             } bg-white p-1 transition relative`}
           >
