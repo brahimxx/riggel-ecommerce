@@ -1,3 +1,10 @@
+// app/api/products/[id]/route.js
+import { NextResponse } from "next/server";
+import pool from "@/lib/db";
+import slugify from "slugify";
+import fs from "fs/promises";
+import path from "path";
+
 // POST /api/products/by-id - Create a new product and its variants
 export async function POST(req) {
   const conn = await pool.getConnection();
@@ -37,10 +44,28 @@ export async function POST(req) {
 
     // 3. Insert variants and their attributes
     for (const variant of variants) {
-      const { sku, price, quantity, attributes } = variant;
+      let { sku, price, quantity, attributes } = variant;
+      // Auto-generate SKU if missing
+      if (!sku || sku.trim() === "") {
+        // Use product name and attribute values
+        const base = slugify(name, { lower: true, strict: true })
+          .replace(/-/g, "")
+          .toUpperCase();
+        const attrPart = Array.isArray(attributes)
+          ? attributes
+              .map((a) =>
+                (a.value || "")
+                  .replace(/\s+/g, "")
+                  .substring(0, 3)
+                  .toUpperCase()
+              )
+              .join("-")
+          : "";
+        sku = attrPart ? `${base}-${attrPart}` : base;
+      }
       const [variantRes] = await conn.query(
         `INSERT INTO product_variants (product_id, sku, price, quantity) VALUES (?, ?, ?, ?)`,
-        [product_id, sku || null, price, quantity]
+        [product_id, sku, price, quantity]
       );
       const variant_id = variantRes.insertId;
 
@@ -86,13 +111,20 @@ export async function POST(req) {
       }
     }
 
-    // 4. Handle images
+    // 4. Handle images (support variant_id)
     if (Array.isArray(images)) {
       for (let idx = 0; idx < images.length; idx++) {
         const img = images[idx];
         await conn.query(
-          `INSERT INTO product_images (product_id, url, alt_text, sort_order, is_primary) VALUES (?, ?, ?, ?, ?)`,
-          [product_id, img.url, img.alt_text || "", idx, img.is_primary ? 1 : 0]
+          `INSERT INTO product_images (product_id, variant_id, url, alt_text, sort_order, is_primary) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            product_id,
+            img.variant_id || null,
+            img.url,
+            img.alt_text || "",
+            idx,
+            img.is_primary ? 1 : 0,
+          ]
         );
       }
     }
@@ -113,12 +145,6 @@ export async function POST(req) {
     );
   }
 }
-// app/api/products/[id]/route.js
-import { NextResponse } from "next/server";
-import pool from "@/lib/db";
-import slugify from "slugify";
-import fs from "fs/promises";
-import path from "path";
 
 // GET /api/products/[id] - This function is correct.
 export async function GET(req, context) {
@@ -247,19 +273,36 @@ export async function PUT(req, { params }) {
 
       for (const variant of variants) {
         let variant_id = variant.variant_id;
-
+        let sku = variant.sku;
+        // Auto-generate SKU if missing
+        if (!sku || sku.trim() === "") {
+          const base = slugify(name, { lower: true, strict: true })
+            .replace(/-/g, "")
+            .toUpperCase();
+          const attrPart = Array.isArray(variant.attributes)
+            ? variant.attributes
+                .map((a) =>
+                  (a.value || "")
+                    .replace(/\s+/g, "")
+                    .substring(0, 3)
+                    .toUpperCase()
+                )
+                .join("-")
+            : "";
+          sku = attrPart ? `${base}-${attrPart}` : base;
+        }
         // A. Upsert the variant
         if (variant_id) {
           // Update existing variant
           await conn.query(
             "UPDATE product_variants SET price = ?, quantity = ?, sku = ? WHERE variant_id = ?",
-            [variant.price, variant.quantity, variant.sku || null, variant_id]
+            [variant.price, variant.quantity, sku, variant_id]
           );
         } else {
           // Create new variant
           const [newVariant] = await conn.query(
             "INSERT INTO product_variants (product_id, price, quantity, sku) VALUES (?, ?, ?, ?)",
-            [id, variant.price, variant.quantity, variant.sku || null]
+            [id, variant.price, variant.quantity, sku]
           );
           variant_id = newVariant.insertId;
         }
@@ -317,8 +360,24 @@ export async function PUT(req, { params }) {
       }
     }
 
-    // 3. Handle Images (existing logic is fine)
-    // ... your image handling logic ...
+    // 3. Handle Images: delete old, insert new (support variant_id)
+    await conn.query("DELETE FROM product_images WHERE product_id = ?", [id]);
+    if (Array.isArray(images)) {
+      for (let idx = 0; idx < images.length; idx++) {
+        const img = images[idx];
+        await conn.query(
+          `INSERT INTO product_images (product_id, variant_id, url, alt_text, sort_order, is_primary) VALUES (?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            img.variant_id || null,
+            img.url,
+            img.alt_text || "",
+            idx,
+            img.is_primary ? 1 : 0,
+          ]
+        );
+      }
+    }
 
     await conn.commit();
     conn.release();
