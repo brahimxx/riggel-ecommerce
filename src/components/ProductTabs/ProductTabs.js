@@ -21,7 +21,7 @@ const tabItems = (children) => [
 ];
 
 const ProductTabs = ({ children = [] }) => (
-  <div className="mt-15">
+  <div className="mt-[36px] lg:mt-15 ">
     <Tabs
       defaultActiveKey="2"
       centered

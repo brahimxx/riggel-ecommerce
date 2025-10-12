@@ -10,7 +10,7 @@ const ColorSelector = ({
 }) => {
   return (
     <div className="font-sans">
-      <div className="text-gray-500 mb-3 text-lg font-medium">
+      <div className="text-gray-500 mb-3 text-[14px] lg:text-lg font-medium">
         Select Colors
       </div>
       <div className="flex gap-5">

@@ -8,28 +8,26 @@ const QuantityCartBar = () => {
   const handleIncrement = () => setQuantity((q) => q + 1);
 
   return (
-    <div className="flex items-center gap-4 font-sans">
-      <div className="flex items-center bg-gray-200 rounded-full px-6 py-2 min-w-[140px] justify-between">
+    <div className="flex text-[14px] lg:text-2xl items-center gap-4 font-sans ">
+      <div className="flex items-center bg-gray-200 rounded-full  py-2 min-w-[90px] lg:min-w-[170px] justify-around ">
         <button
           onClick={handleDecrement}
-          className="text-2xl text-gray-500 font-light px-2 focus:outline-none"
+          className=" text-black font-semibold lg:px-2 focus:outline-none cursor-pointer w-[33%] "
           aria-label="Decrease quantity"
         >
-          −
+          -
         </button>
-        <span className="mx-2 text-lg text-gray-800 select-none">
-          {quantity}
-        </span>
+        <span className=" text-lg text-gray-800 select-none">{quantity}</span>
         <button
           onClick={handleIncrement}
-          className="text-2xl text-gray-500 font-light px-2 focus:outline-none"
+          className=" text-black font-semibold lg:px-2 focus:outline-none cursor-pointer w-[33%]"
           aria-label="Increase quantity"
         >
           +
         </button>
       </div>
       <button
-        className="bg-black text-white rounded-full px-16 py-2 text-lg font-medium transition"
+        className="bg-black text-white rounded-full  py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
         aria-label="Add to Cart"
       >
         Add to Cart
