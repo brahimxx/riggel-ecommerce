@@ -40,14 +40,12 @@ const ProductShowcase = ({ product }) => {
 
   return (
     <>
-      <div className="flex">
-        <div className="flex w-[50%]">
-          <div className="relative w-full  h-[530px] overflow-hidden">
-            <ProductGallery images={product.images} />
-          </div>
+      <div className="flex-col lg:flex lg:flex-row ">
+        <div className="relative lg:w-[50%] h-[408px] md:h-[530px] overflow-hidden">
+          <ProductGallery images={product.images} />
         </div>
-        <div className="flex flex-col max-w-[50%] justify-between gap-[14px] pl-10 max-h-[530px]">
-          <h2 className="font-integral leading-none text-[32px] lg:text-[40px]  font-extrabold">
+        <div className="flex flex-col lg:max-w-[50%] justify-around lg:justify-between gap-[12px] lg:gap-[14px] lg:pl-10 lg:max-h-[530px] mt-[36px] lg:mt-0">
+          <h2 className="font-integral leading-none text-[24px] lg:text-[40px] font-extrabold">
             {product.name}
           </h2>
           <div className="flex relative ">
@@ -56,14 +54,14 @@ const ProductShowcase = ({ product }) => {
               allowHalf
               defaultValue={Number(parseFloat(product.rating).toFixed(1)) || 0}
             />
-            <span className="text-gray-500 ml-2 text-sm">
+            <span className="text-gray-500 ml-2 text-sm font-semibold">
               {Number(parseFloat(product.rating).toFixed(1)) || 0}/5
             </span>
           </div>
-          <p className="text-[32px] text-gray-900 font-semibold">
+          <p className="text-[24px] lg:text-[40px] text-gray-900 font-extrabold lg:font-bold">
             ${displayPrice}
           </p>
-          <p className="text-4 text-gray-700 line-clamp-3">
+          <p className="text-[14px] lg:text-4 text-gray-700 line-clamp-3">
             {product.description}
           </p>
 
@@ -72,13 +70,6 @@ const ProductShowcase = ({ product }) => {
             variants={product.variants}
             setSelectedVariant={setSelectedVariant}
           />
-          {/* <div className="py-[10px] border-t-[2px] border-gray-200/60">
-            <ColorSelector />
-          </div>
-
-          <div className="py-[10px] border-y-[2px] border-gray-200/60">
-            <SizeSelector />
-          </div> */}
           <div className="pt-[10px] border-gray-200/60">
             <QuantityCartBar />
           </div>

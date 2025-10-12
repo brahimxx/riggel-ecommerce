@@ -46,8 +46,8 @@ export default async function YouMightAlsoLike() {
   ));
 
   return (
-    <div className="flex flex-col py-[50px] px-4 lg:py-[72px] max-w-screen-2xl mx-auto">
-      <h2 className="self-center font-integral leading-none text-[32px] lg:text-[40px] xl:text-[48px] font-extrabold">
+    <div className="flex flex-col py-[32px] lg:py-[72px] max-w-screen-2xl ">
+      <h2 className="text-center font-integral leading-none text-[32px] lg:text-[40px] xl:text-[48px] font-extrabold">
         You Might Also Like
       </h2>
 

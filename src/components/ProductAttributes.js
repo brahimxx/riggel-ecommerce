@@ -81,9 +81,9 @@ const ProductAttributes = ({ attributes, variants, setSelectedVariant }) => {
 
         // Default rendering for all other attributes
         return (
-          <div key={name} className="py-4 border-t border-gray-200">
+          <div key={name} className="py-4 border-y border-gray-200">
             <h3 className="font-semibold">{name}</h3>
-            <div className="flex gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-2">
               {values.map((value) => {
                 const isSelected = selectedOptions[name] === value;
                 const available = isOptionAvailable(name, value);
@@ -93,13 +93,11 @@ const ProductAttributes = ({ attributes, variants, setSelectedVariant }) => {
                     key={value}
                     onClick={() => handleOptionSelect(name, value)}
                     disabled={!available}
-                    className={`px-4 py-2 border rounded transition-colors ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-100 text-blue-800"
-                        : "border-gray-300"
+                    className={`px-4 py-2 text-[14px] border rounded-full transition-colors  ${
+                      isSelected ? " bg-black text-white" : "border-gray-300 "
                     } ${
                       available
-                        ? "cursor-pointer hover:border-blue-400"
+                        ? "cursor-pointer hover:border-black"
                         : "cursor-not-allowed bg-gray-100 text-gray-400"
                     }`}
                   >

@@ -4,7 +4,7 @@ import { Input } from "antd";
 const NewsLetter = () => {
   return (
     <div className=" relative   ">
-      <div className="flex flex-col lg:flex-row font-integral justify-between py-[32px] lg:py-[36px] px-[24px] lg:px-[64px] bg-black rounded-3xl max-w-screen-2xl lg:mx-auto h-[300px] lg:h-[180px] z-10">
+      <div className="flex flex-col lg:flex-row font-integral justify-between py-[32px] lg:py-[36px] px-[24px] lg:px-[64px] bg-black rounded-3xl max-w-screen-2xl lg:mx-auto h-[300px] lg:h-[180px] z-10 mx-4">
         <h2 className="text-white font-integral text-[26px] sm:text-[32px] sm:text-center lg:text-left lg:text-[36px] xl:text-[40px] font-extrabold lg:w-[60%] xl:w-[50%]">
           Stay up to date about our latest offers
         </h2>
