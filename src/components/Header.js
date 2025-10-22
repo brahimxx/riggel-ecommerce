@@ -156,8 +156,9 @@ const Header = () => {
               </svg>
             </button>
           </div>
-
-          <ShoppingCartOutlined className="text-2xl cursor-pointer" />
+          <Link href="/shoppingcart">
+            <ShoppingCartOutlined className="text-2xl cursor-pointer" />
+          </Link>
         </div>
       </div>
     </nav>
