@@ -70,8 +70,14 @@ const ProductShowcase = ({ product }) => {
             variants={product.variants}
             setSelectedVariant={setSelectedVariant}
           />
-          <div className="pt-[10px] border-gray-200/60">
-            <QuantityCartBar />
+          <div className="flex gap-4 pt-[10px] border-gray-200/60">
+            <QuantityCartBar />{" "}
+            <button
+              className="bg-black text-white rounded-full  py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
+              aria-label="Add to Cart"
+            >
+              Add to Cart
+            </button>
           </div>
         </div>
       </div>
