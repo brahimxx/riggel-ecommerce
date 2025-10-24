@@ -4,10 +4,18 @@ import { useEffect, useState } from "react";
 import QuantityCartBar from "@/components/QuantityCartBar";
 import ProductGallery from "@/components/ProductGallery";
 import ProductAttributes from "@/components/ProductAttributes";
+import { useCart } from "@/hooks/useCart"; // Import the custom hook
 
 const ProductShowcase = ({ product }) => {
   const [attributes, setAttributes] = useState({});
   const [selectedVariant, setSelectedVariant] = useState({});
+  const [quantity, setQuantity] = useState(1);
+
+  // Use the cart hook
+  const { addToCart } = useCart();
+  const { cart } = useCart();
+
+  console.log(cart);
 
   useEffect(() => {
     const extractedAttributes = {};
@@ -35,6 +43,18 @@ const ProductShowcase = ({ product }) => {
 
     setAttributes(finalAttributes);
   }, [product]);
+
+  const handleAddToCart = () => {
+    // The logic is now handled by the hook!
+    console.log("Adding to cart:", selectedVariant);
+    if (!selectedVariant) {
+      alert("Please select a valid product variant.");
+      return;
+    } else {
+      addToCart(product, selectedVariant, quantity);
+      alert("Product added to cart!");
+    }
+  };
 
   const displayPrice = selectedVariant?.price || product.price;
 
@@ -71,8 +91,9 @@ const ProductShowcase = ({ product }) => {
             setSelectedVariant={setSelectedVariant}
           />
           <div className="flex gap-4 pt-[10px] border-gray-200/60">
-            <QuantityCartBar />{" "}
+            <QuantityCartBar quantity={quantity} setQuantity={setQuantity} />
             <button
+              onClick={handleAddToCart}
               className="bg-black text-white rounded-full  py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
               aria-label="Add to Cart"
             >
