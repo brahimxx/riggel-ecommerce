@@ -1,3 +1,4 @@
+"use client";
 import {
   ArrowLeftOutlined,
   ShoppingOutlined,
@@ -8,10 +9,20 @@ import {
   MessageOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
-
+import { useCart } from "@/hooks/useCart";
 import CartProductCard from "@/components/CartProductCard";
 
 const shoppingcart = () => {
+  const { cart, updateQuantity, removeFromCart } = useCart();
+
+  // The local state and useEffect for fetching are no longer needed
+  // because the hook manages the cart state.
+
+  const subtotal = cart.items
+    .reduce((sum, item) => sum + item.price * item.quantity, 0)
+    .toFixed(2);
+  const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+
   return (
     <>
       <div className="relative flex flex-col items-start justify-start lg:h-full max-w-screen-2xl mx-auto px-4 gap-8 mt-10 mb-20">
@@ -26,12 +37,30 @@ const shoppingcart = () => {
           <div className="flex flex-col lg:w-[60%] ">
             <div className="p-4 border-1 border-gray-300/60 rounded-2xl mb-8">
               <div>
-                <ShoppingOutlined /> Shopping Cart
+                <ShoppingOutlined /> Shopping Cart ({totalItems} items)
               </div>
-              <div className="flex flex-col w-full  ">
-                <CartProductCard />
-                <CartProductCard />
-                <CartProductCard />
+
+              <div className="flex flex-col w-full">
+                {cart.items.length > 0 ? (
+                  cart.items.map((item, index) => (
+                    <div
+                      key={`${item.productId}-${item.variantId || ""}`}
+                      className={`${
+                        index !== cart.items.length - 1
+                          ? "border-b border-gray-300/60"
+                          : ""
+                      }`}
+                    >
+                      <CartProductCard
+                        product={item}
+                        onUpdateQuantity={updateQuantity}
+                        onRemove={removeFromCart}
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <p>Your shopping cart is empty.</p>
+                )}
               </div>
             </div>
             <div className="p-4 flex flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl">
@@ -87,8 +116,8 @@ const shoppingcart = () => {
               <p>Order Summary</p>
               <div className="flex flex-col pb-4 border-b-1 border-gray-300/60 gap-4">
                 <div className="flex justify-between">
-                  <p>Subtotal (3 items)</p>
-                  <p>$355.00</p>
+                  <p>Subtotal ({totalItems} items)</p>
+                  <p>${subtotal}</p>
                 </div>
                 <div className="flex justify-between">
                   <p>Tax</p>

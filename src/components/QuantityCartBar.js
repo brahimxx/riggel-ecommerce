@@ -1,9 +1,7 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 
-const QuantityCartBar = () => {
-  const [quantity, setQuantity] = useState(1);
-
+const QuantityCartBar = ({ quantity, setQuantity }) => {
   const handleDecrement = () => setQuantity((q) => Math.max(1, q - 1));
   const handleIncrement = () => setQuantity((q) => q + 1);
 
