@@ -192,7 +192,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
 
       const url = product
         ? `/api/products/by-id/${product.product_id}`
-        : `/api/products/by-id`;
+        : `/api/products`;
 
       const res = await fetch(url, {
         method: product ? "PUT" : "POST",

@@ -15,9 +15,6 @@ import CartProductCard from "@/components/CartProductCard";
 const shoppingcart = () => {
   const { cart, updateQuantity, removeFromCart } = useCart();
 
-  // The local state and useEffect for fetching are no longer needed
-  // because the hook manages the cart state.
-
   const subtotal = cart.items
     .reduce((sum, item) => sum + item.price * item.quantity, 0)
     .toFixed(2);
@@ -120,17 +117,17 @@ const shoppingcart = () => {
                   <p>${subtotal}</p>
                 </div>
                 <div className="flex justify-between">
-                  <p>Tax</p>
-                  <p>$28.40</p>
+                  <p>Tax (1.1%)</p>
+                  <p>${(subtotal * 0.011).toFixed(2)} </p>
                 </div>
                 <div className="flex justify-between">
                   <p>Shipping</p>
-                  <p>$15.00</p>
+                  <p>{subtotal >= 200 ? "Free" : "$15.00"}</p>
                 </div>
               </div>
               <div className="flex justify-between text-[18px] font-bold">
                 <p>Total</p>
-                <p>$398.40</p>
+                <p>${(subtotal * 0.011 + Number(subtotal) + 15).toFixed(2)}</p>
               </div>
               <button className="bg-black text-white rounded-full  py-2 text-lg font-medium transition cursor-pointer  ">
                 <CreditCardOutlined className="mr-3" /> Proceed to Checkout
