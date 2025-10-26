@@ -36,12 +36,14 @@ export const useCart = () => {
 
   const addToCart = (product, variant, quantity = 1) => {
     const newItem = {
-      productId: product.id,
-      variantId: variant ? variant.id : null,
+      productId: product.product_id,
+      variantId: variant ? variant.variant_id : null,
       name: product.name,
       price: variant?.price || product.price,
       quantity: quantity,
       image: product.images?.[0]?.url || "",
+      slug: product.slug,
+      attributes: variant?.attributes || [],
     };
 
     setCart((prevCart) => {
