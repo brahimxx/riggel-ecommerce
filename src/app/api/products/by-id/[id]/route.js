@@ -6,15 +6,13 @@ import fs from "fs/promises";
 import path from "path";
 
 // GET /api/products/[id]
-export async function GET(req, context) {
-  const params = await context.params;
-  const id = Number(params.id);
+export async function GET(req, { params }) {
+  const id = Number(params.id); // 'id' comes directly from params
   if (!id) {
     return NextResponse.json({ error: "Invalid product id." }, { status: 400 });
   }
 
   try {
-    // MODIFICATION: Removed category_id from SELECT
     const [rows] = await pool.query(
       `SELECT product_id, name, slug, description, created_at FROM products WHERE product_id = ?`,
       [id]
@@ -24,7 +22,6 @@ export async function GET(req, context) {
     }
     const product = rows[0];
 
-    // MODIFICATION: Fetch categories from junction table
     const [categories] = await pool.query(
       `SELECT c.* 
        FROM categories c
@@ -52,7 +49,6 @@ export async function GET(req, context) {
       [id]
     );
 
-    // Parse attributes JSON string to array for each variant
     const variants = variantsRaw.map((v) => ({
       ...v,
       attributes:
@@ -66,10 +62,9 @@ export async function GET(req, context) {
       [id]
     );
 
-    // MODIFICATION: Add categories to the final response
     return NextResponse.json({ ...product, categories, variants, images });
   } catch (error) {
-    console.error("GET /api/products/[id] error:", error);
+    console.error(`GET /api/products/${id} error:`, error);
     return NextResponse.json(
       { error: "Failed to fetch product." },
       { status: 500 }
