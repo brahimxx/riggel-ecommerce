@@ -1,19 +1,20 @@
 import pool from "@/lib/db";
 
-// -- GET: All categories (optionally you can add filters later)
+// -- GET: All categories (adjusted for many-to-many relationship)
 export async function GET(req) {
   try {
     const [categories] = await pool.query(`
       SELECT 
         c.*,
-        COUNT(p.product_id) AS product_count
+        COUNT(pc.product_id) AS product_count
       FROM categories c
-      LEFT JOIN products p ON p.category_id = c.category_id
+      LEFT JOIN product_categories pc ON pc.category_id = c.category_id
       GROUP BY c.category_id
       ORDER BY c.name ASC
     `);
     return Response.json(categories);
   } catch (error) {
+    console.error("Failed to fetch categories:", error); // Log the error for debugging
     return Response.json(
       { error: "Failed to fetch categories." },
       { status: 500 }
@@ -21,7 +22,7 @@ export async function GET(req) {
   }
 }
 
-// -- POST: Create new category
+// -- POST: Create new category (No changes needed)
 export async function POST(req) {
   try {
     const body = await req.json();
@@ -49,6 +50,7 @@ export async function POST(req) {
     );
     return Response.json(rows[0], { status: 201 });
   } catch (error) {
+    console.error("Failed to create category:", error); // Log the error for debugging
     return Response.json(
       { error: "Failed to create category." },
       { status: 500 }

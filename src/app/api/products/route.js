@@ -6,7 +6,7 @@ import slugify from "slugify";
 // Cache JSON for 5 minutes (ISR for the route)
 export const revalidate = 300;
 
-// -- GET: All products with their variants
+// -- GET: All products with their variants (Adjusted for many-to-many categories)
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
@@ -23,11 +23,13 @@ export async function GET(req) {
 
   // --- Build the dynamic query ---
   if (categoryId) {
-    whereClauses.push("p.category_id = ?");
+    // MODIFICATION: Join with product_categories to filter by category
+    joins.push(`JOIN product_categories pc ON p.product_id = pc.product_id`);
+    whereClauses.push("pc.category_id = ?");
     queryParams.push(categoryId);
   }
 
-  // Price range filter now uses the MIN(price) subquery
+  // Price range filter (No change needed)
   if (minPrice && maxPrice) {
     whereClauses.push(
       `(SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) BETWEEN ? AND ?`
@@ -35,9 +37,8 @@ export async function GET(req) {
     queryParams.push(minPrice, maxPrice);
   }
 
-  // Attribute filters (colors, sizes)
+  // Attribute filters (colors, sizes) (No change needed)
   if ((colors && colors.length > 0) || (sizes && sizes.length > 0)) {
-    // This join is necessary to filter by attributes
     joins.push(`
       JOIN product_variants pv_filter ON p.product_id = pv_filter.product_id
       JOIN variant_values vv_filter ON pv_filter.variant_id = vv_filter.variant_id
@@ -65,35 +66,40 @@ export async function GET(req) {
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  // The main query now includes the subqueries for rating and price
+  // MODIFICATION: Removed p.category_id from the SELECT statement
   const sqlQuery = `
-    SELECT DISTINCT
+    SELECT 
       p.product_id, 
       p.name, 
       p.slug, 
       p.description, 
-      p.category_id, 
       p.created_at,
-      -- Subquery for average rating
       (
         SELECT AVG(r.rating)
         FROM reviews r
         WHERE r.product_id = p.product_id
       ) AS rating,
-      -- Subquery for the minimum price among variants
       (
         SELECT MIN(pv.price)
         FROM product_variants pv
         WHERE pv.product_id = p.product_id
       ) AS price,
-      -- Subquery for the primary image
       (
         SELECT pi.url
         FROM product_images pi
         WHERE pi.product_id = p.product_id
         ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
         LIMIT 1
-      ) AS main_image
+      ) AS main_image,
+      -- THIS IS THE NEW PART --
+      (
+        SELECT JSON_ARRAYAGG(
+          JSON_OBJECT('category_id', c.category_id, 'name', c.name)
+        )
+        FROM product_categories pc
+        JOIN categories c ON pc.category_id = c.category_id
+        WHERE pc.product_id = p.product_id
+      ) AS categories
     FROM products p
     ${joinClause}
     ${whereClause}
@@ -103,7 +109,18 @@ export async function GET(req) {
 
   try {
     const [products] = await pool.query(sqlQuery, queryParams);
-    return NextResponse.json(products);
+
+    // MODIFICATION: Safely handle the 'categories' field.
+    // It might already be an object, or it might be a string.
+    const productsWithParsedCategories = products.map((product) => ({
+      ...product,
+      categories:
+        typeof product.categories === "string"
+          ? JSON.parse(product.categories)
+          : product.categories || [],
+    }));
+
+    return NextResponse.json(productsWithParsedCategories);
   } catch (err) {
     console.error(
       "GET /api/products error:",
@@ -120,37 +137,49 @@ export async function GET(req) {
   }
 }
 
-// -- POST: Create new product with variants
+// -- POST: Create new product with variants (Adjusted for many-to-many categories)
 export async function POST(req) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
     const body = await req.json();
-    const { name, description, category_id, images, variants } = body;
+    // MODIFICATION: Expect 'category_ids' to be an array
+    const { name, description, category_ids, images, variants } = body;
 
     // Basic validation
     if (
       !name ||
       !description ||
-      !category_id ||
+      !Array.isArray(category_ids) || // MODIFICATION: Check for array
+      category_ids.length === 0 || // MODIFICATION: Ensure at least one category
       !Array.isArray(variants) ||
       variants.length === 0
     ) {
       return NextResponse.json(
-        { error: "Missing or invalid required fields." },
+        {
+          error:
+            "Missing or invalid required fields. Product must have a name, description, and at least one category.",
+        },
         { status: 400 }
       );
     }
 
-    // 1) Insert base product to get an ID
+    // 1) MODIFICATION: Insert base product without category_id
     const [prodRes] = await connection.query(
-      `INSERT INTO products (name, description, category_id) VALUES (?, ?, ?)`,
-      [name, description, category_id]
+      `INSERT INTO products (name, description) VALUES (?, ?)`,
+      [name, description]
     );
     const product_id = prodRes.insertId;
 
-    // 2) Build and save the slug
+    // 2) MODIFICATION: Link product to its categories in the junction table
+    const categoryValues = category_ids.map((catId) => [product_id, catId]);
+    await connection.query(
+      `INSERT INTO product_categories (product_id, category_id) VALUES ?`,
+      [categoryValues]
+    );
+
+    // 3) Build and save the slug (No changes needed here, just re-numbered)
     const baseSlug = slugify(name, { lower: true, strict: true });
     const slug = `${product_id}-${baseSlug}`;
     await connection.query(
@@ -158,7 +187,7 @@ export async function POST(req) {
       [slug, product_id]
     );
 
-    // 3) Loop through and insert variants and their attributes
+    // 4) Loop through and insert variants and their attributes (No changes needed)
     for (const variant of variants) {
       const { sku, price, quantity, attributes } = variant;
       if (
@@ -222,16 +251,16 @@ export async function POST(req) {
       }
     }
 
-    // 4) Insert images (if any)
+    // 5) Insert images (if any) (No changes needed)
     if (Array.isArray(images)) {
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
         await connection.query(
           `
-          INSERT INTO product_images
-            (product_id, url, alt_text, sort_order, is_primary)
-          VALUES (?, ?, ?, ?, ?)
-          `,
+                INSERT INTO product_images
+                    (product_id, url, alt_text, sort_order, is_primary)
+                VALUES (?, ?, ?, ?, ?)
+                `,
           [
             product_id,
             img.url,
@@ -245,9 +274,14 @@ export async function POST(req) {
 
     await connection.commit();
 
-    // 5) Fetch and return the full, newly created product object
+    // 6) Fetch and return the full, newly created product object
+    // MODIFICATION: Fetch categories from the junction table
     const [finalProduct] = await pool.query(
       `SELECT * FROM products WHERE product_id = ?`,
+      [product_id]
+    );
+    const [finalCategories] = await pool.query(
+      `SELECT c.* FROM categories c JOIN product_categories pc ON c.category_id = pc.category_id WHERE pc.product_id = ?`,
       [product_id]
     );
     const [finalVariants] = await pool.query(
@@ -260,7 +294,12 @@ export async function POST(req) {
     );
 
     return NextResponse.json(
-      { ...finalProduct[0], variants: finalVariants, images: finalImages },
+      {
+        ...finalProduct[0],
+        categories: finalCategories,
+        variants: finalVariants,
+        images: finalImages,
+      },
       { status: 201 }
     );
   } catch (err) {
@@ -271,6 +310,6 @@ export async function POST(req) {
       { status: 500 }
     );
   } finally {
-    connection.release();
+    if (connection) connection.release();
   }
 }

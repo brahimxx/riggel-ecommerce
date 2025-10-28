@@ -5,148 +5,7 @@ import slugify from "slugify";
 import fs from "fs/promises";
 import path from "path";
 
-// POST /api/products/by-id - Create a new product and its variants
-export async function POST(req) {
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-    const body = await req.json();
-    const { name, description, category_id, variants, images } = body;
-
-    if (
-      !name ||
-      !category_id ||
-      !Array.isArray(variants) ||
-      variants.length === 0
-    ) {
-      return NextResponse.json(
-        { error: "Missing required fields." },
-        { status: 400 }
-      );
-    }
-
-    // 1. Insert product
-    const [prodRes] = await conn.query(
-      `INSERT INTO products (name, description, category_id) VALUES (?, ?, ?)`,
-      [name, description || "", category_id]
-    );
-    const product_id = prodRes.insertId;
-
-    // 2. Set slug
-    const slug = `${product_id}-${slugify(name, {
-      lower: true,
-      strict: true,
-    })}`;
-    await conn.query(`UPDATE products SET slug = ? WHERE product_id = ?`, [
-      slug,
-      product_id,
-    ]);
-
-    // 3. Insert variants and their attributes
-    for (const variant of variants) {
-      let { sku, price, quantity, attributes } = variant;
-      // Auto-generate SKU if missing
-      if (!sku || sku.trim() === "") {
-        // Use product name and attribute values
-        const base = slugify(name, { lower: true, strict: true })
-          .replace(/-/g, "")
-          .toUpperCase();
-        const attrPart = Array.isArray(attributes)
-          ? attributes
-              .map((a) =>
-                (a.value || "")
-                  .replace(/\s+/g, "")
-                  .substring(0, 3)
-                  .toUpperCase()
-              )
-              .join("-")
-          : "";
-        sku = attrPart ? `${base}-${attrPart}` : base;
-      }
-      const [variantRes] = await conn.query(
-        `INSERT INTO product_variants (product_id, sku, price, quantity) VALUES (?, ?, ?, ?)`,
-        [product_id, sku, price, quantity]
-      );
-      const variant_id = variantRes.insertId;
-
-      if (Array.isArray(attributes)) {
-        for (const attr of attributes) {
-          if (!attr.name || !attr.value) continue;
-          // Find or create attribute
-          let [attrRow] = await conn.query(
-            "SELECT attribute_id FROM attributes WHERE name = ?",
-            [attr.name]
-          );
-          let attribute_id;
-          if (attrRow.length === 0) {
-            const [newAttr] = await conn.query(
-              "INSERT INTO attributes (name) VALUES (?)",
-              [attr.name]
-            );
-            attribute_id = newAttr.insertId;
-          } else {
-            attribute_id = attrRow[0].attribute_id;
-          }
-          // Find or create attribute value
-          let [valRow] = await conn.query(
-            "SELECT value_id FROM attribute_values WHERE attribute_id = ? AND value = ?",
-            [attribute_id, attr.value]
-          );
-          let value_id;
-          if (valRow.length === 0) {
-            const [newVal] = await conn.query(
-              "INSERT INTO attribute_values (attribute_id, value) VALUES (?, ?)",
-              [attribute_id, attr.value]
-            );
-            value_id = newVal.insertId;
-          } else {
-            value_id = valRow[0].value_id;
-          }
-          // Link variant to attribute value
-          await conn.query(
-            "INSERT INTO variant_values (variant_id, value_id) VALUES (?, ?)",
-            [variant_id, value_id]
-          );
-        }
-      }
-    }
-
-    // 4. Handle images (support variant_id)
-    if (Array.isArray(images)) {
-      for (let idx = 0; idx < images.length; idx++) {
-        const img = images[idx];
-        await conn.query(
-          `INSERT INTO product_images (product_id, variant_id, url, alt_text, sort_order, is_primary) VALUES (?, ?, ?, ?, ?, ?)`,
-          [
-            product_id,
-            img.variant_id || null,
-            img.url,
-            img.alt_text || "",
-            idx,
-            img.is_primary ? 1 : 0,
-          ]
-        );
-      }
-    }
-
-    await conn.commit();
-    conn.release();
-    return NextResponse.json({
-      message: "Product created successfully.",
-      product_id,
-    });
-  } catch (error) {
-    await conn.rollback();
-    conn.release();
-    console.error("POST /api/products/by-id error:", error);
-    return NextResponse.json(
-      { error: "Failed to create product." },
-      { status: 500 }
-    );
-  }
-}
-
-// GET /api/products/[id] - This function is correct.
+// GET /api/products/[id]
 export async function GET(req, context) {
   const params = await context.params;
   const id = Number(params.id);
@@ -155,14 +14,24 @@ export async function GET(req, context) {
   }
 
   try {
+    // MODIFICATION: Removed category_id from SELECT
     const [rows] = await pool.query(
-      `SELECT product_id, name, slug, description, category_id, created_at FROM products WHERE product_id = ?`,
+      `SELECT product_id, name, slug, description, created_at FROM products WHERE product_id = ?`,
       [id]
     );
     if (rows.length === 0) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
     const product = rows[0];
+
+    // MODIFICATION: Fetch categories from junction table
+    const [categories] = await pool.query(
+      `SELECT c.* 
+       FROM categories c
+       JOIN product_categories pc ON c.category_id = pc.category_id
+       WHERE pc.product_id = ?`,
+      [id]
+    );
 
     const [variantsRaw] = await pool.query(
       `
@@ -197,7 +66,8 @@ export async function GET(req, context) {
       [id]
     );
 
-    return NextResponse.json({ ...product, variants, images });
+    // MODIFICATION: Add categories to the final response
+    return NextResponse.json({ ...product, categories, variants, images });
   } catch (error) {
     console.error("GET /api/products/[id] error:", error);
     return NextResponse.json(
@@ -218,9 +88,10 @@ export async function PUT(req, { params }) {
   try {
     await conn.beginTransaction();
     const body = await req.json();
-    const { name, description, category_id, variants, images } = body;
+    // MODIFICATION: Expect 'category_ids' array
+    const { name, description, category_ids, variants, images } = body;
 
-    // 1. Update base product details
+    // 1. Update base product details (name, description)
     const updates = [],
       values = [];
     if (name) {
@@ -230,10 +101,6 @@ export async function PUT(req, { params }) {
     if (description) {
       updates.push("description = ?");
       values.push(description);
-    }
-    if (category_id) {
-      updates.push("category_id = ?");
-      values.push(category_id);
     }
     if (updates.length > 0) {
       values.push(id);
@@ -248,6 +115,22 @@ export async function PUT(req, { params }) {
         newSlug,
         id,
       ]);
+    }
+
+    // 2. MODIFICATION: Handle category updates
+    if (Array.isArray(category_ids)) {
+      // First, remove all existing category associations for this product
+      await conn.query("DELETE FROM product_categories WHERE product_id = ?", [
+        id,
+      ]);
+      // Then, insert the new ones, if any
+      if (category_ids.length > 0) {
+        const categoryValues = category_ids.map((catId) => [id, catId]);
+        await conn.query(
+          `INSERT INTO product_categories (product_id, category_id) VALUES ?`,
+          [categoryValues]
+        );
+      }
     }
 
     // 2. Handle Variants (Create, Update, Delete) with Attributes
@@ -380,18 +263,16 @@ export async function PUT(req, { params }) {
     }
 
     await conn.commit();
-    conn.release();
-
-    // 4. Return the updated product data for confirmation
     return NextResponse.json({ message: "Product updated successfully." });
   } catch (error) {
     await conn.rollback();
-    conn.release();
     console.error("PUT /api/products/[id] error:", error);
     return NextResponse.json(
       { error: "Failed to update product." },
       { status: 500 }
     );
+  } finally {
+    if (conn) conn.release();
   }
 }
 

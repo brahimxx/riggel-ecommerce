@@ -17,34 +17,33 @@ export async function GET(req, { params }) {
   }
 
   try {
-    // 1. Fetch the base product, now including rating, total quantity, and a base price
+    // 1. Fetch the base product, now without the direct category_id
     const [rows] = await pool.query(
       `SELECT 
-         p.product_id, 
-         p.name, 
-         p.slug, 
-         p.description, 
-         p.category_id, 
-         p.created_at,
-         (
-           SELECT AVG(r.rating)
-           FROM reviews r
-           WHERE r.product_id = p.product_id
-         ) AS rating,
-         (
-           SELECT MIN(pv.price)
-           FROM product_variants pv
-           WHERE pv.product_id = p.product_id
-         ) AS price,
-         (
-           SELECT SUM(pv.quantity)
-           FROM product_variants pv
-           WHERE pv.product_id = p.product_id
-         ) AS total_quantity
-       FROM 
-         products p 
-       WHERE 
-         p.slug = ?`,
+        p.product_id, 
+        p.name, 
+        p.slug, 
+        p.description, 
+        p.created_at,
+        (
+          SELECT AVG(r.rating)
+          FROM reviews r
+          WHERE r.product_id = p.product_id
+        ) AS rating,
+        (
+          SELECT MIN(pv.price)
+          FROM product_variants pv
+          WHERE pv.product_id = p.product_id
+        ) AS price,
+        (
+          SELECT SUM(pv.quantity)
+          FROM product_variants pv
+          WHERE pv.product_id = p.product_id
+        ) AS total_quantity
+      FROM 
+        products p 
+      WHERE 
+        p.slug = ?`,
       [slug]
     );
 
@@ -54,7 +53,16 @@ export async function GET(req, { params }) {
 
     const product = rows[0];
 
-    // 2. Fetch all variants for this product
+    // 2. MODIFICATION: Fetch all categories for this product using the junction table
+    const [categories] = await pool.query(
+      `SELECT c.* 
+       FROM categories c
+       JOIN product_categories pc ON c.category_id = pc.category_id
+       WHERE pc.product_id = ?`,
+      [product.product_id]
+    );
+
+    // 3. Fetch all variants for this product
     const [variantsRaw] = await pool.query(
       `
       SELECT 
@@ -85,14 +93,14 @@ export async function GET(req, { params }) {
           : v.attributes || [],
     }));
 
-    // 3. Fetch all images
+    // 4. Fetch all images
     const [images] = await pool.query(
       `SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC`,
       [product.product_id]
     );
 
-    // 4. Combine and return
-    return NextResponse.json({ ...product, variants, images });
+    // 5. Combine and return
+    return NextResponse.json({ ...product, categories, variants, images });
   } catch (error) {
     console.error("GET /api/products/by-slug/[slug] error:", error);
     return NextResponse.json(
