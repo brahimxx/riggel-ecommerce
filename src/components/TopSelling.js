@@ -41,9 +41,9 @@ export async function getNewArrivals() {
 export default async function TopSelling() {
   const products = await getNewArrivals();
 
-  const productsItems = products.map((p) => (
-    <ProductCard key={p.product_id} product={p} />
-  ));
+  const productsItems = products.map(
+    (p) => (console.log(p), (<ProductCard key={p.product_id} product={p} />))
+  );
 
   return (
     <div className="flex flex-col py-[50px] px-4 lg:py-[72px] max-w-screen-2xl mx-auto">

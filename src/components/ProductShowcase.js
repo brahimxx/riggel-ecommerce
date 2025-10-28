@@ -81,7 +81,7 @@ const ProductShowcase = ({ product }) => {
           <p className="text-[24px] lg:text-[40px] text-gray-900 font-extrabold lg:font-bold">
             ${displayPrice}
           </p>
-          <p className="text-[14px] lg:text-4 text-gray-700 line-clamp-3">
+          <p className="text-[14px] lg:text-4 text-gray-700 line-clamp-2">
             {product.description}
           </p>
 
