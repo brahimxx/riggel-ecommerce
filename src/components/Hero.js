@@ -1,4 +1,6 @@
 import Image from "next/image";
+import Link from "next/link";
+
 const Hero = () => {
   return (
     <div className=" bg-[#F2F0F1] overflow-hidden ">
@@ -13,12 +15,12 @@ const Hero = () => {
             designed to bring out your individuality and cater to your sense of
             style.
           </p>
-          <button
-            type="button"
-            className="text-white bg-black hover:bg-black/90 cursor-pointer w-full lg:w-[180px]  focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm  py-3 text-center me-2 mb-2 "
+          <Link
+            href="/shop"
+            className="text-white bg-black hover:bg-black/90 cursor-pointer w-full lg:w-[180px] font-medium rounded-full text-sm  py-3 text-center me-2 mb-2 "
           >
             Shop now
-          </button>
+          </Link>
           <div className="flex flex-wrap lg:flex-nowrap justify-center gap-4 lg:justify-start items-center text-left">
             <div className="relative lg:px-4 pr-8 ">
               <p className="text-[24px] lg:text-[30px] xl:text-[40px] font-bold">

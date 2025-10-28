@@ -9,60 +9,110 @@ export const revalidate = 300;
 // -- GET: All products with their variants
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
+
+  // Extract all filter parameters
   const categoryId = searchParams.get("category_id");
+  const colors = searchParams.get("colors")?.split(",");
+  const sizes = searchParams.get("sizes")?.split(",");
+  const minPrice = searchParams.get("minPrice");
+  const maxPrice = searchParams.get("maxPrice");
 
-  const filters = [];
-  const values = [];
+  let joins = [];
+  let whereClauses = [];
+  const queryParams = [];
 
+  // --- Build the dynamic query ---
   if (categoryId) {
-    filters.push("p.category_id = ?");
-    values.push(categoryId);
+    whereClauses.push("p.category_id = ?");
+    queryParams.push(categoryId);
   }
 
-  const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
+  // Price range filter now uses the MIN(price) subquery
+  if (minPrice && maxPrice) {
+    whereClauses.push(
+      `(SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) BETWEEN ? AND ?`
+    );
+    queryParams.push(minPrice, maxPrice);
+  }
+
+  // Attribute filters (colors, sizes)
+  if ((colors && colors.length > 0) || (sizes && sizes.length > 0)) {
+    // This join is necessary to filter by attributes
+    joins.push(`
+      JOIN product_variants pv_filter ON p.product_id = pv_filter.product_id
+      JOIN variant_values vv_filter ON pv_filter.variant_id = vv_filter.variant_id
+      JOIN attribute_values av_filter ON vv_filter.value_id = av_filter.value_id
+      JOIN attributes a_filter ON av_filter.attribute_id = a_filter.attribute_id
+    `);
+
+    const attributeConditions = [];
+    if (colors && colors.length > 0) {
+      attributeConditions.push(
+        `(a_filter.name = 'Color' AND av_filter.value IN (?))`
+      );
+      queryParams.push(colors);
+    }
+    if (sizes && sizes.length > 0) {
+      attributeConditions.push(
+        `(a_filter.name = 'Size' AND av_filter.value IN (?))`
+      );
+      queryParams.push(sizes);
+    }
+    whereClauses.push(`(${attributeConditions.join(" OR ")})`);
+  }
+
+  const joinClause = joins.join("\n");
+  const whereClause =
+    whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  // The main query now includes the subqueries for rating and price
+  const sqlQuery = `
+    SELECT DISTINCT
+      p.product_id, 
+      p.name, 
+      p.slug, 
+      p.description, 
+      p.category_id, 
+      p.created_at,
+      -- Subquery for average rating
+      (
+        SELECT AVG(r.rating)
+        FROM reviews r
+        WHERE r.product_id = p.product_id
+      ) AS rating,
+      -- Subquery for the minimum price among variants
+      (
+        SELECT MIN(pv.price)
+        FROM product_variants pv
+        WHERE pv.product_id = p.product_id
+      ) AS price,
+      -- Subquery for the primary image
+      (
+        SELECT pi.url
+        FROM product_images pi
+        WHERE pi.product_id = p.product_id
+        ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
+        LIMIT 1
+      ) AS main_image
+    FROM products p
+    ${joinClause}
+    ${whereClause}
+    GROUP BY p.product_id
+    ORDER BY p.created_at DESC;
+  `;
 
   try {
-    // This query now fetches the base product and nests its variants and their attributes
-    const [products] = await pool.query(
-      `
-      SELECT 
-        p.product_id, p.name, p.slug, p.description, p.category_id, p.created_at,
-        (
-          SELECT JSON_ARRAYAGG(
-            JSON_OBJECT(
-              'variant_id', pv.variant_id,
-              'sku', pv.sku,
-              'price', pv.price,
-              'quantity', pv.quantity,
-              'attributes', (
-                SELECT JSON_ARRAYAGG(
-                  JSON_OBJECT('name', a.name, 'value', av.value)
-                )
-                FROM variant_values vv
-                JOIN attribute_values av ON vv.value_id = av.value_id
-                JOIN attributes a ON av.attribute_id = a.attribute_id
-                WHERE vv.variant_id = pv.variant_id
-              )
-            )
-          )
-          FROM product_variants pv
-          WHERE pv.product_id = p.product_id
-        ) AS variants,
-        (
-          SELECT url
-          FROM product_images pi
-          WHERE pi.product_id = p.product_id AND pi.is_primary = TRUE
-          LIMIT 1
-        ) AS main_image
-      FROM products p
-      ${whereClause}
-      ORDER BY p.created_at DESC
-      `,
-      values
-    );
+    const [products] = await pool.query(sqlQuery, queryParams);
     return NextResponse.json(products);
   } catch (err) {
-    console.error("GET /api/products error:", err);
+    console.error(
+      "GET /api/products error:",
+      err,
+      "Query:",
+      sqlQuery,
+      "Params:",
+      queryParams
+    );
     return NextResponse.json(
       { error: "Failed to fetch products." },
       { status: 500 }

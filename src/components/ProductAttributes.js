@@ -64,7 +64,7 @@ const ProductAttributes = ({ attributes, variants, setSelectedVariant }) => {
         // Special rendering for the "Color" attribute
         if (name === "Color") {
           return (
-            <div key={name} className="py-4 border-t border-gray-200">
+            <div key={name} className="py-4 ">
               <ColorSelector
                 colors={values}
                 selectedColor={selectedOptions[name]}
