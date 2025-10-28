@@ -8,34 +8,56 @@ export const revalidate = 300; // ISR for non-fetch data [web:92]
 export async function getNewArrivals() {
   // kayen two options here, first is to use a base api url and use the api, because the api call in the server side needs an absolute url, second is to query DB in the component directly
   const [rows] = await pool.query(
-    `SELECT p.product_id, p.name, p.slug, p.description, p.category_id, p.created_at,
-            (
-              SELECT AVG(r.rating)
-              FROM reviews r
-              WHERE r.product_id = p.product_id
-            ) AS rating,
-            (
-              SELECT MIN(pv.price)
-              FROM product_variants pv
-              WHERE pv.product_id = p.product_id
-            ) AS price,
-            (
-              SELECT SUM(pv.quantity)
-              FROM product_variants pv
-              WHERE pv.product_id = p.product_id
-            ) AS quantity,
-            (
-              SELECT pi.url
-              FROM product_images pi
-              WHERE pi.product_id = p.product_id
-              ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
-              LIMIT 1
-            ) AS main_image
+    `SELECT 
+        p.product_id, 
+        p.name, 
+        p.slug, 
+        p.description, 
+        p.created_at,
+        (
+          SELECT AVG(r.rating)
+          FROM reviews r
+          WHERE r.product_id = p.product_id
+        ) AS rating,
+        (
+          SELECT MIN(pv.price)
+          FROM product_variants pv
+          WHERE pv.product_id = p.product_id
+        ) AS price,
+        (
+          SELECT SUM(pv.quantity)
+          FROM product_variants pv
+          WHERE pv.product_id = p.product_id
+        ) AS quantity,
+        (
+          SELECT pi.url
+          FROM product_images pi
+          WHERE pi.product_id = p.product_id
+          ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
+          LIMIT 1
+        ) AS main_image,
+        -- THIS IS THE NEW PART --
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT('category_id', c.category_id, 'name', c.name)
+          )
+          FROM product_categories pc
+          JOIN categories c ON pc.category_id = c.category_id
+          WHERE pc.product_id = p.product_id
+        ) AS categories
      FROM products p
      ORDER BY p.created_at DESC
      LIMIT 8;`
   );
-  return rows;
+
+  // MODIFICATION: Safely parse the categories string from the database.
+  return rows.map((product) => ({
+    ...product,
+    categories:
+      typeof product.categories === "string"
+        ? JSON.parse(product.categories)
+        : product.categories || [],
+  }));
 }
 
 export default async function NewArrivals() {

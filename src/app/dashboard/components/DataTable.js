@@ -51,7 +51,9 @@ const DataTable = ({
       const id = record[rowKeyField];
       if (!id) throw new Error("Invalid record id for deletion");
 
-      const res = await fetch(`/api/${apiBaseUrl}/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/${apiBaseUrl}/${id}`, {
+        method: "DELETE",
+      });
 
       if (!res.ok) {
         let errMsg = `Delete failed (${res.status})`;
@@ -127,13 +129,19 @@ const DataTable = ({
 
   const columns = useMemo(() => {
     if (columnsOverride && columnsOverride.length) {
-      const mapped = columnsOverride.map((c) => makeCol(c.key, c.title));
-      return [...mapped, actionColumn];
+      // It now uses the full objects from columnsOverride, not just key/title
+      return [...columnsOverride, actionColumn];
     }
     if (!data || data.length === 0) return [actionColumn];
+
+    // Fallback to auto-generate columns
     const baseCols = Object.keys(data[0])
-      .filter((key) => key !== "key")
-      .map((key) => makeCol(key));
+      .filter((key) => key !== "key" && typeof data[0][key] !== "object")
+      .map((key) => ({
+        title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
+        dataIndex: key,
+        key: key,
+      }));
     return [...baseCols, actionColumn];
   }, [data, columnsOverride]);
 

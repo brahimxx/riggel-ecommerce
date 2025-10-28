@@ -55,8 +55,13 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
             }, {})
           : v.attributes || {},
       }));
+
+      // MODIFICATION: Set 'category_ids' from the product's 'categories' array
       form.setFieldsValue({
         ...product,
+        category_ids: product.categories
+          ? product.categories.map((c) => c.category_id)
+          : [],
         variants,
       });
       setImages(product.images || []);
@@ -83,8 +88,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     }
   };
 
-  // (Keep your customRequest, beforeUpload, image handling functions the same)
-  // ...
+  // --- All your image handling functions (customRequest, beforeUpload, etc.) remain unchanged ---
   const getProductId = () => product?.product_id || productName || "new";
   const handleUploadSuccess = (response) => {
     setImages((imgs) => [
@@ -159,12 +163,9 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     });
   };
 
-  // Updated submit handler
   const onFinish = async (values) => {
     try {
-      // Transform variants to include attributes array
       const variants = (values.variants || []).map((variant) => {
-        // attributes: { Color: "Black", Size: "M" } => [{ name: "Color", value: "Black" }, ...]
         const attrs = attributes.map((attr) => ({
           name: attr.name,
           value: variant.attributes?.[attr.name] || "",
@@ -174,8 +175,10 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           attributes: attrs,
         };
       });
+
+      // MODIFICATION: The 'category_ids' field from the form is now used directly.
       const payload = {
-        ...values,
+        ...values, // This will include 'name', 'description', and 'category_ids'
         variants,
         images: images.map((img, idx) => ({
           ...img,
@@ -186,9 +189,9 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         })),
       };
 
-      // Remove the single price/quantity fields if they exist
-      delete payload.price;
-      delete payload.quantity;
+      // The API now expects `category_ids` instead of `category_id`.
+      // Since the form field is named `category_ids`, we don't need to do anything extra here.
+      delete payload.category_id; // Clean up any lingering old field, just in case.
 
       const url = product
         ? `/api/products/by-id/${product.product_id}`
@@ -225,12 +228,23 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       <Form.Item name="name" label="Name" rules={[{ required: true }]}>
         <Input placeholder="Product Name" />
       </Form.Item>
+
+      {/* MODIFICATION: Updated to a multi-select for categories */}
       <Form.Item
-        name="category_id"
-        label="Category"
-        rules={[{ required: true }]}
+        name="category_ids"
+        label="Categories"
+        rules={[
+          { required: true, message: "Please select at least one category." },
+        ]}
       >
-        <Select placeholder="Select a category">
+        <Select
+          mode="multiple"
+          allowClear
+          placeholder="Select categories"
+          filterOption={(input, option) =>
+            (option?.children ?? "").toLowerCase().includes(input.toLowerCase())
+          }
+        >
           {categories.map((cat) => (
             <Select.Option key={cat.category_id} value={cat.category_id}>
               {cat.name}
@@ -238,6 +252,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           ))}
         </Select>
       </Form.Item>
+
       <Form.Item name="description" label="Description">
         <TextArea rows={4} />
       </Form.Item>

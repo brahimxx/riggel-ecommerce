@@ -1,6 +1,6 @@
 import pool from "@/lib/db";
 
-// GET /api/categories/[id]
+// GET /api/categories/[id] - (No changes needed)
 export async function GET(req, { params }) {
   const resolvedParams = await params;
   const id = Number(resolvedParams.id);
@@ -20,6 +20,7 @@ export async function GET(req, { params }) {
 
     return Response.json(rows[0]);
   } catch (error) {
+    console.error("Failed to fetch category:", error);
     return Response.json(
       { error: "Failed to fetch category." },
       { status: 500 }
@@ -27,7 +28,7 @@ export async function GET(req, { params }) {
   }
 }
 
-// PUT /api/categories/[id]
+// PUT /api/categories/[id] - (No changes needed)
 export async function PUT(req, { params }) {
   const resolvedParams = await params;
   const id = Number(resolvedParams.id);
@@ -50,7 +51,6 @@ export async function PUT(req, { params }) {
       return Response.json({ error: "Category not found." }, { status: 404 });
     }
 
-    // Begin transaction in case you want to extend logic in future
     await conn.beginTransaction();
 
     // Update fields if provided
@@ -93,6 +93,7 @@ export async function PUT(req, { params }) {
   } catch (error) {
     await conn.rollback();
     conn.release();
+    console.error("Failed to update category:", error);
     return Response.json(
       { error: "Failed to update category." },
       { status: 500 }
@@ -100,7 +101,7 @@ export async function PUT(req, { params }) {
   }
 }
 
-// DELETE /api/categories/[id]
+// DELETE /api/categories/[id] - (Adjusted)
 export async function DELETE(req, { params }) {
   const resolvedParams = await params;
   const id = Number(resolvedParams.id);
@@ -117,9 +118,9 @@ export async function DELETE(req, { params }) {
       return Response.json({ error: "Category not found." }, { status: 404 });
     }
 
-    // 2. Check if category has assigned products
+    // 2. Check if category has assigned products (using the new junction table)
     const [prodCountRes] = await pool.query(
-      `SELECT COUNT(*) AS product_count FROM products WHERE category_id = ?`,
+      `SELECT COUNT(*) AS product_count FROM product_categories WHERE category_id = ?`,
       [id]
     );
     const productCount = prodCountRes[0]?.product_count ?? 0;
@@ -133,18 +134,32 @@ export async function DELETE(req, { params }) {
       );
     }
 
-    // 3. Safe to delete category
+    // 3. Safe to delete the category
+    // Because of the `ON DELETE CASCADE` constraint on the product_categories table,
+    // you only need to delete from the `categories` table. The database will handle the rest.
     const [result] = await pool.query(
       `DELETE FROM categories WHERE category_id = ?`,
       [id]
     );
 
     if (result.affectedRows === 0) {
+      // This case is unlikely if the first check passed, but it's good practice.
       return Response.json({ error: "Category not found." }, { status: 404 });
     }
 
     return Response.json({ message: "Category deleted." }, { status: 200 });
   } catch (error) {
+    console.error("Failed to delete category:", error);
+    // This will catch errors if, for example, the category is a parent to other sub-categories
+    if (error.code === "ER_ROW_IS_REFERENCED_2") {
+      return Response.json(
+        {
+          error:
+            "Category cannot be deleted because it is a parent to other categories.",
+        },
+        { status: 400 }
+      );
+    }
     return Response.json(
       { error: "Failed to delete category." },
       { status: 500 }

@@ -5,11 +5,11 @@ import DataTable from "../components/DataTable";
 import CategoryForm from "../components/CategoryForm"; // Assumes you have a CategoryForm component
 
 const Categories = () => {
-  const [categories, setCategories] = useState([]); // State for categories
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState(null); // State for the category being edited
+  const [editingCategory, setEditingCategory] = useState(null);
 
   // Fetch categories data
   const fetchData = () => {
@@ -33,22 +33,23 @@ const Categories = () => {
   }, []);
 
   const handleCancel = () => {
+    // MODIFICATION: Use setIsModalOpen to close the modal.
     setIsModalOpen(false);
     setEditingCategory(null);
     setError(null);
   };
 
   const handleSuccess = () => {
-    fetchData(); // Refresh categories list after add/update
+    fetchData();
+    // MODIFICATION: Use setIsModalOpen to close the modal.
     setIsModalOpen(false);
     setEditingCategory(null);
     setError(null);
   };
 
   const handleEditCategory = (category) => {
-    // For a simple entity like a category, you might already have all the data.
-    // If not, you could fetch full details like in the Orders component.
     setEditingCategory(category);
+    // MODIFICATION: Use setIsModalOpen to open the modal.
     setIsModalOpen(true);
   };
 
@@ -61,11 +62,12 @@ const Categories = () => {
       <DataTable
         data={categories}
         loading={loading}
+        // MODIFICATION: Pass 'setIsModalOpen' as the prop that DataTable expects.
         setIsModalOpen={setIsModalOpen}
         onEdit={handleEditCategory}
         onDeleteSuccess={fetchData}
-        apiBaseUrl="categories" // API endpoint for deletion
-        rowKeyField="category_id" // Primary key field for the category
+        apiBaseUrl="categories"
+        rowKeyField="category_id"
       />
 
       <Modal
