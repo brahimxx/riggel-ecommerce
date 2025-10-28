@@ -1,4 +1,3 @@
-// src/app/dashboard/attributes/page.js
 "use client";
 import React, { useEffect, useState } from "react";
 import {
@@ -11,6 +10,14 @@ import {
   Popconfirm,
   message,
 } from "antd";
+// MODIFICATION: Import the new API helpers
+import {
+  getAttributes,
+  createAttribute,
+  updateAttribute,
+  updateAttributeValues,
+  deleteAttribute,
+} from "@/lib/api";
 
 const AttributeDashboard = () => {
   const [attributes, setAttributes] = useState([]);
@@ -20,16 +27,14 @@ const AttributeDashboard = () => {
   const [form] = Form.useForm();
   const [valuesForm] = Form.useForm();
   const [valuesModalOpen, setValuesModalOpen] = useState(false);
-  const [editingValues, setEditingValues] = useState([]);
 
   const fetchAttributes = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/attributes");
-      const data = await res.json();
+      const data = await getAttributes();
       setAttributes(data);
     } catch (err) {
-      message.error("Failed to fetch attributes");
+      message.error(err.message || "Failed to fetch attributes");
     } finally {
       setLoading(false);
     }
@@ -53,22 +58,51 @@ const AttributeDashboard = () => {
 
   const handleEditValues = (attr) => {
     setEditingAttr(attr);
-    setEditingValues(attr.values.map((v) => v.value));
+    // The values from the API are objects {value_id, value}, we need just the 'value' string for the form.
     valuesForm.setFieldsValue({ values: attr.values.map((v) => v.value) });
     setValuesModalOpen(true);
   };
 
   const handleDelete = async (attribute_id) => {
-    // Implement API call for delete (not shown here)
-    message.info("Delete API not implemented");
+    try {
+      await deleteAttribute(attribute_id);
+      message.success("Attribute deleted successfully");
+      fetchAttributes(); // Refresh the list
+    } catch (err) {
+      message.error(err.message || "Failed to delete attribute");
+    }
   };
 
   const handleModalOk = async () => {
-    const values = await form.validateFields();
-    // Implement API call for add/edit (not shown here)
-    message.info("Add/Edit API not implemented");
-    setModalOpen(false);
-    fetchAttributes();
+    try {
+      const values = await form.validateFields();
+      if (editingAttr) {
+        // Update existing attribute
+        await updateAttribute(editingAttr.attribute_id, values.name);
+        message.success("Attribute updated successfully");
+      } else {
+        // Create new attribute
+        await createAttribute(values.name);
+        message.success("Attribute created successfully");
+      }
+      setModalOpen(false);
+      fetchAttributes(); // Refresh the list
+    } catch (err) {
+      // Validation errors are handled by the form, this catches API errors
+      message.error(err.message || "Failed to save attribute");
+    }
+  };
+
+  const handleValuesModalOk = async () => {
+    try {
+      const values = await valuesForm.validateFields();
+      await updateAttributeValues(editingAttr.attribute_id, values.values);
+      message.success("Values updated successfully");
+      setValuesModalOpen(false);
+      fetchAttributes(); // Refresh the list
+    } catch (err) {
+      message.error(err.message || "Failed to update values");
+    }
   };
 
   const columns = [
@@ -79,7 +113,7 @@ const AttributeDashboard = () => {
       key: "values",
       render: (values, record) => (
         <span>
-          {values.map((v) => v.value).join(", ")}
+          {(values || []).map((v) => v.value).join(", ")}
           <Button
             size="small"
             style={{ marginLeft: 8 }}
@@ -96,10 +130,10 @@ const AttributeDashboard = () => {
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => handleEdit(record)}>
-            Edit
+            Edit Name
           </Button>
           <Popconfirm
-            title="Delete?"
+            title="Delete this attribute?"
             onConfirm={() => handleDelete(record.attribute_id)}
           >
             <Button size="small" danger>
@@ -124,8 +158,9 @@ const AttributeDashboard = () => {
         loading={loading}
         pagination={false}
       />
+
       <Modal
-        title={editingAttr ? "Edit Attribute" : "Add Attribute"}
+        title={editingAttr ? "Edit Attribute Name" : "Add Attribute"}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         onOk={handleModalOk}
@@ -136,35 +171,18 @@ const AttributeDashboard = () => {
             label="Attribute Name"
             rules={[{ required: true }]}
           >
-            {" "}
-            <Input />{" "}
+            <Input />
           </Form.Item>
         </Form>
       </Modal>
+
       <Modal
         title={
           editingAttr ? `Edit Values for ${editingAttr.name}` : "Edit Values"
         }
         open={valuesModalOpen}
         onCancel={() => setValuesModalOpen(false)}
-        onOk={async () => {
-          const vals = await valuesForm.validateFields();
-          try {
-            await fetch("/api/attributes", {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                attribute_id: editingAttr.attribute_id,
-                values: vals.values,
-              }),
-            });
-            message.success("Values updated successfully");
-            setValuesModalOpen(false);
-            fetchAttributes();
-          } catch (err) {
-            message.error("Failed to update values");
-          }
-        }}
+        onOk={handleValuesModalOk}
       >
         <Form form={valuesForm} layout="vertical">
           <Form.List name="values">
@@ -179,22 +197,20 @@ const AttributeDashboard = () => {
                     <Form.Item
                       {...restField}
                       name={name}
-                      rules={[{ required: true, message: "Enter value" }]}
+                      rules={[
+                        { required: true, message: "Value cannot be empty" },
+                      ]}
+                      style={{ flex: 1 }}
                     >
-                      <Input placeholder="Value" />
+                      <Input placeholder="Attribute Value" />
                     </Form.Item>
-                    <Button
-                      danger
-                      onClick={() => remove(name)}
-                      size="small"
-                      style={{ marginLeft: 8 }}
-                    >
-                      Remove
+                    <Button danger onClick={() => remove(name)} size="small">
+                      -
                     </Button>
                   </Space>
                 ))}
                 <Button type="dashed" onClick={() => add()} block>
-                  Add Value
+                  + Add Value
                 </Button>
               </>
             )}

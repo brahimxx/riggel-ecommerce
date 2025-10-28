@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { Modal, Alert } from "antd";
-import DataTable from "../components/DataTable"; // The same reusable DataTable
-import UserForm from "../components/UserForm"; // The new form for users
+import DataTable from "../components/DataTable";
+import UserForm from "../components/UserForm";
+// MODIFICATION: Import your new API helpers
+import { getUsers, getUserById, getRoles } from "@/lib/api";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -10,40 +12,39 @@ const Users = () => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [roles, setRoles] = useState([]); // Additional data needed for the form
+  const [roles, setRoles] = useState([]);
 
   const isMounted = useRef(true);
 
-  // Fetch both users and roles data
-  const fetchData = () => {
+  // MODIFICATION: The fetchData function is now cleaner and fetches roles.
+  const fetchData = async () => {
     setLoading(true);
-    fetch("/api/users")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to fetch users");
-        return res.json();
-      })
-      .then((usersData) => {
-        if (isMounted.current) {
-          setUsers(usersData);
-        }
-      })
-      .catch((err) => {
-        if (isMounted.current) {
-          setError(err.message);
-        }
-      })
-      .finally(() => {
-        if (isMounted.current) {
-          setLoading(false);
-        }
-      });
+    try {
+      // Fetch users and roles in parallel
+      const [usersData, rolesData] = await Promise.all([
+        getUsers(),
+        getRoles(), // Assumes you have roles to pass to the form
+      ]);
+
+      if (isMounted.current) {
+        setUsers(usersData || []);
+        setRoles(rolesData || []);
+      }
+    } catch (err) {
+      if (isMounted.current) {
+        setError(err.message);
+      }
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
   };
 
   useEffect(() => {
     isMounted.current = true;
     fetchData();
 
-    // Cleanup function to prevent state updates on unmounted component
     return () => {
       isMounted.current = false;
     };
@@ -58,20 +59,17 @@ const Users = () => {
 
   const handleSuccess = () => {
     if (!isMounted.current) return;
-    fetchData(); // Refresh list after add/update
+    fetchData();
     setIsModalOpen(false);
     setEditingUser(null);
-    setError(null);
   };
 
-  // Fetch full user details before opening the edit modal
+  // MODIFICATION: Using the new 'getUserById' helper function.
   const handleEditUser = async (user) => {
     if (!isMounted.current) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/users/${user.id}`);
-      if (!res.ok) throw new Error("Failed to fetch user details");
-      const fullUser = await res.json();
+      const fullUser = await getUserById(user.id);
       if (isMounted.current) {
         setEditingUser(fullUser);
         setIsModalOpen(true);
@@ -104,9 +102,13 @@ const Users = () => {
         open={isModalOpen}
         onCancel={handleCancel}
         footer={null}
-        width={600} // Adjusted width for a typical user form
+        width={600}
       >
-        <UserForm user={editingUser} onSuccess={handleSuccess} />
+        <UserForm
+          user={editingUser}
+          onSuccess={handleSuccess}
+          roles={roles} // Pass roles to the form
+        />
       </Modal>
     </div>
   );

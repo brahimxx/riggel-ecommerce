@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import { Modal, Alert } from "antd";
 import DataTable from "../components/DataTable";
-import CategoryForm from "../components/CategoryForm"; // Assumes you have a CategoryForm component
+import CategoryForm from "../components/CategoryForm";
+// MODIFICATION: Import your API helper
+import { getCategories } from "@/lib/api";
 
 const Categories = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -11,21 +13,17 @@ const Categories = () => {
   const [error, setError] = useState(null);
   const [editingCategory, setEditingCategory] = useState(null);
 
-  // Fetch categories data
-  const fetchData = () => {
+  // MODIFICATION: The fetchData function is now much cleaner.
+  const fetchData = async () => {
     setLoading(true);
-    fetch("/api/categories")
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to fetch categories");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        setCategories(data);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    try {
+      const data = await getCategories();
+      setCategories(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -33,7 +31,6 @@ const Categories = () => {
   }, []);
 
   const handleCancel = () => {
-    // MODIFICATION: Use setIsModalOpen to close the modal.
     setIsModalOpen(false);
     setEditingCategory(null);
     setError(null);
@@ -41,7 +38,6 @@ const Categories = () => {
 
   const handleSuccess = () => {
     fetchData();
-    // MODIFICATION: Use setIsModalOpen to close the modal.
     setIsModalOpen(false);
     setEditingCategory(null);
     setError(null);
@@ -49,7 +45,6 @@ const Categories = () => {
 
   const handleEditCategory = (category) => {
     setEditingCategory(category);
-    // MODIFICATION: Use setIsModalOpen to open the modal.
     setIsModalOpen(true);
   };
 
@@ -62,7 +57,6 @@ const Categories = () => {
       <DataTable
         data={categories}
         loading={loading}
-        // MODIFICATION: Pass 'setIsModalOpen' as the prop that DataTable expects.
         setIsModalOpen={setIsModalOpen}
         onEdit={handleEditCategory}
         onDeleteSuccess={fetchData}
