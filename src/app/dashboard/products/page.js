@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Modal, Alert, Table, Tag } from "antd";
 import DataTable from "../components/DataTable";
 import ProductForm from "../components/ProductForm";
+import { getProducts, getCategories } from "@/lib/api";
 
 const Products = () => {
   const [products, setProducts] = useState([]);
@@ -13,18 +14,20 @@ const Products = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
-    Promise.all([
-      fetch("/api/products").then((res) => res.json()),
-      fetch("/api/categories").then((res) => res.json()),
-    ])
-      .then(([productsData, categoriesData]) => {
-        setProducts(productsData || []);
-        setCategories(categoriesData || []);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
+    try {
+      const [productsData, categoriesData] = await Promise.all([
+        getProducts(),
+        getCategories(),
+      ]);
+      setProducts(productsData || []);
+      setCategories(categoriesData || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
