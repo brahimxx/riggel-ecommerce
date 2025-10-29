@@ -16,6 +16,10 @@ export async function GET(req) {
   const sizes = searchParams.get("sizes")?.split(",");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = parseInt(searchParams.get("limit") || "12", 10);
+  const offset = (page - 1) * limit;
+  const sortBy = searchParams.get("sortBy") || "created_at_desc";
 
   let joins = [];
   let whereClauses = [];
@@ -23,7 +27,6 @@ export async function GET(req) {
 
   // --- Build the dynamic query ---
   if (categoryId) {
-    // MODIFICATION: Join with product_categories to filter by category
     joins.push(`JOIN product_categories pc ON p.product_id = pc.product_id`);
     whereClauses.push("pc.category_id = ?");
     queryParams.push(categoryId);
@@ -62,56 +65,58 @@ export async function GET(req) {
     whereClauses.push(`(${attributeConditions.join(" OR ")})`);
   }
 
+  // --- MODIFICATION: Robust ORDER BY clause ---
+  let orderByClause = "";
+  switch (sortBy) {
+    case "price_asc":
+      // Push products with no price to the end
+      orderByClause = "ORDER BY price ASC NULLS LAST, p.created_at DESC";
+      break;
+    case "price_desc":
+      // Push products with no price to the end
+      orderByClause = "ORDER BY price DESC NULLS LAST, p.created_at DESC";
+      break;
+    case "popularity_desc":
+      // Sort by rating, pushing unrated products to the end
+      orderByClause = "ORDER BY rating DESC NULLS LAST, p.created_at DESC";
+      break;
+    case "created_at_desc":
+    default:
+      // Default sort by newest
+      orderByClause = "ORDER BY p.created_at DESC";
+      break;
+  }
+
   const joinClause = joins.join("\n");
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  // MODIFICATION: Removed p.category_id from the SELECT statement
-  const sqlQuery = `
-    SELECT 
-      p.product_id, 
-      p.name, 
-      p.slug, 
-      p.description, 
-      p.created_at,
-      (
-        SELECT AVG(r.rating)
-        FROM reviews r
-        WHERE r.product_id = p.product_id
-      ) AS rating,
-      (
-        SELECT MIN(pv.price)
-        FROM product_variants pv
-        WHERE pv.product_id = p.product_id
-      ) AS price,
-      (
-        SELECT pi.url
-        FROM product_images pi
-        WHERE pi.product_id = p.product_id
-        ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
-        LIMIT 1
-      ) AS main_image,
-      -- THIS IS THE NEW PART --
-      (
-        SELECT JSON_ARRAYAGG(
-          JSON_OBJECT('category_id', c.category_id, 'name', c.name)
-        )
-        FROM product_categories pc
-        JOIN categories c ON pc.category_id = c.category_id
-        WHERE pc.product_id = p.product_id
-      ) AS categories
-    FROM products p
-    ${joinClause}
-    ${whereClause}
-    GROUP BY p.product_id
-    ORDER BY p.created_at DESC;
-  `;
+  const countQuery = `SELECT COUNT(DISTINCT p.product_id) as total FROM products p ${joinClause} ${whereClause};`;
+
+  const dataQuery = `
+  SELECT 
+    p.product_id, p.name, p.slug, p.description, p.created_at,
+    (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
+    (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
+    (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.product_id ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS main_image,
+    (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories
+  FROM products p
+  ${joinClause}
+  ${whereClause}
+  GROUP BY p.product_id
+  ${orderByClause}
+  LIMIT ?
+  OFFSET ?;
+`;
 
   try {
-    const [products] = await pool.query(sqlQuery, queryParams);
+    const [[countResult], [products]] = await Promise.all([
+      pool.query(countQuery, queryParams),
+      pool.query(dataQuery, [...queryParams, limit, offset]),
+    ]);
 
-    // MODIFICATION: Safely handle the 'categories' field.
-    // It might already be an object, or it might be a string.
+    const total = countResult[0].total;
+
     const productsWithParsedCategories = products.map((product) => ({
       ...product,
       categories:
@@ -120,16 +125,9 @@ export async function GET(req) {
           : product.categories || [],
     }));
 
-    return NextResponse.json(productsWithParsedCategories);
+    return NextResponse.json({ products: productsWithParsedCategories, total });
   } catch (err) {
-    console.error(
-      "GET /api/products error:",
-      err,
-      "Query:",
-      sqlQuery,
-      "Params:",
-      queryParams
-    );
+    console.error("GET /api/products error:", err);
     return NextResponse.json(
       { error: "Failed to fetch products." },
       { status: 500 }

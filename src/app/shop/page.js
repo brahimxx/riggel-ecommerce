@@ -1,9 +1,13 @@
 // your-pages-directory/shop.js
 "use client";
 import { useState, useEffect } from "react";
+import { Pagination, Spin } from "antd";
 import FilterSidebar from "@/components/FilterSidebar";
-import ProductCard from "@/components/ProductCard"; // <-- 1. Import ProductCard
-import { getProducts } from "@/lib/api";
+import ProductCard from "@/components/ProductCard";
+import { getProducts, getCategories, getAttributes } from "@/lib/api";
+import ShopHeader from "@/components/ShopHeader";
+
+const PAGE_SIZE = 9; // Define a page size constant
 
 const ShopPage = () => {
   // --- State for products and loading ---
@@ -11,34 +15,60 @@ const ShopPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // --- MODIFICATION: State for pagination ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalProducts, setTotalProducts] = useState(0);
+
   // --- State for filters ---
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // --- Data for filters (ideally fetched from the database) ---
-  const allAvailableColors = [
-    "black",
-    "white",
-    "#FF5733",
-    "#33FF57",
-    "#3357FF",
-    "yellow",
-    "purple",
-  ];
-  const allAvailableSizes = [
-    "XX-Small",
-    "X-Small",
-    "Small",
-    "Medium",
-    "Large",
-    "X-Large",
-    "XX-Large",
-    "3X-Large",
-    "4X-Large",
-  ];
-  const categories = ["T-shirt", "Shorts", "Shirts", "Hoddie", "Jeans"];
+  // --- State for dynamic filter options ---
+  const [allAvailableColors, setAllAvailableColors] = useState([]);
+  const [allAvailableSizes, setAllAvailableSizes] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+
+  // MODIFICATION: Add state for sorting
+  const [sortBy, setSortBy] = useState("created_at_desc");
+
+  // --- Effect for fetching initial filter data ---
+  useEffect(() => {
+    const fetchFilterData = async () => {
+      try {
+        const [categoriesData, attributesData] = await Promise.all([
+          getCategories(),
+          getAttributes(),
+        ]);
+
+        setAllCategories(categoriesData || []);
+
+        // Extract colors and sizes from the attributes data
+        const colorsAttr = attributesData.find(
+          (attr) => attr.name.toLowerCase() === "color"
+        );
+        const sizesAttr = attributesData.find(
+          (attr) => attr.name.toLowerCase() === "size"
+        );
+
+        if (colorsAttr) {
+          setAllAvailableColors(colorsAttr.values.map((v) => v.value));
+        }
+        if (sizesAttr) {
+          setAllAvailableSizes(sizesAttr.values.map((v) => v.value));
+        }
+      } catch (err) {
+        console.error("Failed to fetch filter data:", err);
+        // Set empty arrays as a fallback
+        setAllCategories([]);
+        setAllAvailableColors([]);
+        setAllAvailableSizes([]);
+      }
+    };
+
+    fetchFilterData();
+  }, []);
 
   // --- Handler Functions ---
   const handleColorToggle = (color) => {
@@ -58,11 +88,18 @@ const ShopPage = () => {
   };
 
   const handleCategorySelect = (category) => {
-    // Toggle selection: if the same category is clicked again, deselect it.
     setSelectedCategory((prev) => (prev === category ? null : category));
   };
 
-  // --- Effect for Fetching and Filtering Data ---
+  // MODIFICATION: Handler for page changes
+  const onPageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo(0, 0); // Scroll to top on page change
+  };
+
+  // MODIFICATION: Add handler for sorting
+  const handleSortByChange = (value) => setSortBy(value);
+
   useEffect(() => {
     const fetchAndSetProducts = async () => {
       setIsLoading(true);
@@ -71,14 +108,15 @@ const ShopPage = () => {
         colors: selectedColors,
         sizes: selectedSizes,
         price: priceRange,
-        // Add category to filters if one is selected
-        // Note: This assumes your API can handle a category name. You might need to pass an ID.
-        category: selectedCategory,
+        category_id: selectedCategory ? selectedCategory.category_id : null,
+        page: currentPage,
+        limit: PAGE_SIZE,
+        sortBy: sortBy,
       };
-
       try {
-        const fetchedProducts = await getProducts(filters);
-        setProducts(fetchedProducts);
+        const response = await getProducts(filters);
+        setProducts(response.products || []);
+        setTotalProducts(response.total || 0);
       } catch (err) {
         setError("Failed to load products. Please try again later.");
         console.error(err);
@@ -87,34 +125,52 @@ const ShopPage = () => {
       }
     };
 
-    // Debounce fetching to avoid too many API calls while user is interacting
-    const timer = setTimeout(() => {
-      fetchAndSetProducts();
-    }, 500); // Wait 500ms after the last filter change before fetching
+    const timer = setTimeout(fetchAndSetProducts, 500);
+    return () => clearTimeout(timer);
+  }, [
+    selectedColors,
+    selectedSizes,
+    priceRange,
+    selectedCategory,
+    currentPage,
+    sortBy,
+  ]);
 
-    return () => clearTimeout(timer); // Cleanup timer on unmount or re-render
-  }, [selectedColors, selectedSizes, priceRange, selectedCategory]);
+  // Effect 2: Resets the current page to 1 ONLY when a filter changes.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedColors, selectedSizes, priceRange, selectedCategory, sortBy]);
 
-  // --- Render Logic ---
   const renderContent = () => {
     if (isLoading) {
-      // You can replace this with a more sophisticated skeleton loader
-      return <p>Loading products...</p>;
+      return (
+        <div className="text-center py-10">
+          <Spin size="large" />
+        </div>
+      );
     }
     if (error) {
       return <p className="text-red-500">{error}</p>;
     }
     if (products.length > 0) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8">
-          {products.map(
-            (product) => (
-              // 2. Use the ProductCard component here
-              console.log(product),
-              (<ProductCard key={product.product_id} product={product} />)
-            )
-          )}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8">
+            {products.map((product) => (
+              <ProductCard key={product.product_id} product={product} />
+            ))}
+          </div>
+          {/* MODIFICATION: Add the Pagination component */}
+          <div className="mt-12 flex justify-center">
+            <Pagination
+              current={currentPage}
+              pageSize={PAGE_SIZE}
+              total={totalProducts}
+              onChange={onPageChange}
+              showSizeChanger={false} // Optional: hide the size changer
+            />
+          </div>
+        </>
       );
     }
     return <p>No products found matching your criteria.</p>;
@@ -125,7 +181,7 @@ const ShopPage = () => {
       <FilterSidebar
         priceRange={priceRange}
         onPriceChange={handlePriceChange}
-        categories={categories}
+        categories={allCategories}
         selectedCategory={selectedCategory}
         onCategorySelect={handleCategorySelect}
         colors={allAvailableColors}
@@ -137,7 +193,17 @@ const ShopPage = () => {
       />
 
       {/* Product Grid Area */}
-      <div className="w-full lg:w-[80%]">{renderContent()}</div>
+      <div className="w-full lg:w-[80%]">
+        {/* MODIFICATION: Add the ShopHeader component */}
+        <ShopHeader
+          currentPage={currentPage}
+          pageSize={PAGE_SIZE}
+          totalProducts={totalProducts}
+          sortBy={sortBy}
+          onSortByChange={handleSortByChange}
+        />
+        {renderContent()}
+      </div>
     </div>
   );
 };

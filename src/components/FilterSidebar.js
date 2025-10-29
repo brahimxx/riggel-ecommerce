@@ -1,22 +1,23 @@
-// src/components/FilterSidebar.js
 "use client";
 import React from "react";
-import { SlidersOutlined, RightOutlined } from "@ant-design/icons";
-import { Slider } from "antd";
+import { SlidersOutlined } from "@ant-design/icons";
+import { Slider, Checkbox } from "antd";
 import ColorFilter from "@/components/ColorFilter";
 import SizeFilter from "@/components/SizeFilter";
 
 const FilterSidebar = ({
-  // Props for Price Filter
+  // Price Filter Props
   priceRange,
   onPriceChange,
-  // Props for Category Filter
+  // Category Filter Props
   categories,
-  // Props for Color Filter
+  selectedCategory,
+  onCategorySelect,
+  // Color Filter Props
   colors,
   selectedColors,
   onColorToggle,
-  // Props for Size Filter
+  // Size Filter Props
   sizes,
   selectedSizes,
   onSizeToggle,
@@ -31,16 +32,13 @@ const FilterSidebar = ({
 
       {/* Price Filter Section */}
       <div className="border-b border-gray-300/60 py-6">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="font-semibold text-gray-800">Price</h3>
-        </div>
+        <h3 className="font-semibold text-gray-800 mb-2">Price</h3>
         <Slider
           range
           min={0}
           max={500}
           value={priceRange}
           onChange={onPriceChange}
-          // Add your custom styles back here if needed
         />
         <div className="flex justify-between mt-2 text-sm text-gray-600">
           <span>${priceRange[0]}</span>
@@ -52,11 +50,19 @@ const FilterSidebar = ({
       <ul className="flex flex-col gap-4 border-b border-gray-300/60 py-6">
         {categories.map((category) => (
           <li
-            key={category}
-            className="flex justify-between items-center cursor-pointer hover:text-gray-900 text-gray-600"
+            // MODIFICATION: Use the unique category_id for the key
+            key={category.category_id}
+            className="flex justify-between items-center hover:text-gray-900 text-gray-600"
           >
-            <p>{category}</p>
-            <RightOutlined className="text-xs" />
+            <Checkbox
+              className="cursor-pointer"
+              // MODIFICATION: Make the checkbox interactive
+              onChange={() => onCategorySelect(category)}
+              checked={selectedCategory?.category_id === category.category_id}
+            >
+              {/* MODIFICATION: Display the category name as the label */}
+              {category.name}
+            </Checkbox>
           </li>
         ))}
       </ul>
