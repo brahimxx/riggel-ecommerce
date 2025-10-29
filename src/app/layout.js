@@ -1,3 +1,4 @@
+import "@ant-design/v5-patch-for-react-19";
 import "./styles/globals.css";
 import Header from "@/components/Header";
 import NewsLetter from "@/components/NewsLetter";

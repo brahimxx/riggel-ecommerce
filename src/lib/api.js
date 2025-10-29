@@ -19,6 +19,15 @@ export async function getProducts(filters = {}) {
     params.append("category_id", filters.category_id);
   }
 
+  // --- FIX: Add page and limit to the URL parameters ---
+  if (filters.page) {
+    params.append("page", filters.page);
+  }
+  if (filters.limit) {
+    params.append("limit", filters.limit);
+  }
+  // ----------------------------------------------------
+
   const queryString = params.toString();
   const url = `/api/products${queryString ? `?${queryString}` : ""}`;
 
