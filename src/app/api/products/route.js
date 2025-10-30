@@ -69,20 +69,19 @@ export async function GET(req) {
   let orderByClause = "";
   switch (sortBy) {
     case "price_asc":
-      // Push products with no price to the end
-      orderByClause = "ORDER BY price ASC NULLS LAST, p.created_at DESC";
+      // For ASC, use 'IS NULL' to push NULLs to the end.
+      orderByClause = "ORDER BY price IS NULL, price ASC, p.created_at DESC";
       break;
     case "price_desc":
-      // Push products with no price to the end
-      orderByClause = "ORDER BY price DESC NULLS LAST, p.created_at DESC";
+      // For DESC, MySQL automatically puts NULLs last.
+      orderByClause = "ORDER BY price DESC, p.created_at DESC";
       break;
     case "popularity_desc":
-      // Sort by rating, pushing unrated products to the end
-      orderByClause = "ORDER BY rating DESC NULLS LAST, p.created_at DESC";
+      // For DESC, MySQL automatically puts NULLs last.
+      orderByClause = "ORDER BY rating DESC, p.created_at DESC";
       break;
     case "created_at_desc":
     default:
-      // Default sort by newest
       orderByClause = "ORDER BY p.created_at DESC";
       break;
   }
