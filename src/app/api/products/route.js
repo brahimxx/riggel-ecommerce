@@ -10,29 +10,43 @@ export const revalidate = 300;
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
-  // Extract all filter parameters
+  // Extract all filter, pagination, and sorting parameters
   const categoryId = searchParams.get("category_id");
   const colors = searchParams.get("colors")?.split(",");
   const sizes = searchParams.get("sizes")?.split(",");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "12", 10);
+  const limit = parseInt(searchParams.get("limit") || "9", 10); // Match frontend PAGE_SIZE
   const offset = (page - 1) * limit;
   const sortBy = searchParams.get("sortBy") || "created_at_desc";
+  const query = searchParams.get("query");
 
-  let joins = [];
   let whereClauses = [];
   const queryParams = [];
 
-  // --- Build the dynamic query ---
+  // --- Build the dynamic query using independent AND conditions ---
+
+  // Search filter
+  if (query) {
+    // Use MATCH() AGAINST() for intelligent searching.
+    // The 'IN NATURAL LANGUAGE MODE' is the default and provides relevance scoring.
+    whereClauses.push(
+      `MATCH(p.name, p.description) AGAINST(? IN NATURAL LANGUAGE MODE)`
+    );
+    queryParams.push(query);
+  }
+
+  // Category filter
   if (categoryId) {
-    joins.push(`JOIN product_categories pc ON p.product_id = pc.product_id`);
-    whereClauses.push("pc.category_id = ?");
+    // Use EXISTS for efficient many-to-many filtering
+    whereClauses.push(
+      `EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.product_id AND pc.category_id = ?)`
+    );
     queryParams.push(categoryId);
   }
 
-  // Price range filter (No change needed)
+  // Price range filter
   if (minPrice && maxPrice) {
     whereClauses.push(
       `(SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) BETWEEN ? AND ?`
@@ -40,77 +54,87 @@ export async function GET(req) {
     queryParams.push(minPrice, maxPrice);
   }
 
-  // Attribute filters (colors, sizes) (No change needed)
-  if ((colors && colors.length > 0) || (sizes && sizes.length > 0)) {
-    joins.push(`
-      JOIN product_variants pv_filter ON p.product_id = pv_filter.product_id
-      JOIN variant_values vv_filter ON pv_filter.variant_id = vv_filter.variant_id
-      JOIN attribute_values av_filter ON vv_filter.value_id = av_filter.value_id
-      JOIN attributes a_filter ON av_filter.attribute_id = a_filter.attribute_id
-    `);
+  // MODIFICATION: Helper function to create EXISTS clauses for attributes
+  const addAttributeFilter = (attributeName, values) => {
+    if (values && values.length > 0) {
+      whereClauses.push(`
+        EXISTS (
+          SELECT 1 FROM product_variants pv
+          JOIN variant_values vv ON pv.variant_id = vv.variant_id
+          JOIN attribute_values av ON vv.value_id = av.value_id
+          JOIN attributes a ON av.attribute_id = a.attribute_id
+          WHERE pv.product_id = p.product_id
+            AND a.name = ?
+            AND av.value IN (?)
+        )
+      `);
+      queryParams.push(attributeName, values);
+    }
+  };
 
-    const attributeConditions = [];
-    if (colors && colors.length > 0) {
-      attributeConditions.push(
-        `(a_filter.name = 'Color' AND av_filter.value IN (?))`
-      );
-      queryParams.push(colors);
-    }
-    if (sizes && sizes.length > 0) {
-      attributeConditions.push(
-        `(a_filter.name = 'Size' AND av_filter.value IN (?))`
-      );
-      queryParams.push(sizes);
-    }
-    whereClauses.push(`(${attributeConditions.join(" OR ")})`);
+  // Apply filters for colors and sizes
+  addAttributeFilter("Color", colors);
+  addAttributeFilter("Size", sizes);
+
+  // --- Sorting logic (MySQL-compatible) ---
+  let orderByClause = "";
+  if (query) {
+    // Always sort by relevance first if there is a search query
+    orderByClause = `ORDER BY MATCH(p.name, p.description) AGAINST(?) DESC`;
+    orderByParams.push(query);
   }
 
-  // --- MODIFICATION: Robust ORDER BY clause ---
-  let orderByClause = "";
+  // Append the user's selected sort order
   switch (sortBy) {
     case "price_asc":
-      // For ASC, use 'IS NULL' to push NULLs to the end.
-      orderByClause = "ORDER BY price IS NULL, price ASC, p.created_at DESC";
+      orderByClause += orderByClause
+        ? ", price ASC"
+        : "ORDER BY price IS NULL, price ASC";
       break;
     case "price_desc":
-      // For DESC, MySQL automatically puts NULLs last.
-      orderByClause = "ORDER BY price DESC, p.created_at DESC";
+      orderByClause += orderByClause ? ", price DESC" : "ORDER BY price DESC";
       break;
     case "popularity_desc":
-      // For DESC, MySQL automatically puts NULLs last.
-      orderByClause = "ORDER BY rating DESC, p.created_at DESC";
+      orderByClause += orderByClause ? ", rating DESC" : "ORDER BY rating DESC";
       break;
     case "created_at_desc":
-    default:
-      orderByClause = "ORDER BY p.created_at DESC";
+      orderByClause += orderByClause
+        ? ", p.created_at DESC"
+        : "ORDER BY p.created_at DESC";
       break;
   }
+  // Ensure there's always a final fallback sort order
+  if (!orderByClause.includes("p.created_at DESC")) {
+    orderByClause += ", p.created_at DESC";
+  }
 
-  const joinClause = joins.join("\n");
+  // --- Final Query Construction ---
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  const countQuery = `SELECT COUNT(DISTINCT p.product_id) as total FROM products p ${joinClause} ${whereClause};`;
+  const countQuery = `SELECT COUNT(p.product_id) as total FROM products p ${whereClause};`;
 
   const dataQuery = `
-  SELECT 
-    p.product_id, p.name, p.slug, p.description, p.created_at,
-    (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
-    (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
-    (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.product_id ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS main_image,
-    (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories
-  FROM products p
-  ${joinClause}
-  ${whereClause}
-  GROUP BY p.product_id
-  ${orderByClause}
-  LIMIT ?
-  OFFSET ?;
-`;
+    SELECT 
+      p.product_id, p.name, p.slug, p.description, p.created_at,
+      (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
+      (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
+      (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.product_id ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS main_image,
+      (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories
+    FROM products p
+    ${whereClause}
+    GROUP BY p.product_id
+    ${orderByClause}
+    LIMIT ?
+    OFFSET ?;
+  `;
 
   try {
     const [[countResult], [products]] = await Promise.all([
-      pool.query(countQuery, queryParams),
+      pool.query(
+        countQuery,
+        queryParams.filter((p) => p !== limit && p !== offset)
+      ),
       pool.query(dataQuery, [...queryParams, limit, offset]),
     ]);
 
