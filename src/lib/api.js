@@ -19,6 +19,10 @@ export async function getProducts(filters = {}) {
     params.append("category_id", filters.category_id);
   }
 
+  if (filters.query) {
+    params.append("query", filters.query);
+  }
+
   // --- FIX: Add sortBy, page and limit to the URL parameters ---
   if (filters.sortBy) {
     params.append("sortBy", filters.sortBy);

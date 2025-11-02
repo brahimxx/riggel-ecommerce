@@ -6,6 +6,7 @@ import FilterSidebar from "@/components/FilterSidebar";
 import ProductCard from "@/components/ProductCard";
 import { getProducts, getCategories, getAttributes } from "@/lib/api";
 import ShopHeader from "@/components/ShopHeader";
+import { useSearchParams } from "next/navigation";
 
 const PAGE_SIZE = 9; // Define a page size constant
 
@@ -14,6 +15,7 @@ const ShopPage = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const searchParams = useSearchParams();
 
   // --- MODIFICATION: State for pagination ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -104,11 +106,13 @@ const ShopPage = () => {
     const fetchAndSetProducts = async () => {
       setIsLoading(true);
       setError(null);
+      const query = searchParams.get("query");
       const filters = {
         colors: selectedColors,
         sizes: selectedSizes,
         price: priceRange,
         category_id: selectedCategory ? selectedCategory.category_id : null,
+        query: query,
         page: currentPage,
         limit: PAGE_SIZE,
         sortBy: sortBy,
@@ -134,12 +138,20 @@ const ShopPage = () => {
     selectedCategory,
     currentPage,
     sortBy,
+    searchParams,
   ]);
 
   // Effect 2: Resets the current page to 1 ONLY when a filter changes.
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedColors, selectedSizes, priceRange, selectedCategory, sortBy]);
+  }, [
+    selectedColors,
+    selectedSizes,
+    priceRange,
+    selectedCategory,
+    sortBy,
+    searchParams,
+  ]);
 
   const renderContent = () => {
     if (isLoading) {
