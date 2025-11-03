@@ -6,6 +6,8 @@ import DataTable from "../components/DataTable";
 import ProductForm from "../components/ProductForm";
 import { getProducts, getCategories } from "@/lib/api";
 
+const PAGE_SIZE = 9; // Define a page size constant
+
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -14,14 +16,29 @@ const Products = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
+  const [totalProducts, setTotalProducts] = useState(0);
+
   const fetchData = async () => {
     setLoading(true);
     try {
+      const filters = {
+        page: currentPage,
+        limit: pageSize,
+      };
+
       const [productsData, categoriesData] = await Promise.all([
-        getProducts(),
+        getProducts(filters),
         getCategories(),
       ]);
-      setProducts(productsData || []);
+
+      // Handle the paginated response structure
+      setProducts(productsData.products || productsData || []);
+      setTotalProducts(
+        productsData.total || productsData.products?.length || 0
+      );
       setCategories(categoriesData || []);
     } catch (err) {
       setError(err.message);
@@ -30,9 +47,10 @@ const Products = () => {
     }
   };
 
+  // Fetch data when page or pageSize changes
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const handleCancel = () => {
     setIsModalOpen(false);
@@ -61,7 +79,17 @@ const Products = () => {
     }
   };
 
-  // Define columns for the nested variants table (no changes needed)
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo(0, 0);
+  };
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size);
+    setCurrentPage(1); // Reset to page 1 when page size changes
+  };
+
+  // Define columns for the nested variants table
   const variantColumns = [
     { title: "SKU", dataIndex: "sku", key: "sku" },
     {
@@ -104,6 +132,7 @@ const Products = () => {
       render: (p) => (p ? `$${Number(p).toFixed(2)}` : "N/A"),
     },
   ];
+
   return (
     <div>
       {error && (
@@ -111,14 +140,23 @@ const Products = () => {
       )}
 
       <DataTable
-        data={products}
+        data={{
+          products: products,
+          pagination: {
+            page: currentPage,
+            limit: pageSize,
+            total: totalProducts,
+            totalPages: Math.ceil(totalProducts / pageSize),
+          },
+        }}
         loading={loading}
         setIsModalOpen={setIsModalOpen}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
         onEdit={handleEditProduct}
         onDeleteSuccess={fetchData}
         apiBaseUrl="products/by-id"
         rowKeyField="product_id"
-        // MODIFICATION: Using 'columnsOverride' to match the DataTable prop
         columnsOverride={productColumns}
         expandable={{
           expandedRowRender: (record) => (
@@ -139,7 +177,7 @@ const Products = () => {
         open={isModalOpen}
         onCancel={handleCancel}
         footer={null}
-        width={800} // Make modal wider for the variants UI
+        width={800}
       >
         <ProductForm
           product={editingProduct}
