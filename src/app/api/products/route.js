@@ -10,14 +10,13 @@ export const revalidate = 300;
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
-  // Extract all filter, pagination, and sorting parameters
   const categoryId = searchParams.get("category_id");
   const colors = searchParams.get("colors")?.split(",");
   const sizes = searchParams.get("sizes")?.split(",");
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const limit = parseInt(searchParams.get("limit") || "9", 10); // Match frontend PAGE_SIZE
+  const limit = parseInt(searchParams.get("limit") || "9", 10);
   const offset = (page - 1) * limit;
   const sortBy = searchParams.get("sortBy") || "created_at_desc";
   const query = searchParams.get("query");
@@ -25,21 +24,36 @@ export async function GET(req) {
   let whereClauses = [];
   const queryParams = [];
 
-  // --- Build the dynamic query using independent AND conditions ---
+  // Search filter - IMPROVED with normalization
+  if (query && query.trim()) {
+    const searchTerm = query.trim();
 
-  // Search filter
-  if (query) {
-    // Use MATCH() AGAINST() for intelligent searching.
-    // The 'IN NATURAL LANGUAGE MODE' is the default and provides relevance scoring.
-    whereClauses.push(
-      `MATCH(p.name, p.description) AGAINST(? IN NATURAL LANGUAGE MODE)`
+    // Normalize the search term: remove spaces, hyphens, and convert to lowercase
+    const normalizedSearch = searchTerm.toLowerCase().replace(/[\s-]/g, "");
+
+    // Search in multiple ways for maximum flexibility:
+    // 1. Direct match with original query (case-insensitive)
+    // 2. Match after removing spaces and hyphens from both search and database fields
+    whereClauses.push(`(
+      p.name LIKE ? 
+      OR p.description LIKE ? 
+      OR LOWER(REPLACE(REPLACE(p.name, ' ', ''), '-', '')) LIKE ?
+      OR LOWER(REPLACE(REPLACE(p.description, ' ', ''), '-', '')) LIKE ?
+    )`);
+
+    const likePattern = `%${searchTerm}%`;
+    const normalizedPattern = `%${normalizedSearch}%`;
+
+    queryParams.push(
+      likePattern,
+      likePattern,
+      normalizedPattern,
+      normalizedPattern
     );
-    queryParams.push(query);
   }
 
   // Category filter
   if (categoryId) {
-    // Use EXISTS for efficient many-to-many filtering
     whereClauses.push(
       `EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.product_id AND pc.category_id = ?)`
     );
@@ -54,7 +68,7 @@ export async function GET(req) {
     queryParams.push(minPrice, maxPrice);
   }
 
-  // MODIFICATION: Helper function to create EXISTS clauses for attributes
+  // Helper function to create EXISTS clauses for attributes
   const addAttributeFilter = (attributeName, values) => {
     if (values && values.length > 0) {
       whereClauses.push(`
@@ -72,16 +86,23 @@ export async function GET(req) {
     }
   };
 
-  // Apply filters for colors and sizes
   addAttributeFilter("Color", colors);
   addAttributeFilter("Size", sizes);
 
-  // --- Sorting logic (MySQL-compatible) ---
+  // --- Sorting logic ---
   let orderByClause = "";
-  if (query) {
-    // Always sort by relevance first if there is a search query
-    orderByClause = `ORDER BY MATCH(p.name, p.description) AGAINST(?) DESC`;
-    orderByParams.push(query);
+
+  // For search, prioritize better matches
+  if (query && query.trim()) {
+    const searchTerm = query.trim();
+    orderByClause = `ORDER BY 
+      CASE 
+        WHEN LOWER(p.name) = LOWER(?) THEN 0
+        WHEN LOWER(p.name) LIKE LOWER(?) THEN 1
+        WHEN LOWER(REPLACE(REPLACE(p.name, ' ', ''), '-', '')) LIKE LOWER(?) THEN 2
+        ELSE 3
+      END`;
+    // Note: We'll add these parameters separately
   }
 
   // Append the user's selected sort order
@@ -102,17 +123,21 @@ export async function GET(req) {
         ? ", p.created_at DESC"
         : "ORDER BY p.created_at DESC";
       break;
+    default:
+      orderByClause += orderByClause
+        ? ", p.created_at DESC"
+        : "ORDER BY p.created_at DESC";
+      break;
   }
-  // Ensure there's always a final fallback sort order
+
   if (!orderByClause.includes("p.created_at DESC")) {
     orderByClause += ", p.created_at DESC";
   }
 
-  // --- Final Query Construction ---
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  const countQuery = `SELECT COUNT(p.product_id) as total FROM products p ${whereClause};`;
+  const countQuery = `SELECT COUNT(DISTINCT p.product_id) as total FROM products p ${whereClause};`;
 
   const dataQuery = `
     SELECT 
@@ -125,17 +150,27 @@ export async function GET(req) {
     ${whereClause}
     GROUP BY p.product_id
     ${orderByClause}
-    LIMIT ?
-    OFFSET ?;
+    LIMIT ? OFFSET ?;
   `;
+
+  // Build parameter arrays
+  const countQueryParams = [...queryParams];
+
+  const dataQueryParams = [...queryParams];
+  // Add sorting parameters if search query exists
+  if (query && query.trim()) {
+    const searchTerm = query.trim();
+    const normalizedSearch = searchTerm.toLowerCase().replace(/[\s-]/g, "");
+    dataQueryParams.push(searchTerm); // For exact match check
+    dataQueryParams.push(`${searchTerm}%`); // For starts-with check
+    dataQueryParams.push(`%${normalizedSearch}%`); // For normalized check
+  }
+  dataQueryParams.push(limit, offset);
 
   try {
     const [[countResult], [products]] = await Promise.all([
-      pool.query(
-        countQuery,
-        queryParams.filter((p) => p !== limit && p !== offset)
-      ),
-      pool.query(dataQuery, [...queryParams, limit, offset]),
+      pool.query(countQuery, countQueryParams),
+      pool.query(dataQuery, dataQueryParams),
     ]);
 
     const total = countResult[0].total;
@@ -148,7 +183,16 @@ export async function GET(req) {
           : product.categories || [],
     }));
 
-    return NextResponse.json({ products: productsWithParsedCategories, total });
+    return NextResponse.json({
+      products: productsWithParsedCategories,
+      total,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (err) {
     console.error("GET /api/products error:", err);
     return NextResponse.json(

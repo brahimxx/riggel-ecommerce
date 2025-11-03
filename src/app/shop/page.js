@@ -1,5 +1,6 @@
 // your-pages-directory/shop.js
 "use client";
+import "@ant-design/v5-patch-for-react-19";
 import { useState, useEffect } from "react";
 import { Pagination, Spin } from "antd";
 import FilterSidebar from "@/components/FilterSidebar";
