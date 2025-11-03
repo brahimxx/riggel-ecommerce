@@ -19,12 +19,14 @@ const DataTable = ({
   setIsModalOpen,
   onEdit,
   onDeleteSuccess,
-  apiBaseUrl, // e.g. "products", "categories"
-  rowKeyField = "id", // e.g. "product_id", "category_id"
+  apiBaseUrl,
+  rowKeyField = "id",
   expandable = defaultExpandable,
   showTitle = false,
   showFooter = true,
-  columnsOverride, // [{ key, title }]
+  columnsOverride,
+  onPageChange, // ← NEW: Callback for page changes
+  onPageSizeChange, // ← NEW: Callback for page size changes
 }) => {
   const [bordered, setBordered] = useState(false);
   const [size, setSize] = useState("large");
@@ -33,10 +35,43 @@ const DataTable = ({
   const [yScroll, setYScroll] = useState(false);
   const [xScroll, setXScroll] = useState("unset");
   const [expandableState, setExpandable] = useState(expandable);
-
-  // Rename internal UI toggles to avoid collision with props
   const [showTitleUI, setShowTitleUI] = useState(showTitle);
   const [showFooterUI, setShowFooterUI] = useState(showFooter);
+
+  // Extract pagination info and products array from response
+  const { validData, paginationInfo } = useMemo(() => {
+    console.log("DataTable received data:", data);
+
+    if (!data) return { validData: [], paginationInfo: null };
+
+    // If data is already an array (old format)
+    if (Array.isArray(data)) {
+      return { validData: data, paginationInfo: null };
+    }
+
+    // If data has pagination structure (new format)
+    if (data.products && Array.isArray(data.products)) {
+      console.log("Extracted products array:", data.products);
+      return {
+        validData: data.products,
+        paginationInfo: data.pagination || null,
+      };
+    }
+
+    // Alternative format with 'data' property
+    if (data.data && Array.isArray(data.data)) {
+      return {
+        validData: data.data,
+        paginationInfo: data.pagination || null,
+      };
+    }
+
+    console.warn("DataTable: Unexpected data format", data);
+    return { validData: [], paginationInfo: null };
+  }, [data]);
+
+  console.log("DataTable validData:", validData);
+  console.log("DataTable paginationInfo:", paginationInfo);
 
   const showModal = (record = null) => {
     if (record) {
@@ -112,38 +147,28 @@ const DataTable = ({
     ),
   };
 
-  const makeCol = (key, titleLabel) => ({
-    title:
-      titleLabel ||
-      key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
-    dataIndex: key,
-    key,
-    sorter: (a, b) => {
-      const aVal = a[key] ?? "";
-      const bVal = b[key] ?? "";
-      if (typeof aVal === "number" && typeof bVal === "number")
-        return aVal - bVal;
-      return String(aVal).localeCompare(String(bVal));
-    },
-  });
-
   const columns = useMemo(() => {
     if (columnsOverride && columnsOverride.length) {
-      // It now uses the full objects from columnsOverride, not just key/title
       return [...columnsOverride, actionColumn];
     }
-    if (!data || data.length === 0) return [actionColumn];
+    if (!validData || validData.length === 0) return [actionColumn];
 
-    // Fallback to auto-generate columns
-    const baseCols = Object.keys(data[0])
-      .filter((key) => key !== "key" && typeof data[0][key] !== "object")
+    const baseCols = Object.keys(validData[0])
+      .filter((key) => key !== "key" && typeof validData[0][key] !== "object")
       .map((key) => ({
         title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
         dataIndex: key,
         key: key,
+        sorter: (a, b) => {
+          const aVal = a[key] ?? "";
+          const bVal = b[key] ?? "";
+          if (typeof aVal === "number" && typeof bVal === "number")
+            return aVal - bVal;
+          return String(aVal).localeCompare(String(bVal));
+        },
       }));
     return [...baseCols, actionColumn];
-  }, [data, columnsOverride]);
+  }, [validData, columnsOverride]);
 
   const handleBorderChange = (checked) => setBordered(checked);
   const handleSizeChange = (e) => setSize(e.target.value);
@@ -157,6 +182,19 @@ const DataTable = ({
   const handleYScrollChange = (checked) => setYScroll(checked);
   const handleXScrollChange = (e) => setXScroll(e.target.value);
 
+  // ← FIX: Handle pagination changes properly
+  const handleTableChange = (pagination, filters, sorter) => {
+    // Check if page changed
+    if (onPageChange && pagination.current !== paginationInfo?.page) {
+      onPageChange(pagination.current);
+    }
+
+    // Check if page size changed
+    if (onPageSizeChange && pagination.pageSize !== paginationInfo?.limit) {
+      onPageSizeChange(pagination.pageSize);
+    }
+  };
+
   const scroll = {};
   if (yScroll) scroll.y = 240;
   if (xScroll !== "unset") scroll.x = "100vw";
@@ -166,6 +204,20 @@ const DataTable = ({
     tableColumns[0].fixed = true;
     tableColumns[tableColumns.length - 1].fixed = "right";
   }
+
+  // ← NEW: Configure pagination based on server response
+  const paginationConfig = paginationInfo
+    ? {
+        current: paginationInfo.page,
+        pageSize: paginationInfo.limit,
+        total: paginationInfo.total,
+        showSizeChanger: true,
+        showTotal: (total, range) =>
+          `${range[0]}-${range[1]} of ${total} items`,
+        pageSizeOptions: ["9", "18", "27", "50", "100"],
+        position: ["bottomRight"],
+      }
+    : { position: ["bottomRight"] };
 
   const tableProps = {
     bordered,
@@ -235,11 +287,12 @@ const DataTable = ({
 
       <Table
         {...tableProps}
-        pagination={{ position: ["bottomRight"] }}
+        pagination={paginationConfig}
         columns={tableColumns}
-        dataSource={data}
+        dataSource={validData}
         rowKey={(record) => record[rowKeyField]}
         scroll={scroll}
+        onChange={handleTableChange}
       />
     </div>
   );
