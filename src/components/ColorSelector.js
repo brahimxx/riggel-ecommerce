@@ -2,12 +2,33 @@
 "use client";
 import React from "react";
 
+const colorMap = {
+  Brown: "#8B4513",
+  Blue: "#4169E1",
+  Black: "#000000",
+  White: "#FFFFFF",
+  Red: "#DC143C",
+  Green: "#228B22",
+  Yellow: "#FFD700",
+  Pink: "#FF69B4",
+  Purple: "#800080",
+  Orange: "#FF8C00",
+  Gray: "#808080",
+  Grey: "#808080",
+  Navy: "#000080",
+  Beige: "#F5F5DC",
+};
+
 const ColorSelector = ({
   colors,
   selectedColor,
   onColorSelect,
   isAvailable,
 }) => {
+  const getColorHex = (colorName) => {
+    return colorMap[colorName] || colorName.toLowerCase();
+  };
+
   return (
     <div className="font-sans">
       <div className="text-gray-500 mb-3 text-[14px] lg:text-lg font-medium">
@@ -17,6 +38,7 @@ const ColorSelector = ({
         {colors.map((color) => {
           const isSelected = selectedColor === color;
           const available = isAvailable(color);
+          const colorHex = getColorHex(color);
 
           return (
             <div key={color} className="relative">
@@ -28,15 +50,15 @@ const ColorSelector = ({
                   available ? "cursor-pointer" : "cursor-not-allowed opacity-40"
                 }`}
                 style={{
-                  backgroundColor: color,
+                  backgroundColor: colorHex,
                   border: isSelected ? "3px solid white" : "none",
-                  boxShadow: isSelected ? `0 0 0 3px ${color}` : "none",
+                  boxShadow: isSelected ? `0 0 0 3px ${colorHex}` : "none",
                 }}
               />
               {!available && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <svg
-                    className="w-full h-full text-white" // Set the bar color to white
+                    className="w-full h-full text-white"
                     viewBox="0 0 100 100"
                     preserveAspectRatio="none"
                   >
@@ -46,7 +68,7 @@ const ColorSelector = ({
                       x2="100"
                       y2="0"
                       stroke="currentColor"
-                      strokeWidth="5" // Adjust thickness if needed
+                      strokeWidth="5"
                     />
                   </svg>
                 </div>

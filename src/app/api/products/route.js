@@ -145,7 +145,22 @@ export async function GET(req) {
       (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
       (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
       (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.product_id ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS main_image,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories
+      (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories,
+      (SELECT JSON_ARRAYAGG(
+        JSON_OBJECT(
+          'variant_id', pv.variant_id,
+          'sku', pv.sku,
+          'price', pv.price,
+          'quantity', pv.quantity,
+          'attributes', (
+            SELECT JSON_ARRAYAGG(JSON_OBJECT('name', a.name, 'value', av.value))
+            FROM variant_values vv
+            JOIN attribute_values av ON vv.value_id = av.value_id
+            JOIN attributes a ON av.attribute_id = a.attribute_id
+            WHERE vv.variant_id = pv.variant_id
+          )
+        )
+      ) FROM product_variants pv WHERE pv.product_id = p.product_id) AS variants
     FROM products p
     ${whereClause}
     GROUP BY p.product_id
@@ -175,16 +190,20 @@ export async function GET(req) {
 
     const total = countResult[0].total;
 
-    const productsWithParsedCategories = products.map((product) => ({
+    const productsWithParsedData = products.map((product) => ({
       ...product,
       categories:
         typeof product.categories === "string"
           ? JSON.parse(product.categories)
           : product.categories || [],
+      variants:
+        typeof product.variants === "string"
+          ? JSON.parse(product.variants)
+          : product.variants || [],
     }));
 
     return NextResponse.json({
-      products: productsWithParsedCategories,
+      products: productsWithParsedData,
       total,
       pagination: {
         page,
