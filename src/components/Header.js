@@ -48,7 +48,7 @@ const Header = () => {
             <li>
               <Link
                 href="/shop"
-                className="block py-2 px-3 text-white bg-blue-700 rounded-sm md:bg-transparent md:text-black md:p-0 "
+                className="block py-2 px-3 text-white rounded-sm md:bg-transparent md:text-black md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 aria-current="page"
               >
                 Shop
@@ -57,7 +57,7 @@ const Header = () => {
             <li>
               <a
                 href="#"
-                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 "
+                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent  md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
               >
                 On sale
               </a>
@@ -65,7 +65,7 @@ const Header = () => {
             <li>
               <a
                 href="#"
-                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 "
+                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
               >
                 New Arrivals
               </a>
@@ -73,14 +73,14 @@ const Header = () => {
             <li>
               <a
                 href="#"
-                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:hover:text-blue-700 md:p-0 "
+                className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
               >
                 Brands
               </a>
             </li>
           </ul>
         </div>
-        <div className="flex flex-row gap-5">
+        <div className="flex flex-row gap-5 items-center">
           <div className="flex ">
             <SearchBar />
             <button
@@ -108,8 +108,8 @@ const Header = () => {
               </svg>
             </button>
           </div>
-          <Link href="/shoppingcart">
-            <ShoppingCartOutlined className="text-2xl cursor-pointer" />
+          <Link href="/shoppingcart" className="text-gray-900 ">
+            <ShoppingCartOutlined className="text-2xl cursor-pointer transition-transform duration-200 ease-in-out hover:scale-110" />
           </Link>
         </div>
       </div>
