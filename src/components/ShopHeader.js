@@ -32,7 +32,11 @@ const ShopHeader = ({
           variant="borderless"
         >
           <Select.Option value="created_at_desc">Newest</Select.Option>
-          <Select.Option value="popularity_desc">Most Popular</Select.Option>
+          <Select.Option value="popularity_desc">
+            Most Popular (Rating)
+          </Select.Option>
+          <Select.Option value="orders_desc">Best Selling</Select.Option>
+          <Select.Option value="orders_asc">Least Selling</Select.Option>
           <Select.Option value="price_asc">Price: Low to High</Select.Option>
           <Select.Option value="price_desc">Price: High to Low</Select.Option>
         </Select>

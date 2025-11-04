@@ -123,7 +123,17 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
-        <p className="text-[20px] lg:text-[20px] font-bold">${product.price}</p>
+        <div className="flex justify-between">
+          <p className="text-[20px] lg:text-[20px] font-bold">
+            ${product.price}
+          </p>
+          {product.total_orders > 0 && (
+            <div className="text-xs text-gray-500 mt-2">
+              {product.total_orders}{" "}
+              {product.total_orders === 1 ? "order" : "orders"}
+            </div>
+          )}
+        </div>
       </div>
     </Link>
   );
