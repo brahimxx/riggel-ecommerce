@@ -19,6 +19,7 @@ const statusOptions = [
   "processing",
   "shipped",
   "delivered",
+  "completed",
   "cancelled",
 ];
 

@@ -12,22 +12,22 @@ const Orders = () => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState([]); // isMounted ref is a good practice to avoid state updates on unmounted components
 
-  // isMounted ref is a good practice to avoid state updates on unmounted components
-  const isMounted = useRef(true);
+  const isMounted = useRef(true); // MODIFICATION: The fetchData function is now much cleaner and more readable.
 
-  // MODIFICATION: The fetchData function is now much cleaner and more readable.
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const [ordersData, productsData] = await Promise.all([
+      const [ordersResponse, productsResponse] = await Promise.all([
         getOrders(),
         getProducts(),
       ]);
       if (isMounted.current) {
-        setOrders(ordersData);
-        setProducts(productsData);
+        // FIX: Extract the array from the response object.
+        setOrders(ordersResponse || []);
+        setProducts(productsResponse?.products || []);
       }
     } catch (err) {
       if (isMounted.current) setError(err.message);
@@ -56,16 +56,17 @@ const Orders = () => {
     fetchData();
     setIsModalOpen(false);
     setEditingOrder(null);
-  };
+  }; // MODIFICATION: Using the new 'getOrderById' helper function.
 
-  // MODIFICATION: Using the new 'getOrderById' helper function.
   const handleEditOrder = async (order) => {
     if (!isMounted.current) return;
     setLoading(true);
+    setError(null);
     try {
-      const fullOrder = await getOrderById(order.order_id);
+      const orderResponse = await getOrderById(order.order_id);
       if (isMounted.current) {
-        setEditingOrder(fullOrder);
+        // FIX: Extract the single order object from the response.
+        setEditingOrder(orderResponse?.order);
         setIsModalOpen(true);
       }
     } catch (error) {
@@ -74,11 +75,18 @@ const Orders = () => {
       if (isMounted.current) setLoading(false);
     }
   };
-
+  console.log(orders);
   return (
     <div>
       {error && (
-        <Alert message="Error" description={error} type="error" showIcon />
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          closable
+          onClose={() => setError(null)}
+        />
       )}
       <DataTable
         data={orders}

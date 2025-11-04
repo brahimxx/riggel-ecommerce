@@ -70,7 +70,7 @@ export async function getCategories() {
 export async function getOrders() {
   try {
     const response = await fetch("/api/orders", {
-      next: { revalidate: 300 }, // Cache orders list
+      next: "no-store", // Cache orders list
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch orders: ${response.statusText}`);

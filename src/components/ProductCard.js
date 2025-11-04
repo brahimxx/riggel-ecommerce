@@ -52,19 +52,19 @@ const ProductCard = ({ product }) => {
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="flex flex-col w-[95%] lg:w-full rounded-3xl xl:h-[500px] gap-4 overflow-hidden hover:shadow-[0_0_20px_rgba(0,0,0,0.1)]"
+      className="group flex flex-col w-[95%] lg:w-[280px] rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
     >
-      <div className="relative w-full h-[270px] xl:w-full xl:h-[295px] rounded-3xl xl:rounded-t-3xl xl:rounded-b-none overflow-hidden">
+      <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl xl:rounded-b-none overflow-hidden bg-[#F0EEED]">
         <Image
           src={product.main_image || "/images/products_images/product_test.png"}
           alt="product image"
           quality={100}
           fill
-          className="object-fill"
+          className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
         />
       </div>
       <div className="flex flex-col justify-between px-4 gap-3 pb-4">
-        <p className="text-[16px] lg:text-[20px] font-bold lg:pt-0">
+        <p className="text-[16px] lg:text-[18px] font-bold lg:pt-0">
           {product.name}
         </p>
         <div className="flex flex-row items-center gap-2">
@@ -123,7 +123,7 @@ const ProductCard = ({ product }) => {
           </div>
         )}
 
-        <p className="text-[20px] lg:text-[24px] font-bold">${product.price}</p>
+        <p className="text-[20px] lg:text-[20px] font-bold">${product.price}</p>
       </div>
     </Link>
   );
