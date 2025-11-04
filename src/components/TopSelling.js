@@ -6,6 +6,9 @@ import Link from "next/link";
 // Revalidate this component every 5 minutes
 export const revalidate = 300;
 
+// MODIFICATION: Configurable fetch limit
+const FETCH_LIMIT = 8; // Change this number to fetch more or fewer products
+
 export async function getTopSelling() {
   const [rows] = await pool.query(
     `SELECT
@@ -87,7 +90,8 @@ export async function getTopSelling() {
       WHERE o.status = 'completed'
       GROUP BY p.product_id, p.name, p.slug, p.description, p.created_at
       ORDER BY total_orders DESC
-      LIMIT 8;`
+      LIMIT ?;`,
+    [FETCH_LIMIT]
   );
 
   // Parse all the nested JSON fields
