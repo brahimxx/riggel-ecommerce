@@ -1,6 +1,7 @@
 import ProductCard from "./ProductCard";
 import pool from "@/lib/db";
 import MyCarousel from "./MyCarousel";
+import Link from "next/link";
 
 // Revalidate this component every 5 minutes
 export const revalidate = 300;
@@ -78,14 +79,14 @@ export async function getTopSelling() {
           FROM order_items oi
           JOIN product_variants pv ON oi.variant_id = pv.variant_id
           WHERE pv.product_id = p.product_id
-        ) AS total_sold
+        ) AS total_orders
       FROM products p
       JOIN product_variants pv ON p.product_id = pv.product_id
       JOIN order_items oi ON pv.variant_id = oi.variant_id
       JOIN orders o ON oi.order_id = o.order_id
       WHERE o.status = 'completed'
       GROUP BY p.product_id, p.name, p.slug, p.description, p.created_at
-      ORDER BY total_sold DESC
+      ORDER BY total_orders DESC
       LIMIT 8;`
   );
 
@@ -126,12 +127,12 @@ export default async function TopSelling() {
         <MyCarousel items={productsItems} partialVisible={true} />
       </div>
 
-      <a
-        href="/products?sort=top_selling"
+      <Link
+        href="/shop?sortBy=orders_desc"
         className="self-center font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] border border-black/20 rounded-full text-sm py-[10px] text-center"
       >
         View All
-      </a>
+      </Link>
     </div>
   );
 }

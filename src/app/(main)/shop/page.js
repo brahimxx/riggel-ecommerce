@@ -1,4 +1,3 @@
-// your-pages-directory/shop.js
 "use client";
 import "@ant-design/v5-patch-for-react-19";
 import { useState, useEffect } from "react";
@@ -7,7 +6,7 @@ import FilterSidebar from "@/components/FilterSidebar";
 import ProductCard from "@/components/ProductCard";
 import { getProducts, getCategories, getAttributes } from "@/lib/api";
 import ShopHeader from "@/components/ShopHeader";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
 const PAGE_SIZE = 12; // Define a page size constant
 
@@ -17,6 +16,8 @@ const ShopPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   // --- MODIFICATION: State for pagination ---
   const [currentPage, setCurrentPage] = useState(1);
@@ -33,8 +34,18 @@ const ShopPage = () => {
   const [allAvailableSizes, setAllAvailableSizes] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
 
-  // MODIFICATION: Add state for sorting
-  const [sortBy, setSortBy] = useState("created_at_desc");
+  // MODIFICATION: Initialize sortBy from URL params
+  const [sortBy, setSortBy] = useState(() => {
+    return searchParams.get("sortBy") || "created_at_desc";
+  });
+
+  // MODIFICATION: Sync sortBy with URL changes (browser back/forward)
+  useEffect(() => {
+    const urlSortBy = searchParams.get("sortBy") || "created_at_desc";
+    if (urlSortBy !== sortBy) {
+      setSortBy(urlSortBy);
+    }
+  }, [searchParams]);
 
   // --- Effect for fetching initial filter data ---
   useEffect(() => {
@@ -100,8 +111,15 @@ const ShopPage = () => {
     window.scrollTo(0, 0); // Scroll to top on page change
   };
 
-  // MODIFICATION: Add handler for sorting
-  const handleSortByChange = (value) => setSortBy(value);
+  // MODIFICATION: Update handler to write to URL
+  const handleSortByChange = (value) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("sortBy", value);
+    params.set("page", "1"); // Reset to page 1 when sorting changes
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setSortBy(value);
+    setCurrentPage(1); // Also reset local page state
+  };
 
   useEffect(() => {
     const fetchAndSetProducts = async () => {

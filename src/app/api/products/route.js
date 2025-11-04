@@ -118,6 +118,16 @@ export async function GET(req) {
     case "popularity_desc":
       orderByClause += orderByClause ? ", rating DESC" : "ORDER BY rating DESC";
       break;
+    case "orders_desc":
+      orderByClause += orderByClause
+        ? ", total_orders DESC"
+        : "ORDER BY total_orders DESC";
+      break;
+    case "orders_asc":
+      orderByClause += orderByClause
+        ? ", total_orders ASC"
+        : "ORDER BY total_orders ASC";
+      break;
     case "created_at_desc":
       orderByClause += orderByClause
         ? ", p.created_at DESC"
@@ -160,7 +170,13 @@ export async function GET(req) {
             WHERE vv.variant_id = pv.variant_id
           )
         )
-      ) FROM product_variants pv WHERE pv.product_id = p.product_id) AS variants
+      ) FROM product_variants pv WHERE pv.product_id = p.product_id) AS variants,
+      COALESCE((
+        SELECT SUM(oi.quantity) 
+        FROM order_items oi 
+        JOIN product_variants pv ON oi.variant_id = pv.variant_id
+        WHERE pv.product_id = p.product_id
+      ), 0) AS total_orders
     FROM products p
     ${whereClause}
     GROUP BY p.product_id
