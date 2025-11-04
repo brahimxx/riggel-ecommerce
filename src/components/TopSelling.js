@@ -2,17 +2,16 @@ import ProductCard from "./ProductCard";
 import pool from "@/lib/db";
 import MyCarousel from "./MyCarousel";
 
-// Revalidate this component every 5 minutes (works even without fetch)
-export const revalidate = 300; // ISR for non-fetch data [web:92]
+// Revalidate this component every 5 minutes
+export const revalidate = 300;
 
-export async function getNewArrivals() {
-  // kayen two options here, first is to use a base api url and use the api, because the api call in the server side needs an absolute url, second is to query DB in the component directly
+export async function getTopSelling() {
   const [rows] = await pool.query(
-    `SELECT 
-        p.product_id, 
-        p.name, 
-        p.slug, 
-        p.description, 
+    `SELECT
+        p.product_id,
+        p.name,
+        p.slug,
+        p.description,
         p.created_at,
         (
           SELECT AVG(r.rating)
@@ -36,7 +35,6 @@ export async function getNewArrivals() {
           ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
           LIMIT 1
         ) AS main_image,
-        -- THIS IS THE NEW PART --
         (
           SELECT JSON_ARRAYAGG(
             JSON_OBJECT('category_id', c.category_id, 'name', c.name)
@@ -44,24 +42,75 @@ export async function getNewArrivals() {
           FROM product_categories pc
           JOIN categories c ON pc.category_id = c.category_id
           WHERE pc.product_id = p.product_id
-        ) AS categories
-     FROM products p
-     ORDER BY p.created_at DESC
-     LIMIT 8;`
+        ) AS categories,
+        -- NEW: Fetch all variants with their individual attributes
+        (
+          SELECT JSON_ARRAYAGG(
+            JSON_OBJECT(
+              'variant_id', variant_id,
+              'sku', sku,
+              'price', price,
+              'quantity', quantity,
+              'attributes', attributes
+            )
+          )
+          FROM (
+            SELECT
+              pv2.variant_id,
+              pv2.sku,
+              pv2.price,
+              pv2.quantity,
+              (
+                SELECT JSON_ARRAYAGG(
+                  JSON_OBJECT('name', a.name, 'value', av.value)
+                )
+                FROM variant_values vv
+                JOIN attribute_values av ON vv.value_id = av.value_id
+                JOIN attributes a ON av.attribute_id = a.attribute_id
+                WHERE vv.variant_id = pv2.variant_id
+              ) AS attributes
+            FROM product_variants pv2
+            WHERE pv2.product_id = p.product_id
+          ) AS variant_list
+        ) AS variants,
+        (
+          SELECT COALESCE(SUM(oi.quantity), 0)
+          FROM order_items oi
+          JOIN product_variants pv ON oi.variant_id = pv.variant_id
+          WHERE pv.product_id = p.product_id
+        ) AS total_sold
+      FROM products p
+      JOIN product_variants pv ON p.product_id = pv.product_id
+      JOIN order_items oi ON pv.variant_id = oi.variant_id
+      JOIN orders o ON oi.order_id = o.order_id
+      WHERE o.status = 'completed'
+      GROUP BY p.product_id, p.name, p.slug, p.description, p.created_at
+      ORDER BY total_sold DESC
+      LIMIT 8;`
   );
 
-  // MODIFICATION: Safely parse the categories string from the database.
+  // Parse all the nested JSON fields
   return rows.map((product) => ({
     ...product,
     categories:
       typeof product.categories === "string"
         ? JSON.parse(product.categories)
         : product.categories || [],
+    variants:
+      typeof product.variants === "string"
+        ? JSON.parse(product.variants)
+        : product.variants || [],
   }));
 }
 
 export default async function TopSelling() {
-  const products = await getNewArrivals();
+  const products = await getTopSelling();
+
+  console.log("Top Selling Products:", products);
+
+  if (!products || products.length === 0) {
+    return null;
+  }
 
   const productsItems = products.map((p) => (
     <ProductCard key={p.product_id} product={p} />
@@ -73,12 +122,12 @@ export default async function TopSelling() {
         Top Selling
       </h2>
 
-      <div className="py-[32px]  justify-center items-center lg:py-[55px]">
+      <div className="py-[32px] justify-center items-center lg:py-[55px]">
         <MyCarousel items={productsItems} partialVisible={true} />
       </div>
 
       <a
-        href="/products?sort=new"
+        href="/products?sort=top_selling"
         className="self-center font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] border border-black/20 rounded-full text-sm py-[10px] text-center"
       >
         View All

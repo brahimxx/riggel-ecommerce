@@ -9,7 +9,7 @@ import { getProducts, getCategories, getAttributes } from "@/lib/api";
 import ShopHeader from "@/components/ShopHeader";
 import { useSearchParams } from "next/navigation";
 
-const PAGE_SIZE = 9; // Define a page size constant
+const PAGE_SIZE = 12; // Define a page size constant
 
 const ShopPage = () => {
   // --- State for products and loading ---
@@ -170,7 +170,7 @@ const ShopPage = () => {
     if (products.length > 0) {
       return (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8">
             {products.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
