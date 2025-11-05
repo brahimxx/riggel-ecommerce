@@ -23,11 +23,11 @@ const FilterSidebar = ({
   onSizeToggle,
 }) => {
   return (
-    <div className="w-[20%] border border-gray-300/60 rounded-2xl px-6">
+    <div className=" lg:border border-gray-300/60 rounded-2xl lg:px-6">
       {/* Header */}
-      <div className="flex justify-between items-center border-b border-gray-300/60 py-6">
+      <div className="hidden lg:flex justify-between items-center border-b border-gray-300/60 py-6">
         <p className="font-semibold text-gray-800">Filter</p>
-        <SlidersOutlined />
+        <SlidersOutlined className="!text-gray-400 text-xl" />
       </div>
 
       {/* Price Filter Section */}
