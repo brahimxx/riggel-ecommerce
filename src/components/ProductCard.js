@@ -52,9 +52,9 @@ const ProductCard = ({ product }) => {
   return (
     <Link
       href={`/products/${product.slug}`}
-      className="group flex flex-col w-[95%] lg:w-[280px] rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
+      className="mx-auto group flex flex-col w-[280px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:min-w-[300px] rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
     >
-      <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl xl:rounded-b-none overflow-hidden bg-[#F0EEED]">
+      <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
         <Image
           src={product.main_image || "/images/products_images/product_test.png"}
           alt="product image"
@@ -73,6 +73,7 @@ const ProductCard = ({ product }) => {
               disabled
               allowHalf
               defaultValue={Number(parseFloat(product.rating).toFixed(1)) || 0}
+              className="text-nowrap"
             />
           </div>
           <p className="text-sm text-gray-500">

@@ -31,22 +31,21 @@ const MyCarousel = ({
     largedesktop: {
       breakpoint: { max: 3000, min: 1440 },
       items: numberOfItems[0],
-      partialVisibilityGutter: 10,
     },
     desktop: {
       breakpoint: { max: 1439, min: 1024 },
       items: numberOfItems[1],
-      partialVisibilityGutter: 10,
+      partialVisibilityGutter: 0,
     },
     tablet: {
       breakpoint: { max: 1023, min: 550 },
       items: numberOfItems[2],
-      partialVisibilityGutter: 10,
+      partialVisibilityGutter: 0,
     },
     mobile: {
       breakpoint: { max: 549, min: 0 },
       items: numberOfItems[3],
-      partialVisibilityGutter: 10,
+      partialVisibilityGutter: 0,
     },
   };
 

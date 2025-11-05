@@ -3,15 +3,16 @@ import "@ant-design/v5-patch-for-react-19";
 import { useState, useEffect } from "react";
 import { Pagination, Spin } from "antd";
 import FilterSidebar from "@/components/FilterSidebar";
+import FilterDrawer from "@/components/FilterDrawer"; // Add this import
 import ProductCard from "@/components/ProductCard";
 import { getProducts, getCategories, getAttributes } from "@/lib/api";
 import ShopHeader from "@/components/ShopHeader";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 
-const PAGE_SIZE = 12; // Define a page size constant
+const PAGE_SIZE = 12;
 
 const ShopPage = () => {
-  // --- State for products and loading ---
+  const [showFilter, setShowFilter] = useState(false);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,27 +20,22 @@ const ShopPage = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  // --- MODIFICATION: State for pagination ---
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
 
-  // --- State for filters ---
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // --- State for dynamic filter options ---
   const [allAvailableColors, setAllAvailableColors] = useState([]);
   const [allAvailableSizes, setAllAvailableSizes] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
 
-  // MODIFICATION: Initialize sortBy from URL params
   const [sortBy, setSortBy] = useState(() => {
     return searchParams.get("sortBy") || "created_at_desc";
   });
 
-  // MODIFICATION: Sync sortBy with URL changes (browser back/forward)
   useEffect(() => {
     const urlSortBy = searchParams.get("sortBy") || "created_at_desc";
     if (urlSortBy !== sortBy) {
@@ -47,7 +43,6 @@ const ShopPage = () => {
     }
   }, [searchParams]);
 
-  // --- Effect for fetching initial filter data ---
   useEffect(() => {
     const fetchFilterData = async () => {
       try {
@@ -58,7 +53,6 @@ const ShopPage = () => {
 
         setAllCategories(categoriesData || []);
 
-        // Extract colors and sizes from the attributes data
         const colorsAttr = attributesData.find(
           (attr) => attr.name.toLowerCase() === "color"
         );
@@ -74,7 +68,6 @@ const ShopPage = () => {
         }
       } catch (err) {
         console.error("Failed to fetch filter data:", err);
-        // Set empty arrays as a fallback
         setAllCategories([]);
         setAllAvailableColors([]);
         setAllAvailableSizes([]);
@@ -84,7 +77,6 @@ const ShopPage = () => {
     fetchFilterData();
   }, []);
 
-  // --- Handler Functions ---
   const handleColorToggle = (color) => {
     setSelectedColors((prev) =>
       prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
@@ -105,20 +97,18 @@ const ShopPage = () => {
     setSelectedCategory((prev) => (prev === category ? null : category));
   };
 
-  // MODIFICATION: Handler for page changes
   const onPageChange = (page) => {
     setCurrentPage(page);
-    window.scrollTo(0, 0); // Scroll to top on page change
+    window.scrollTo(0, 0);
   };
 
-  // MODIFICATION: Update handler to write to URL
   const handleSortByChange = (value) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("sortBy", value);
-    params.set("page", "1"); // Reset to page 1 when sorting changes
+    params.set("page", "1");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setSortBy(value);
-    setCurrentPage(1); // Also reset local page state
+    setCurrentPage(1);
   };
 
   useEffect(() => {
@@ -160,7 +150,6 @@ const ShopPage = () => {
     searchParams,
   ]);
 
-  // Effect 2: Resets the current page to 1 ONLY when a filter changes.
   useEffect(() => {
     setCurrentPage(1);
   }, [
@@ -171,8 +160,6 @@ const ShopPage = () => {
     sortBy,
     searchParams,
   ]);
-
-  console.log(products);
 
   const renderContent = () => {
     if (isLoading) {
@@ -188,19 +175,18 @@ const ShopPage = () => {
     if (products.length > 0) {
       return (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 gap-x-4 gap-y-8">
             {products.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
           </div>
-          {/* MODIFICATION: Add the Pagination component */}
           <div className="mt-12 flex justify-center">
             <Pagination
               current={currentPage}
               pageSize={PAGE_SIZE}
               total={totalProducts}
               onChange={onPageChange}
-              showSizeChanger={false} // Optional: hide the size changer
+              showSizeChanger={false}
             />
           </div>
         </>
@@ -211,7 +197,27 @@ const ShopPage = () => {
 
   return (
     <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-8 mt-10 mb-20">
-      <FilterSidebar
+      {/* Desktop sidebar */}
+      <div className="lg:w-[20%] hidden lg:block">
+        <FilterSidebar
+          priceRange={priceRange}
+          onPriceChange={handlePriceChange}
+          categories={allCategories}
+          selectedCategory={selectedCategory}
+          onCategorySelect={handleCategorySelect}
+          colors={allAvailableColors}
+          selectedColors={selectedColors}
+          onColorToggle={handleColorToggle}
+          sizes={allAvailableSizes}
+          selectedSizes={selectedSizes}
+          onSizeToggle={handleSizeToggle}
+        />
+      </div>
+
+      {/* Mobile filter drawer - Add this */}
+      <FilterDrawer
+        showFilter={showFilter}
+        setShowFilter={setShowFilter}
         priceRange={priceRange}
         onPriceChange={handlePriceChange}
         categories={allCategories}
@@ -227,13 +233,14 @@ const ShopPage = () => {
 
       {/* Product Grid Area */}
       <div className="w-full lg:w-[80%]">
-        {/* MODIFICATION: Add the ShopHeader component */}
         <ShopHeader
           currentPage={currentPage}
           pageSize={PAGE_SIZE}
           totalProducts={totalProducts}
           sortBy={sortBy}
           onSortByChange={handleSortByChange}
+          setShowFilter={setShowFilter}
+          showFilter={showFilter}
         />
         {renderContent()}
       </div>
