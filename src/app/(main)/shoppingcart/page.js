@@ -24,8 +24,8 @@ const shoppingcart = () => {
     <>
       <div className="relative flex flex-col items-start justify-start lg:h-full max-w-screen-2xl mx-auto px-4 gap-8 mt-10 mb-20">
         <Link
-          href="/"
-          className="font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px]  rounded-full text-sm py-[10px] text-center"
+          href="/shop"
+          className="font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] rounded-full text-sm py-[10px] text-center"
         >
           <ArrowLeftOutlined /> Continue Shopping
         </Link>
