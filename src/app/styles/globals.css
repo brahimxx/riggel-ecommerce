@@ -31,7 +31,7 @@ body {
 
 @media (min-width: 1024px) {
   .react-multi-carousel-track li {
-    margin-inline: 0.1%;
+    margin-inline: 0%;
   }
 }
 

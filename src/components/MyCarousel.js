@@ -29,21 +29,22 @@ const MyCarousel = ({
 
   const responsive = {
     largedesktop: {
-      breakpoint: { max: 3000, min: 1440 },
+      breakpoint: { max: 3000, min: 1280 },
       items: numberOfItems[0],
+      partialVisibilityGutter: 0,
     },
     desktop: {
-      breakpoint: { max: 1439, min: 1024 },
+      breakpoint: { max: 1280, min: 1024 },
       items: numberOfItems[1],
       partialVisibilityGutter: 0,
     },
     tablet: {
-      breakpoint: { max: 1023, min: 550 },
+      breakpoint: { max: 1023, min: 580 },
       items: numberOfItems[2],
       partialVisibilityGutter: 0,
     },
     mobile: {
-      breakpoint: { max: 549, min: 0 },
+      breakpoint: { max: 580, min: 0 },
       items: numberOfItems[3],
       partialVisibilityGutter: 0,
     },
