@@ -50,14 +50,14 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="relative w-[280px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:min-w-[300px]">
+    <div className="mx-auto relative w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:min-w-[300px]">
       <div className="absolute z-1 right-4 top-4">
         <FavoriteButton product={product} />
       </div>
 
       <Link
         href={`/products/${product.slug}`}
-        className="mx-auto group flex flex-col  rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
+        className="group flex flex-col  rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
       >
         <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
           <Image
@@ -67,6 +67,7 @@ const ProductCard = ({ product }) => {
             alt="product image"
             quality={100}
             fill
+            sizes="(max-width: 768px) 100vw, 300px"
             className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
           />
         </div>

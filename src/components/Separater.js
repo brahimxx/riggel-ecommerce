@@ -9,6 +9,7 @@ const Separater = () => {
           alt="brand logo image"
           quality={100}
           fill
+          sizes="(max-width: 640px) 80px, (max-width: 1280px) 100px, 150px"
           className="object-contain "
         />
       </div>
@@ -18,6 +19,7 @@ const Separater = () => {
           alt="brand logo image"
           quality={100}
           fill
+          sizes="(max-width: 640px) 80px, (max-width: 1280px) 100px, 150px"
           className="object-contain "
         />
       </div>
@@ -27,6 +29,7 @@ const Separater = () => {
           alt="brand logo image"
           quality={100}
           fill
+          sizes="(max-width: 640px) 80px, (max-width: 1280px) 100px, 150px"
           className="object-contain "
         />
       </div>
@@ -36,6 +39,7 @@ const Separater = () => {
           alt="brand logo image"
           quality={100}
           fill
+          sizes="(max-width: 640px) 80px, (max-width: 1280px) 100px, 150px"
           className="object-contain "
         />
       </div>
@@ -45,6 +49,7 @@ const Separater = () => {
           alt="brand logo image"
           quality={100}
           fill
+          sizes="(max-width: 640px) 80px, (max-width: 1280px) 100px, 150px"
           className="object-contain "
         />
       </div>

@@ -57,7 +57,9 @@ const Hero = () => {
             alt="Hero image"
             quality={100}
             fill
+            sizes="(max-width: 768px) 320px, (max-width: 1200px) 440px, 500px"
             className="object-contain "
+            priority
           />
           <div className="absolute xl:w-[100px] xl:h-[100px] w-[60px] h-[60px] sm:w-[80px] sm:h-[80px] lg:top-5 right-0 ">
             <Image
@@ -65,6 +67,7 @@ const Hero = () => {
               alt="star image"
               quality={100}
               fill
+              sizes="(max-width: 768px) 60px, (max-width: 1200px) 80px, 100px"
               className="object-contain "
             />
           </div>
@@ -74,6 +77,7 @@ const Hero = () => {
               alt="star image"
               quality={100}
               fill
+              sizes="(max-width: 768px) 30px, (max-width: 1200px) 50px, 50px"
               className="object-contain "
             />
           </div>
