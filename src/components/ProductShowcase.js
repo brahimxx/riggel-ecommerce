@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 import QuantityCartBar from "@/components/QuantityCartBar";
 import ProductGallery from "@/components/ProductGallery";
 import ProductAttributes from "@/components/ProductAttributes";
-import { useCart } from "@/hooks/useCart"; // Import the custom hook
+import { useCartContext } from "@/components/CartContext";
+import { message } from "antd";
+import FavoriteButton from "@/components/FavoriteButton";
 
 const ProductShowcase = ({ product }) => {
   const [attributes, setAttributes] = useState({});
   const [selectedVariant, setSelectedVariant] = useState({});
   const [quantity, setQuantity] = useState(1);
 
-  // Use the cart hook
-  const { addToCart } = useCart();
-  const { cart } = useCart();
+  const { cart, addToCart } = useCartContext();
 
   console.log(cart);
 
@@ -45,14 +45,12 @@ const ProductShowcase = ({ product }) => {
   }, [product]);
 
   const handleAddToCart = () => {
-    // The logic is now handled by the hook!
-    console.log("Adding to cart:", selectedVariant);
     if (!selectedVariant) {
-      alert("Please select a valid product variant.");
+      message.error("Please select a valid product variant.");
       return;
     } else {
       addToCart(product, selectedVariant, quantity);
-      alert("Product added to cart!");
+      message.success("Product added to cart!");
     }
   };
 
@@ -99,6 +97,7 @@ const ProductShowcase = ({ product }) => {
             >
               Add to Cart
             </button>
+            <FavoriteButton product={product} className="text-3xl" />
           </div>
         </div>
       </div>

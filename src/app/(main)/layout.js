@@ -2,14 +2,17 @@
 import Header from "@/components/Header";
 import NewsLetter from "@/components/NewSletter";
 import Footer from "@/components/Footer";
+import { CartProvider } from "@/components/CartContext";
 
 export default function MainLayout({ children }) {
   return (
-    <>
-      <Header />
-      {children}
-      <NewsLetter />
-      <Footer />
-    </>
+    <CartProvider>
+      <>
+        <Header />
+        {children}
+        <NewsLetter />
+        <Footer />
+      </>
+    </CartProvider>
   );
 }

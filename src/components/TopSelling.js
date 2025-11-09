@@ -111,8 +111,6 @@ export async function getTopSelling() {
 export default async function TopSelling() {
   const products = await getTopSelling();
 
-  console.log("Top Selling Products:", products);
-
   if (!products || products.length === 0) {
     return null;
   }

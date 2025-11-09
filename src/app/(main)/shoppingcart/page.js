@@ -9,11 +9,12 @@ import {
   MessageOutlined,
 } from "@ant-design/icons";
 import Link from "next/link";
-import { useCart } from "@/hooks/useCart";
+import { useCartContext } from "@/components/CartContext";
+
 import CartProductCard from "@/components/CartProductCard";
 
 const shoppingcart = () => {
-  const { cart, updateQuantity, removeFromCart } = useCart();
+  const { cart, updateQuantity, removeFromCart } = useCartContext();
 
   const subtotal = cart.items
     .reduce((sum, item) => sum + item.price * item.quantity, 0)
