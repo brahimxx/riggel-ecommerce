@@ -65,6 +65,7 @@ const ProductGallery = ({ images }) => {
                 src={image.url}
                 alt={image.alt_text || `preview-${idx}`}
                 fill
+                sizes="(max-width: 768px) 32vw, 24vw"
                 className="object-cover rounded-2xl"
                 priority={selected === idx}
               />
