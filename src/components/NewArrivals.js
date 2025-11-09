@@ -99,8 +99,6 @@ export async function getNewArrivals() {
 export default async function NewArrivals() {
   const products = await getNewArrivals();
 
-  console.log("New Arrivals Products:", products);
-
   if (!products || products.length === 0) {
     return null;
   }

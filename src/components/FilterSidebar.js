@@ -21,6 +21,9 @@ const FilterSidebar = ({
   sizes,
   selectedSizes,
   onSizeToggle,
+  // Favorites Filter Props
+  showFavoritesOnly,
+  onFavoritesToggle,
 }) => {
   return (
     <div className=" lg:border border-gray-300/60 rounded-2xl lg:px-6">
@@ -28,6 +31,13 @@ const FilterSidebar = ({
       <div className="hidden lg:flex justify-between items-center border-b border-gray-300/60 py-6">
         <p className="font-semibold text-gray-800">Filter</p>
         <SlidersOutlined className="!text-gray-400 text-xl" />
+      </div>
+
+      {/* Favorites Filter Section */}
+      <div className="border-b border-gray-300/60 py-6 flex items-center">
+        <Checkbox checked={showFavoritesOnly} onChange={onFavoritesToggle}>
+          Show Favorites Only
+        </Checkbox>
       </div>
 
       {/* Price Filter Section */}

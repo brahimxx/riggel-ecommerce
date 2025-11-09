@@ -1,12 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import {
-  ShoppingCartOutlined,
-  CloseOutlined,
-  MenuOutlined,
-} from "@ant-design/icons";
+import { CloseOutlined, MenuOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
+import CartIcon from "./CartIcon";
 
 const Header = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -69,19 +66,19 @@ const Header = () => {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/shop?sortBy=created_at_desc"
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
                   New Arrivals
                 </a>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href={`/shop?favorites=1`}
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
-                  Brands
-                </a>
+                  Favorites
+                </Link>
               </li>
             </ul>
           </div>
@@ -100,7 +97,7 @@ const Header = () => {
               </button>
             </div>
             <Link href="/shoppingcart" className="text-gray-900">
-              <ShoppingCartOutlined className="text-2xl cursor-pointer transition-transform duration-200 ease-in-out hover:scale-110" />
+              <CartIcon className="text-2xl cursor-pointer transition-transform duration-200 ease-in-out hover:scale-110" />
             </Link>
           </div>
         </div>

@@ -8,6 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import { getProducts, getCategories, getAttributes } from "@/lib/api";
 import ShopHeader from "@/components/ShopHeader";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useFavorites } from "@/hooks/useFavorites";
 
 const PAGE_SIZE = 12;
 
@@ -19,6 +20,10 @@ const ShopPage = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  const { favorites, isLoaded } = useFavorites();
+  const [showFavorites, setShowFavorites] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -76,6 +81,21 @@ const ShopPage = () => {
 
     fetchFilterData();
   }, []);
+
+  const handleFavoritesToggle = (checked) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (checked) {
+      params.set("favorites", "1");
+    } else {
+      params.delete("favorites");
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setShowFavoritesOnly(checked);
+  };
+
+  useEffect(() => {
+    setShowFavoritesOnly(searchParams.get("favorites") === "1");
+  }, [searchParams]);
 
   const handleColorToggle = (color) => {
     setSelectedColors((prev) =>
@@ -161,6 +181,15 @@ const ShopPage = () => {
     searchParams,
   ]);
 
+  const favoriteProductIds = (favorites.items || []).map(
+    (item) => item.productId
+  );
+  const filteredProducts = showFavoritesOnly
+    ? products.filter((product) =>
+        favoriteProductIds.includes(product.product_id)
+      )
+    : products;
+
   const renderContent = () => {
     if (isLoading) {
       return (
@@ -172,11 +201,11 @@ const ShopPage = () => {
     if (error) {
       return <p className="text-red-500">{error}</p>;
     }
-    if (products.length > 0) {
+    if (filteredProducts.length > 0) {
       return (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 gap-x-4 gap-y-8">
-            {products.map((product) => (
+            {filteredProducts.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
           </div>
@@ -211,6 +240,8 @@ const ShopPage = () => {
           sizes={allAvailableSizes}
           selectedSizes={selectedSizes}
           onSizeToggle={handleSizeToggle}
+          showFavoritesOnly={showFavoritesOnly}
+          onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
         />
       </div>
 

@@ -1,5 +1,4 @@
 // src/app/layout.js
-import "@ant-design/v5-patch-for-react-19";
 import "./styles/globals.css";
 
 export const metadata = {

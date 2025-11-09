@@ -1,9 +1,9 @@
 import Image from "next/image";
 import { Rate } from "antd";
 import Link from "next/link";
+import FavoriteButton from "@/components/FavoriteButton";
 
 const ProductCard = ({ product }) => {
-  // Extract unique colors from variants
   const colors = [
     ...new Set(
       product.variants
@@ -50,93 +50,103 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <Link
-      href={`/products/${product.slug}`}
-      className="mx-auto group flex flex-col w-[280px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:min-w-[300px] rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
-    >
-      <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
-        <Image
-          src={product.main_image || "/images/products_images/product_test.png"}
-          alt="product image"
-          quality={100}
-          fill
-          className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
-        />
+    <div className="relative w-[280px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:min-w-[300px]">
+      <div className="absolute z-1 right-4 top-4">
+        <FavoriteButton product={product} />
       </div>
-      <div className="flex flex-col justify-between px-4 gap-3 pb-4">
-        <p className="text-[16px] lg:text-[18px] font-bold lg:pt-0">
-          {product.name}
-        </p>
-        <div className="flex flex-row items-center gap-2">
-          <div className="relative">
-            <Rate
-              disabled
-              allowHalf
-              defaultValue={Number(parseFloat(product.rating).toFixed(1)) || 0}
-              className="text-nowrap"
-            />
-          </div>
-          <p className="text-sm text-gray-500">
-            {Number(parseFloat(product.rating).toFixed(1)) || 0}/5
-          </p>
+
+      <Link
+        href={`/products/${product.slug}`}
+        className="mx-auto group flex flex-col  rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
+      >
+        <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
+          <Image
+            src={
+              product.main_image || "/images/products_images/product_test.png"
+            }
+            alt="product image"
+            quality={100}
+            fill
+            className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
+          />
         </div>
-
-        {/* Color Variants - Display Only */}
-        {colors.length > 0 && (
-          <div className="flex flex-row items-center gap-2">
-            {colors.map((color) => {
-              const available = isAvailable(color);
-              const colorHex = getColorHex(color);
-
-              return (
-                <div key={color} className="relative">
-                  <div
-                    aria-label={`Color ${color}`}
-                    className={`w-6 h-6 rounded-full transition-all ${
-                      available ? "" : "opacity-40"
-                    }`}
-                    style={{
-                      backgroundColor: colorHex,
-                      border: "1px solid rgba(0,0,0,0.1)",
-                    }}
-                  />
-                  {!available && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <svg
-                        className="w-full h-full text-white"
-                        viewBox="0 0 100 100"
-                        preserveAspectRatio="none"
-                      >
-                        <line
-                          x1="0"
-                          y1="100"
-                          x2="100"
-                          y2="0"
-                          stroke="currentColor"
-                          strokeWidth="5"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="flex justify-between">
-          <p className="text-[20px] lg:text-[20px] font-bold">
-            ${product.price}
+        <div className="flex flex-col justify-between px-4 gap-3 pb-4">
+          <p className="text-[16px] lg:text-[18px] font-bold lg:pt-0">
+            {product.name}
           </p>
-          {product.total_orders > 0 && (
-            <div className="text-xs text-gray-500 mt-2">
-              {product.total_orders}{" "}
-              {product.total_orders === 1 ? "order" : "orders"}
+          <div className="flex flex-row items-center gap-2">
+            <div className="relative">
+              <Rate
+                disabled
+                allowHalf
+                defaultValue={
+                  Number(parseFloat(product.rating).toFixed(1)) || 0
+                }
+                className="text-nowrap"
+              />
+            </div>
+            <p className="text-sm text-gray-500">
+              {Number(parseFloat(product.rating).toFixed(1)) || 0}/5
+            </p>
+          </div>
+
+          {/* Color Variants - Display Only */}
+          {colors.length > 0 && (
+            <div className="flex flex-row items-center gap-2">
+              {colors.map((color) => {
+                const available = isAvailable(color);
+                const colorHex = getColorHex(color);
+
+                return (
+                  <div key={color} className="relative">
+                    <div
+                      aria-label={`Color ${color}`}
+                      className={`w-6 h-6 rounded-full transition-all ${
+                        available ? "" : "opacity-40"
+                      }`}
+                      style={{
+                        backgroundColor: colorHex,
+                        border: "1px solid rgba(0,0,0,0.1)",
+                      }}
+                    />
+                    {!available && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <svg
+                          className="w-full h-full text-white"
+                          viewBox="0 0 100 100"
+                          preserveAspectRatio="none"
+                        >
+                          <line
+                            x1="0"
+                            y1="100"
+                            x2="100"
+                            y2="0"
+                            stroke="currentColor"
+                            strokeWidth="5"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
+
+          <div className="flex justify-between">
+            <p className="text-[20px] lg:text-[20px] font-bold">
+              ${product.price}
+            </p>
+            {product.total_orders > 0 && (
+              <div className="text-xs text-gray-500 mt-2">
+                {product.total_orders}{" "}
+                {product.total_orders === 1 ? "order" : "orders"}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 };
 
