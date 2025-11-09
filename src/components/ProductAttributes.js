@@ -12,7 +12,6 @@ const ProductAttributes = ({ attributes, variants, setSelectedVariant }) => {
         const { [attributeName]: _, ...rest } = prev;
         return rest;
       }
-      console.log("Selected Options:", { ...prev, [attributeName]: value });
       return { ...prev, [attributeName]: value };
     });
   };
@@ -56,7 +55,6 @@ const ProductAttributes = ({ attributes, variants, setSelectedVariant }) => {
     // Call the setVariant prop with the result.
     // If no match is found, `find` returns undefined, which is what we want.
     setSelectedVariant(matchedVariant);
-    console.log("Matched Variant:", matchedVariant);
   }, [selectedOptions, variants, setSelectedVariant]); // Dependencies for the effect
   return (
     <div>
