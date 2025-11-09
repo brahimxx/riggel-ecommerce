@@ -4,7 +4,6 @@ import { DeleteOutlined } from "@ant-design/icons";
 import Link from "next/link";
 
 const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
-  console.log("CartProductCard props:", product);
   const handleQuantityChange = (newQuantity) => {
     // Call the update function from the parent
     onUpdateQuantity(product.productId, product.variantId, newQuantity);
@@ -13,7 +12,6 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
     // Call the remove function from the parent
     onRemove(product.productId, product.variantId);
   };
-  console.log("CartProductCard render:", product);
   return (
     <div className="py-8  ">
       <div className="flex h-[115px] gap-3 ">
