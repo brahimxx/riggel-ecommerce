@@ -32,18 +32,34 @@ export function CartProvider({ children }) {
   // Action methods (copy-paste your safe logic here)
   const addToCart = (product, variant, quantity = 1) => {
     setCart((prevCart) => {
+      // Always normalize variantId to null (never undefined)
+      const normalizedVariantId =
+        typeof variant?.variant_id === "undefined" ? null : variant?.variant_id;
+
+      // Try to find existing item using loose equality (string/number)
       const existingItemIndex = prevCart.items.findIndex(
         (item) =>
-          item.productId === product.product_id &&
-          item.variantId === (variant ? variant.variant_id : null)
+          item.productId == product.product_id &&
+          item.variantId == normalizedVariantId
       );
-      const newItems = [...prevCart.items];
+
+      // Defensive: Remove any accidental duplicate first
+      let newItems = prevCart.items.filter(
+        (item, idx) => idx !== existingItemIndex // skip the old instance if it exists
+      );
+
       if (existingItemIndex > -1) {
-        newItems[existingItemIndex].quantity += quantity;
+        // Add updated item with increased quantity
+        const existingItem = prevCart.items[existingItemIndex];
+        newItems.push({
+          ...existingItem,
+          quantity: existingItem.quantity + quantity,
+        });
       } else {
+        // Add new item
         newItems.push({
           productId: product.product_id,
-          variantId: variant ? variant.variant_id : null,
+          variantId: normalizedVariantId,
           name: product.name,
           price: variant?.price || product.price,
           quantity,
@@ -52,6 +68,7 @@ export function CartProvider({ children }) {
           attributes: variant?.attributes || [],
         });
       }
+
       return { items: newItems };
     });
   };

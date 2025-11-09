@@ -13,9 +13,7 @@ const ProductShowcase = ({ product }) => {
   const [selectedVariant, setSelectedVariant] = useState({});
   const [quantity, setQuantity] = useState(1);
 
-  const { cart, addToCart } = useCartContext();
-
-  console.log(cart);
+  const { addToCart } = useCartContext();
 
   useEffect(() => {
     const extractedAttributes = {};
