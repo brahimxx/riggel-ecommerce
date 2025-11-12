@@ -16,11 +16,13 @@ const CategoryForm = ({ category = null, categories = [], onSuccess }) => {
         name: category.name || "",
         parent_category_id: category.parent_category_id || null,
         description: category.description || "",
+        category_type: category.category_type || "type",
       });
       setCategoryName(category.name || "");
     } else {
       // Reset form if no category (add mode)
       form.resetFields();
+      form.setFieldsValue({ category_type: "type" }); // Set default on reset
       setCategoryName("");
     }
   }, [category, form]);
@@ -114,6 +116,17 @@ const CategoryForm = ({ category = null, categories = [], onSuccess }) => {
 
       <Form.Item name="description" label="Description">
         <TextArea rows={4} placeholder="Category Description (optional)" />
+      </Form.Item>
+      <Form.Item
+        name="category_type"
+        label="Type"
+        rules={[{ required: true, message: "Category type is required" }]}
+        initialValue={category?.category_type || "type"}
+      >
+        <Select>
+          <Select.Option value="type">Product Type</Select.Option>
+          <Select.Option value="style">Style / Occasion</Select.Option>
+        </Select>
       </Form.Item>
 
       <Form.Item wrapperCol={{ offset: 6, span: 16 }}>

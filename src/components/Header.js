@@ -29,7 +29,7 @@ const Header = () => {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-30 border-gray-200 transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 right-0 z-3000 border-gray-200 transition-all duration-300 ease-in-out ${
           isScrolled ? "bg-white/95 backdrop-blur-md shadow-md" : "bg-white"
         }`}
       >
