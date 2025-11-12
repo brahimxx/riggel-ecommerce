@@ -50,7 +50,7 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="mx-auto relative w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:min-w-[300px]">
+    <div className="mx-auto relative w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:max-w-[300px]">
       <div className="absolute z-1 right-4 top-4">
         <FavoriteButton product={product} />
       </div>

@@ -226,7 +226,7 @@ const ShopPage = () => {
     if (filteredProducts.length > 0) {
       return (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 gap-x-4 gap-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
             {filteredProducts.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
@@ -247,7 +247,7 @@ const ShopPage = () => {
   };
 
   return (
-    <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-8 mt-10 mb-20">
+    <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-4 mt-10 mb-20">
       {/* Desktop sidebar */}
       <div className="lg:w-[20%] hidden lg:block">
         <FilterSidebar
