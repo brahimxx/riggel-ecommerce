@@ -90,7 +90,7 @@ const ProductShowcase = ({ product }) => {
             <QuantityCartBar quantity={quantity} setQuantity={setQuantity} />
             <button
               onClick={handleAddToCart}
-              className="bg-black text-white rounded-full  py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
+              className="bg-black hover:bg-black/90 text-white rounded-full  py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
               aria-label="Add to Cart"
             >
               Add to Cart

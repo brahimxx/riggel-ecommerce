@@ -101,7 +101,7 @@ const shoppingcart = () => {
                     className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:ring-blue-500 focus:border-blue-500 "
                     placeholder="Enter promo code"
                   />
-                  <button className="bg-black text-white rounded-full  py-2 text-lg font-medium transition cursor-pointer  w-[150px]">
+                  <button className="bg-black hover:bg-black/90 text-white rounded-full  py-2 text-lg font-medium transition cursor-pointer  w-[150px]">
                     Apply
                   </button>
                 </div>
@@ -130,7 +130,7 @@ const shoppingcart = () => {
                 <p>Total</p>
                 <p>${(subtotal * 0.011 + Number(subtotal) + 15).toFixed(2)}</p>
               </div>
-              <button className="bg-black text-white rounded-full  py-2 text-lg font-medium transition cursor-pointer  ">
+              <button className="bg-black hover:bg-black/90 text-white rounded-full  py-2 text-lg font-medium transition cursor-pointer  ">
                 <CreditCardOutlined className="mr-3" /> Proceed to Checkout
               </button>
             </div>
