@@ -49,6 +49,21 @@ const ProductCard = ({ product }) => {
     return colorMap[colorName] || colorName.toLowerCase();
   };
 
+  // New: Utility to calculate sale price (if on sale)
+  const getSalePrice = (product) => {
+    if (!product.sale_id || !product.discount_type || !product.discount_value)
+      return null;
+    const basePrice = Number(product.price);
+    if (product.discount_type === "percentage") {
+      return (basePrice * (1 - product.discount_value / 100)).toFixed(2);
+    }
+    if (product.discount_type === "fixed") {
+      return (basePrice - product.discount_value).toFixed(2);
+    }
+    return null;
+  };
+
+  const salePrice = getSalePrice(product);
   return (
     <div className="mx-auto relative w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:max-w-[300px]">
       <div className="absolute z-1 right-4 top-4">
@@ -70,6 +85,11 @@ const ProductCard = ({ product }) => {
             sizes="(max-width: 768px) 100vw, 300px"
             className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
           />
+          {salePrice !== null && (
+            <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-lg shadow-md font-semibold z-10">
+              SALE{product.sale_name ? `: ${product.sale_name}` : ""}
+            </span>
+          )}
         </div>
         <div className="flex flex-col justify-between px-4 gap-3 pb-4">
           <p className="text-[16px] lg:text-[18px] font-bold lg:pt-0">
@@ -91,13 +111,11 @@ const ProductCard = ({ product }) => {
             </p>
           </div>
 
-          {/* Color Variants - Display Only */}
           {colors.length > 0 && (
             <div className="flex flex-row items-center gap-2">
               {colors.map((color) => {
                 const available = isAvailable(color);
                 const colorHex = getColorHex(color);
-
                 return (
                   <div key={color} className="relative">
                     <div
@@ -134,10 +152,21 @@ const ProductCard = ({ product }) => {
             </div>
           )}
 
-          <div className="flex justify-between">
-            <p className="text-[20px] lg:text-[20px] font-bold">
-              ${product.price}
-            </p>
+          <div className="flex justify-between items-center">
+            {salePrice !== null ? (
+              <div className="flex flex-col">
+                <span className="text-[14px] line-through text-gray-400">
+                  ${Number(product.price).toFixed(2)}
+                </span>
+                <span className="text-[20px] font-bold text-red-600">
+                  ${salePrice}
+                </span>
+              </div>
+            ) : (
+              <span className="text-[20px] font-bold">
+                ${Number(product.price).toFixed(2)}
+              </span>
+            )}
             {product.total_orders > 0 && (
               <div className="text-xs text-gray-500 mt-2">
                 {product.total_orders}{" "}

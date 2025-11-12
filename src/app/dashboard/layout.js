@@ -9,9 +9,12 @@ import React, { useState } from "react";
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  UploadOutlined,
+  PercentageOutlined,
   UserOutlined,
-  VideoCameraOutlined,
+  ProfileOutlined,
+  ProductOutlined,
+  BarsOutlined,
+  ControlOutlined,
 } from "@ant-design/icons";
 import { Button, Layout, Menu, theme } from "antd";
 const { Header, Sider, Content } = Layout;
@@ -35,28 +38,33 @@ const DashboardLayout = ({ children }) => {
           items={[
             {
               key: "/dashboard/products",
-              icon: <UserOutlined />,
+              icon: <ProductOutlined />,
               label: <Link href="/dashboard/products">Products</Link>,
             },
             {
               key: "/dashboard/orders",
-              icon: <VideoCameraOutlined />,
+              icon: <ProfileOutlined />,
               label: <Link href="/dashboard/orders">Orders</Link>,
             },
             {
               key: "/dashboard/categories",
-              icon: <UploadOutlined />,
+              icon: <BarsOutlined />,
               label: <Link href="/dashboard/categories">Categories</Link>,
             },
             {
               key: "/dashboard/users",
-              icon: <UploadOutlined />,
+              icon: <UserOutlined />,
               label: <Link href="/dashboard/users">Users</Link>,
             },
             {
               key: "/dashboard/attributes",
-              icon: <UploadOutlined />,
+              icon: <ControlOutlined />,
               label: <Link href="/dashboard/attributes">Attributes</Link>,
+            },
+            {
+              key: "/dashboard/sales",
+              icon: <PercentageOutlined />,
+              label: <Link href="/dashboard/sales">Sales</Link>,
             },
           ]}
         />
