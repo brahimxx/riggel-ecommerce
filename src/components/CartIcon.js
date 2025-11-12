@@ -1,4 +1,8 @@
-import { ShoppingCartOutlined, ShoppingOutlined } from "@ant-design/icons";
+import {
+  ShoppingCartOutlined,
+  ShoppingOutlined,
+  CreditCardOutlined,
+} from "@ant-design/icons";
 import Link from "next/link";
 import { Badge } from "antd";
 import { useCartContext } from "@/components/CartContext";
@@ -23,6 +27,8 @@ const CartIcon = ({ className = "!text-2xl" }) => {
     <div
       className="flex flex-col min-w-[300px] 
       h-[60vh] overflow-auto"
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <div className="px-4 ">
         <div className="flex flex-col w-full">
@@ -46,16 +52,14 @@ const CartIcon = ({ className = "!text-2xl" }) => {
                 </div>
               ))}
               <div className="py-2 px-4 bg-white sticky bottom-0 left-0 z-10">
-                <div className="flex justify-between font-bold mb-2">
+                <div className="flex justify-between items-center font-bold mb-4">
                   <span>Subtotal:</span>
-                  <span>${subtotal}</span>
+                  <span className="text-xl">${subtotal}</span>
                 </div>
-                <Link
-                  href="/cart"
-                  className="bg-black text-white rounded-full py-2 text-sm text-center block hover:bg-black/90 transition"
-                  scroll={false}
-                >
-                  View Cart / Checkout
+                <Link href="/shoppingcart">
+                  <button className="w-full hover:bg-black/90 bg-black text-white rounded-full  py-2 text-lg font-medium transition cursor-pointer  ">
+                    <CreditCardOutlined className="mr-3" /> Proceed to Checkout
+                  </button>
                 </Link>
               </div>
             </>

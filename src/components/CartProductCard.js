@@ -32,7 +32,7 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
               <div className="flex flex-col justify-between  w-[50%]">
                 <Link
                   href={"/products/" + product.slug}
-                  className="text-[16px] font-bold"
+                  className="text-[16px] font-bold !text-black"
                 >
                   {product.name}
                 </Link>
@@ -66,7 +66,7 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
               />
               <div
                 onClick={handleRemove}
-                className="self-center font-semibold text-red-600 hover:bg-red-100/80 cursor-pointer w-full lg:w-[110px] rounded-full text-sm py-[6px] text-center"
+                className="self-center font-semibold text-red-500/90 hover:bg-red-100/80 cursor-pointer w-full lg:w-[110px] rounded-full text-sm py-[6px] text-center"
               >
                 <DeleteOutlined /> Remove
               </div>
