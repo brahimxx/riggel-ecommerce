@@ -26,7 +26,7 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const body = await req.json();
-    const { name, parent_category_id, description } = body;
+    const { name, parent_category_id, description, category_type } = body;
 
     if (typeof name !== "string" || name.trim() === "") {
       return Response.json(
@@ -35,11 +35,13 @@ export async function POST(req) {
       );
     }
 
+    const catType = category_type || "type";
+
     // Insert category
     const [catRes] = await pool.query(
-      `INSERT INTO categories (name, parent_category_id, description)
-       VALUES (?, ?, ?)`,
-      [name.trim(), parent_category_id || null, description || ""]
+      `INSERT INTO categories (name, parent_category_id, description, category_type)
+       VALUES (?, ?, ?, ?)`,
+      [name.trim(), parent_category_id || null, description || "", catType]
     );
     const category_id = catRes.insertId;
 

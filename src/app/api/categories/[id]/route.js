@@ -39,7 +39,7 @@ export async function PUT(req, { params }) {
 
   try {
     const body = await req.json();
-    const { name, parent_category_id, description } = body;
+    const { name, parent_category_id, description, category_type } = body;
 
     // Check category exists
     const [existing] = await conn.query(
@@ -70,6 +70,10 @@ export async function PUT(req, { params }) {
     if (typeof description === "string") {
       updates.push("description = ?");
       values.push(description);
+    }
+    if (typeof category_type === "string") {
+      updates.push("category_type = ?");
+      values.push(category_type.trim());
     }
 
     if (updates.length > 0) {

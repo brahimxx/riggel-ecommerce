@@ -25,6 +25,13 @@ const FilterSidebar = ({
   showFavoritesOnly,
   onFavoritesToggle,
 }) => {
+  const typeCategories = categories.filter(
+    (cat) => cat.category_type === "type"
+  );
+  const styleCategories = categories.filter(
+    (cat) => cat.category_type === "style"
+  );
+
   return (
     <div className=" lg:border border-gray-300/60 rounded-2xl lg:px-6">
       {/* Header */}
@@ -56,21 +63,38 @@ const FilterSidebar = ({
         </div>
       </div>
 
-      {/* Category Filter Section */}
+      {/* Product Type Filter Section */}
       <ul className="flex flex-col gap-4 border-b border-gray-300/60 py-6">
-        {categories.map((category) => (
+        <h3 className="font-semibold text-gray-800 mb-2">Product Type</h3>
+        {typeCategories.map((category) => (
           <li
-            // MODIFICATION: Use the unique category_id for the key
             key={category.category_id}
             className="flex justify-between items-center hover:text-gray-900 text-gray-600"
           >
             <Checkbox
               className="cursor-pointer"
-              // MODIFICATION: Make the checkbox interactive
               onChange={() => onCategorySelect(category)}
               checked={selectedCategory?.category_id === category.category_id}
             >
-              {/* MODIFICATION: Display the category name as the label */}
+              {category.name}
+            </Checkbox>
+          </li>
+        ))}
+      </ul>
+
+      {/* Style Filter Section */}
+      <ul className="flex flex-col gap-4 border-b border-gray-300/60 py-6">
+        <h3 className="font-semibold text-gray-800 mb-2">Style / Occasion</h3>
+        {styleCategories.map((category) => (
+          <li
+            key={category.category_id}
+            className="flex justify-between items-center hover:text-gray-900 text-gray-600"
+          >
+            <Checkbox
+              className="cursor-pointer"
+              onChange={() => onCategorySelect(category)}
+              checked={selectedCategory?.category_id === category.category_id}
+            >
               {category.name}
             </Checkbox>
           </li>

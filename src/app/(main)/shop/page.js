@@ -82,6 +82,28 @@ const ShopPage = () => {
     fetchFilterData();
   }, []);
 
+  // After setAllCategories
+  useEffect(() => {
+    if (allCategories.length) {
+      const urlCategoryId = searchParams.get("category_id");
+      if (urlCategoryId) {
+        const found = allCategories.find(
+          (cat) => String(cat.category_id) === urlCategoryId
+        );
+        if (
+          found &&
+          (!selectedCategory ||
+            found.category_id !== selectedCategory.category_id)
+        ) {
+          setSelectedCategory(found);
+        }
+      } else {
+        setSelectedCategory(null);
+      }
+    }
+    // eslint-disable-next-line
+  }, [allCategories, searchParams]);
+
   const handleFavoritesToggle = (checked) => {
     const params = new URLSearchParams(searchParams.toString());
     if (checked) {
