@@ -231,3 +231,25 @@ export async function getRoles() {
     return []; // Return empty array on failure so UI doesn't break
   }
 }
+
+// --- NEW FUNCTIONS FOR SALES ---
+export const getSales = async () => {
+  const res = await fetch("/api/sales");
+  if (!res.ok) throw new Error("Failed to fetch sales");
+  return await res.json();
+};
+export const getSaleById = async (id) => {
+  const res = await fetch(`/api/sales/${id}`);
+  if (!res.ok) throw new Error("Failed to fetch sale");
+  return await res.json();
+};
+export function getSalePrice(product) {
+  if (!product.sale_id) return product.price;
+  if (product.discount_type === "percentage") {
+    return (product.price * (1 - product.discount_value / 100)).toFixed(2);
+  }
+  if (product.discount_type === "fixed") {
+    return (product.price - product.discount_value).toFixed(2);
+  }
+  return product.price;
+}

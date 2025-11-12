@@ -67,7 +67,7 @@ const SearchBar = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative hidden md:block">
+    <form onSubmit={handleSubmit} className="relative hidden md:block ">
       <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
         <SearchOutlined className="text-gray-500" />
       </div>
@@ -75,7 +75,7 @@ const SearchBar = () => {
         type="text"
         value={term}
         onChange={handleChange}
-        className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:ring-black focus:border-black"
+        className="block w-full p-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-full bg-gray-50 focus:!ring-black focus:!border-black"
         placeholder="Search..."
       />
     </form>

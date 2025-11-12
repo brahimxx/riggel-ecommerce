@@ -40,8 +40,6 @@ const DataTable = ({
 
   // Extract pagination info and products array from response
   const { validData, paginationInfo } = useMemo(() => {
-    console.log("DataTable received data:", data);
-
     if (!data) return { validData: [], paginationInfo: null };
 
     // If data is already an array (old format)
@@ -51,7 +49,6 @@ const DataTable = ({
 
     // If data has pagination structure (new format)
     if (data.products && Array.isArray(data.products)) {
-      console.log("Extracted products array:", data.products);
       return {
         validData: data.products,
         paginationInfo: data.pagination || null,
@@ -69,9 +66,6 @@ const DataTable = ({
     console.warn("DataTable: Unexpected data format", data);
     return { validData: [], paginationInfo: null };
   }, [data]);
-
-  console.log("DataTable validData:", validData);
-  console.log("DataTable paginationInfo:", paginationInfo);
 
   const showModal = (record = null) => {
     if (record) {

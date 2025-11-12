@@ -7,6 +7,7 @@ import slugify from "slugify";
 export const revalidate = 300;
 
 // -- GET: All products with their variants (Adjusted for many-to-many categories)
+
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
@@ -24,26 +25,18 @@ export async function GET(req) {
   let whereClauses = [];
   const queryParams = [];
 
-  // Search filter - IMPROVED with normalization
+  // ---- Search filter ----
   if (query && query.trim()) {
     const searchTerm = query.trim();
-
-    // Normalize the search term: remove spaces, hyphens, and convert to lowercase
     const normalizedSearch = searchTerm.toLowerCase().replace(/[\s-]/g, "");
-
-    // Search in multiple ways for maximum flexibility:
-    // 1. Direct match with original query (case-insensitive)
-    // 2. Match after removing spaces and hyphens from both search and database fields
     whereClauses.push(`(
-      p.name LIKE ? 
-      OR p.description LIKE ? 
+      p.name LIKE ?
+      OR p.description LIKE ?
       OR LOWER(REPLACE(REPLACE(p.name, ' ', ''), '-', '')) LIKE ?
       OR LOWER(REPLACE(REPLACE(p.description, ' ', ''), '-', '')) LIKE ?
     )`);
-
     const likePattern = `%${searchTerm}%`;
     const normalizedPattern = `%${normalizedSearch}%`;
-
     queryParams.push(
       likePattern,
       likePattern,
@@ -52,7 +45,7 @@ export async function GET(req) {
     );
   }
 
-  // Category filter
+  // ---- Category filter ----
   if (categoryId) {
     whereClauses.push(
       `EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.product_id AND pc.category_id = ?)`
@@ -60,7 +53,7 @@ export async function GET(req) {
     queryParams.push(categoryId);
   }
 
-  // Price range filter
+  // ---- Price filter ----
   if (minPrice && maxPrice) {
     whereClauses.push(
       `(SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) BETWEEN ? AND ?`
@@ -68,7 +61,7 @@ export async function GET(req) {
     queryParams.push(minPrice, maxPrice);
   }
 
-  // Helper function to create EXISTS clauses for attributes
+  // ---- Attribute filters ----
   const addAttributeFilter = (attributeName, values) => {
     if (values && values.length > 0) {
       whereClauses.push(`
@@ -85,14 +78,11 @@ export async function GET(req) {
       queryParams.push(attributeName, values);
     }
   };
-
   addAttributeFilter("Color", colors);
   addAttributeFilter("Size", sizes);
 
-  // --- Sorting logic ---
+  // ---- Sorting logic ----
   let orderByClause = "";
-
-  // For search, prioritize better matches
   if (query && query.trim()) {
     const searchTerm = query.trim();
     orderByClause = `ORDER BY 
@@ -102,10 +92,8 @@ export async function GET(req) {
         WHEN LOWER(REPLACE(REPLACE(p.name, ' ', ''), '-', '')) LIKE LOWER(?) THEN 2
         ELSE 3
       END`;
-    // Note: We'll add these parameters separately
   }
 
-  // Append the user's selected sort order
   switch (sortBy) {
     case "price_asc":
       orderByClause += orderByClause
@@ -139,7 +127,6 @@ export async function GET(req) {
         : "ORDER BY p.created_at DESC";
       break;
   }
-
   if (!orderByClause.includes("p.created_at DESC")) {
     orderByClause += ", p.created_at DESC";
   }
@@ -147,8 +134,10 @@ export async function GET(req) {
   const whereClause =
     whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
+  // ---- Count query ----
   const countQuery = `SELECT COUNT(DISTINCT p.product_id) as total FROM products p ${whereClause};`;
 
+  // ---- Data query with Sale info (MIN() for sale fields) ----
   const dataQuery = `
     SELECT 
       p.product_id, p.name, p.slug, p.description, p.created_at,
@@ -176,25 +165,30 @@ export async function GET(req) {
         FROM order_items oi 
         JOIN product_variants pv ON oi.variant_id = pv.variant_id
         WHERE pv.product_id = p.product_id
-      ), 0) AS total_orders
+      ), 0) AS total_orders,
+      MIN(s.id) AS sale_id,
+      MIN(s.name) AS sale_name,
+      MIN(s.discount_type) AS discount_type,
+      MIN(s.discount_value) AS discount_value
     FROM products p
+    LEFT JOIN sale_product sp ON p.product_id = sp.product_id
+    LEFT JOIN sales s ON sp.sale_id = s.id AND s.start_date <= NOW() AND s.end_date >= NOW()
     ${whereClause}
     GROUP BY p.product_id
     ${orderByClause}
     LIMIT ? OFFSET ?;
   `;
 
-  // Build parameter arrays
+  // Final query params
   const countQueryParams = [...queryParams];
-
   const dataQueryParams = [...queryParams];
   // Add sorting parameters if search query exists
   if (query && query.trim()) {
     const searchTerm = query.trim();
     const normalizedSearch = searchTerm.toLowerCase().replace(/[\s-]/g, "");
-    dataQueryParams.push(searchTerm); // For exact match check
-    dataQueryParams.push(`${searchTerm}%`); // For starts-with check
-    dataQueryParams.push(`%${normalizedSearch}%`); // For normalized check
+    dataQueryParams.push(searchTerm);
+    dataQueryParams.push(`${searchTerm}%`);
+    dataQueryParams.push(`%${normalizedSearch}%`);
   }
   dataQueryParams.push(limit, offset);
 
