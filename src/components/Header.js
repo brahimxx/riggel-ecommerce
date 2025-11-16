@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { CloseOutlined, MenuOutlined } from "@ant-design/icons";
+import { CloseOutlined, LinkOutlined, MenuOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
 import CartIcon from "./CartIcon";
@@ -29,7 +29,7 @@ const Header = () => {
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-3000 border-gray-200 transition-all duration-300 ease-in-out ${
+        className={`fixed top-0 left-0 right-0 z-30 border-gray-200 transition-all duration-300 ease-in-out ${
           isScrolled ? "bg-white/95 backdrop-blur-md shadow-md" : "bg-white"
         }`}
       >
@@ -57,20 +57,20 @@ const Header = () => {
                 </Link>
               </li>
               <li>
-                <a
-                  href="#"
+                <Link
+                  href="/shop?on_sale=true"
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
                   On sale
-                </a>
+                </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/shop?sortBy=created_at_desc"
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
                   New Arrivals
-                </a>
+                </Link>
               </li>
               <li>
                 <Link

@@ -24,6 +24,9 @@ const FilterSidebar = ({
   // Favorites Filter Props
   showFavoritesOnly,
   onFavoritesToggle,
+  // On Sale Filter Props
+  showOnSaleOnly,
+  onOnSaleToggle,
 }) => {
   const typeCategories = categories.filter(
     (cat) => cat.category_type === "type"
@@ -44,6 +47,13 @@ const FilterSidebar = ({
       <div className="border-b border-gray-300/60 py-6 flex items-center">
         <Checkbox checked={showFavoritesOnly} onChange={onFavoritesToggle}>
           Show Favorites Only
+        </Checkbox>
+      </div>
+
+      {/* On Sale Filter Section */}
+      <div className="border-b border-gray-300/60 py-6 flex items-center">
+        <Checkbox checked={showOnSaleOnly} onChange={onOnSaleToggle}>
+          Show On Sale Only
         </Checkbox>
       </div>
 

@@ -75,7 +75,20 @@ async function getProduct(slug) {
       [product.product_id]
     );
 
-    return { ...product, categories, variants, images };
+    // Fetch active sale for this product
+    const [saleRows] = await pool.query(
+      `SELECT s.*
+   FROM sale_product sp
+   JOIN sales s ON sp.sale_id = s.id
+   WHERE sp.product_id = ? AND s.start_date <= NOW() AND s.end_date >= NOW()
+   ORDER BY s.id DESC
+   LIMIT 1`, // picks latest sale if multiple overlap
+      [product.product_id]
+    );
+
+    const sale = saleRows.length > 0 ? saleRows[0] : null;
+
+    return { ...product, categories, variants, images, sale };
   } catch (error) {
     console.error("Error fetching product:", error);
     return null;

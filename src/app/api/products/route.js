@@ -21,6 +21,7 @@ export async function GET(req) {
   const offset = (page - 1) * limit;
   const sortBy = searchParams.get("sortBy") || "created_at_desc";
   const query = searchParams.get("query");
+  const onSaleOnly = searchParams.get("on_sale") === "true";
 
   let whereClauses = [];
   const queryParams = [];
@@ -43,6 +44,19 @@ export async function GET(req) {
       normalizedPattern,
       normalizedPattern
     );
+  }
+
+  // ---- On Sale filter ----
+  if (onSaleOnly) {
+    whereClauses.push(`
+    EXISTS (
+      SELECT 1
+      FROM sale_product sp
+      JOIN sales s ON sp.sale_id = s.id
+      WHERE sp.product_id = p.product_id
+      AND s.start_date <= NOW() AND s.end_date >= NOW()
+    )
+  `);
   }
 
   // ---- Category filter ----
@@ -197,7 +211,6 @@ export async function GET(req) {
       pool.query(countQuery, countQueryParams),
       pool.query(dataQuery, dataQueryParams),
     ]);
-
     const total = countResult[0].total;
 
     const productsWithParsedData = products.map((product) => ({

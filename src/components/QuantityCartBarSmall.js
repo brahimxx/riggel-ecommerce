@@ -13,8 +13,8 @@ const QuantityCartBarSmall = ({ quantity = 1, onChange }) => {
   };
 
   return (
-    <div className="flex items-center gap-4 text-sm lg:text-base font-sans">
-      <div className="flex items-center bg-gray-200 rounded-full  py-1 min-w-[90px] lg:min-w-[110px] justify-around ">
+    <div className="flex items-center gap-4  text-[12px] md:text-base font-sans">
+      <div className="flex items-center bg-gray-200 rounded-full  py-1 min-w-[60px] md:min-w-[110px] justify-around ">
         <button
           onClick={handleDecrement}
           className=" text-black font-semibold lg:px-2 focus:outline-none cursor-pointer w-[33%] "
