@@ -37,7 +37,7 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
               <div className="flex flex-col justify-between  md:w-[50%]">
                 <div
                   href={"/products/" + product.slug}
-                  className="flex items-center justify-between text-[12px] md:text-[16px] text-nowrap font-bold "
+                  className="flex items-center justify-between md:justify-start text-[12px] md:text-[16px] text-nowrap font-bold "
                 >
                   <Link
                     href={"/products/" + product.slug}
