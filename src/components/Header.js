@@ -57,28 +57,28 @@ const Header = () => {
                 </Link>
               </li>
               <li>
-                <Link
+                <a
                   href="/shop?on_sale=true"
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
                   On sale
-                </Link>
+                </a>
               </li>
               <li>
-                <Link
+                <a
                   href="/shop?sortBy=created_at_desc"
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
                   New Arrivals
-                </Link>
+                </a>
               </li>
               <li>
-                <Link
+                <a
                   href={`/shop?favorites=1`}
                   className="block py-2 px-3 text-gray-900 rounded-sm hover:bg-gray-100 md:hover:bg-transparent md:p-0 transition-transform duration-200 ease-in-out hover:scale-110"
                 >
                   Favorites
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
