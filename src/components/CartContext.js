@@ -1,4 +1,5 @@
 "use client";
+import { getSalePrice } from "@/lib/api";
 import { createContext, useContext, useState, useEffect } from "react";
 import Cookies from "js-cookie";
 
@@ -32,40 +33,44 @@ export function CartProvider({ children }) {
   // Action methods (copy-paste your safe logic here)
   const addToCart = (product, variant, quantity = 1) => {
     setCart((prevCart) => {
-      // Always normalize variantId to null (never undefined)
       const normalizedVariantId =
         typeof variant?.variant_id === "undefined" ? null : variant?.variant_id;
 
-      // Try to find existing item using loose equality (string/number)
       const existingItemIndex = prevCart.items.findIndex(
         (item) =>
           item.productId == product.product_id &&
           item.variantId == normalizedVariantId
       );
 
-      // Defensive: Remove any accidental duplicate first
       let newItems = prevCart.items.filter(
-        (item, idx) => idx !== existingItemIndex // skip the old instance if it exists
+        (item, idx) => idx !== existingItemIndex
       );
 
+      // --- Calculate correct price ---
+      // Prefer variant price, fallback to product price
+      const basePrice = variant?.price || product.price;
+      // Use sale price if product.sale exists
+      // (If sale info is at product.sale, pass product.sale fields. If at product root, just pass product)
+      const finalPrice = getSalePrice(product, basePrice);
+
       if (existingItemIndex > -1) {
-        // Add updated item with increased quantity
         const existingItem = prevCart.items[existingItemIndex];
         newItems.push({
           ...existingItem,
           quantity: existingItem.quantity + quantity,
         });
       } else {
-        // Add new item
         newItems.push({
           productId: product.product_id,
           variantId: normalizedVariantId,
           name: product.name,
-          price: variant?.price || product.price,
+          price: finalPrice,
           quantity,
           image: product.images?.[0]?.url || "",
           slug: product.slug,
           attributes: variant?.attributes || [],
+          // Optionally store sale info for checkout display
+          sale: product.sale || null,
         });
       }
 

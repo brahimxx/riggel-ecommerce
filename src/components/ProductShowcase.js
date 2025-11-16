@@ -14,6 +14,21 @@ const ProductShowcase = ({ product }) => {
   const [quantity, setQuantity] = useState(1);
 
   const { addToCart } = useCartContext();
+  const basePrice = selectedVariant?.price || product.price;
+  const sale = product.sale;
+
+  function getSalePrice(basePrice, sale) {
+    if (!sale) return null;
+    if (sale.discount_type === "percentage") {
+      return (basePrice * (1 - sale.discount_value / 100)).toFixed(2);
+    }
+    if (sale.discount_type === "fixed") {
+      return (basePrice - sale.discount_value).toFixed(2);
+    }
+    return null;
+  }
+
+  const salePrice = getSalePrice(basePrice, sale);
 
   useEffect(() => {
     const extractedAttributes = {};
@@ -52,8 +67,7 @@ const ProductShowcase = ({ product }) => {
     }
   };
 
-  const displayPrice = selectedVariant?.price || product.price;
-
+  console.log(product);
   return (
     <>
       <div className="flex-col lg:flex lg:flex-row ">
@@ -74,9 +88,27 @@ const ProductShowcase = ({ product }) => {
               {Number(parseFloat(product.rating).toFixed(1)) || 0}/5
             </span>
           </div>
-          <p className="text-[24px] lg:text-[40px] text-gray-900 font-extrabold lg:font-bold">
-            ${displayPrice}
-          </p>
+          {salePrice ? (
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="line-through text-gray-800/70 mr-2">
+                  ${Number(basePrice).toFixed(2)}
+                </span>
+                <span className="text-[#669900] text-[24px] lg:text-[40px] font-extrabold">
+                  ${salePrice}
+                </span>
+              </div>
+
+              <span className="ml-2 bg-[#669900] text-white text-xs px-2 py-1 rounded">
+                On sale{sale?.name ? `: ${sale.name}` : ""}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[24px] lg:text-[40px] text-gray-900 font-extrabold lg:font-bold">
+              ${Number(basePrice).toFixed(2)}
+            </span>
+          )}
+
           <p className="text-[14px] lg:text-4 text-gray-700 line-clamp-2">
             {product.description}
           </p>

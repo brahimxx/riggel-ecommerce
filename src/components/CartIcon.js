@@ -27,7 +27,7 @@ const CartIcon = ({ className = "!text-2xl" }) => {
   const content = (
     <div
       className="flex flex-col min-w-[300px] 
-      h-[60vh] overflow-auto"
+      max-h-[60vh] overflow-auto"
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >

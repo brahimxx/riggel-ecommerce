@@ -86,7 +86,7 @@ const ProductCard = ({ product }) => {
             className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
           />
           {salePrice !== null && (
-            <span className="absolute top-3 left-3 bg-red-500 text-white text-xs px-2 py-1 rounded-lg shadow-md font-semibold z-10">
+            <span className="absolute top-3 left-3 bg-[#669900] text-white text-xs px-2 py-1 rounded-lg shadow-md font-semibold z-10">
               SALE{product.sale_name ? `: ${product.sale_name}` : ""}
             </span>
           )}
@@ -158,7 +158,7 @@ const ProductCard = ({ product }) => {
                 <span className="text-[14px] line-through text-gray-400">
                   ${Number(product.price).toFixed(2)}
                 </span>
-                <span className="text-[20px] font-bold text-red-600">
+                <span className="text-[20px] font-bold text-[#669900]">
                   ${salePrice}
                 </span>
               </div>

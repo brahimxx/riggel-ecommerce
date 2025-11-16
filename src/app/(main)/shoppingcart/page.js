@@ -10,14 +10,21 @@ import {
 } from "@ant-design/icons";
 import Link from "next/link";
 import { useCartContext } from "@/components/CartContext";
+import { getSalePrice } from "@/lib/api";
 
 import CartProductCard from "@/components/CartProductCard";
 
 const shoppingcart = () => {
   const { cart, updateQuantity, removeFromCart } = useCartContext();
 
+  console.log("Cart contents:", cart);
+
   const subtotal = cart.items
-    .reduce((sum, item) => sum + item.price * item.quantity, 0)
+    .reduce((sum, item) => {
+      // Always run getSalePrice to ensure up-to-date price
+      const priceNow = getSalePrice(item, item.price);
+      return sum + priceNow * item.quantity;
+    }, 0)
     .toFixed(2);
   const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 

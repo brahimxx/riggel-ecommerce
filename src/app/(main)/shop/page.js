@@ -22,7 +22,6 @@ const ShopPage = () => {
   const pathname = usePathname();
 
   const { favorites, isLoaded } = useFavorites();
-  const [showFavorites, setShowFavorites] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,6 +39,10 @@ const ShopPage = () => {
   const [sortBy, setSortBy] = useState(() => {
     return searchParams.get("sortBy") || "created_at_desc";
   });
+
+  const [showOnSaleOnly, setShowOnSaleOnly] = useState(
+    () => searchParams.get("on_sale") === "true"
+  );
 
   useEffect(() => {
     const urlSortBy = searchParams.get("sortBy") || "created_at_desc";
@@ -125,6 +128,18 @@ const ShopPage = () => {
     );
   };
 
+  const handleOnSaleToggle = (e) => {
+    const checked = e.target.checked;
+    const params = new URLSearchParams(searchParams.toString());
+    if (checked) {
+      params.set("on_sale", "true");
+    } else {
+      params.delete("on_sale");
+    }
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    setShowOnSaleOnly(checked);
+  };
+
   const handleSizeToggle = (size) => {
     setSelectedSizes((prev) =>
       prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
@@ -167,6 +182,7 @@ const ShopPage = () => {
         page: currentPage,
         limit: PAGE_SIZE,
         sortBy: sortBy,
+        onSale: showOnSaleOnly,
       };
       try {
         const response = await getProducts(filters);
@@ -265,6 +281,8 @@ const ShopPage = () => {
           onSizeToggle={handleSizeToggle}
           showFavoritesOnly={showFavoritesOnly}
           onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
+          showOnSaleOnly={showOnSaleOnly}
+          onOnSaleToggle={handleOnSaleToggle}
         />
       </div>
 

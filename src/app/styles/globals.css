@@ -40,3 +40,7 @@ body {
     margin-left: 0.5%;
   }
 }
+
+.react-multiple-carousel__arrow {
+  z-index: 1 !important;
+}

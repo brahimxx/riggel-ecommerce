@@ -5,6 +5,9 @@
 export async function getProducts(filters = {}) {
   const params = new URLSearchParams();
 
+  if (filters.onSale) {
+    params.append("on_sale", "true");
+  }
   if (filters.colors && filters.colors.length > 0) {
     params.append("colors", filters.colors.join(","));
   }
@@ -243,13 +246,21 @@ export const getSaleById = async (id) => {
   if (!res.ok) throw new Error("Failed to fetch sale");
   return await res.json();
 };
-export function getSalePrice(product) {
-  if (!product.sale_id) return product.price;
-  if (product.discount_type === "percentage") {
-    return (product.price * (1 - product.discount_value / 100)).toFixed(2);
+function isSaleActive(sale) {
+  if (!sale) return false;
+  const now = new Date();
+  const start = new Date(sale.start_date);
+  const end = new Date(sale.end_date);
+  return now >= start && now <= end;
+}
+export function getSalePrice(product, basePrice) {
+  const sale = product.sale;
+  if (!sale || !isSaleActive(sale)) return basePrice;
+  if (sale.discount_type === "percentage") {
+    return (basePrice * (1 - sale.discount_value / 100)).toFixed(2);
   }
-  if (product.discount_type === "fixed") {
-    return (product.price - product.discount_value).toFixed(2);
+  if (sale.discount_type === "fixed") {
+    return (basePrice - sale.discount_value).toFixed(2);
   }
-  return product.price;
+  return basePrice;
 }
