@@ -173,14 +173,16 @@ const ShopPage = () => {
       setIsLoading(true);
       setError(null);
       const query = searchParams.get("query");
+      // If showing favorites only, fetch all products (large limit, always page 1)
+      const isFavorites = showFavoritesOnly;
       const filters = {
         colors: selectedColors,
         sizes: selectedSizes,
         price: priceRange,
         category_id: selectedCategory ? selectedCategory.category_id : null,
         query: query,
-        page: currentPage,
-        limit: PAGE_SIZE,
+        page: isFavorites ? 1 : currentPage,
+        limit: isFavorites ? 1000 : PAGE_SIZE,
         sortBy: sortBy,
         onSale: showOnSaleOnly,
       };
@@ -240,22 +242,35 @@ const ShopPage = () => {
       return <p className="text-red-500">{error}</p>;
     }
     if (filteredProducts.length > 0) {
+      // Pagination for favorites only: slice the filteredProducts array
+      const paginatedProducts = showFavoritesOnly
+        ? filteredProducts.slice(
+            (currentPage - 1) * PAGE_SIZE,
+            currentPage * PAGE_SIZE
+          )
+        : filteredProducts;
+      const totalToShow = showFavoritesOnly
+        ? filteredProducts.length
+        : totalProducts;
+      const showPagination = totalToShow > PAGE_SIZE;
       return (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
-            {filteredProducts.map((product) => (
+            {paginatedProducts.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
           </div>
-          <div className="mt-12 flex justify-center">
-            <Pagination
-              current={currentPage}
-              pageSize={PAGE_SIZE}
-              total={totalProducts}
-              onChange={onPageChange}
-              showSizeChanger={false}
-            />
-          </div>
+          {showPagination && (
+            <div className="mt-12 flex justify-center">
+              <Pagination
+                current={currentPage}
+                pageSize={PAGE_SIZE}
+                total={totalToShow}
+                onChange={onPageChange}
+                showSizeChanger={false}
+              />
+            </div>
+          )}
         </>
       );
     }
@@ -308,7 +323,9 @@ const ShopPage = () => {
         <ShopHeader
           currentPage={currentPage}
           pageSize={PAGE_SIZE}
-          totalProducts={totalProducts}
+          totalProducts={
+            showFavoritesOnly ? filteredProducts.length : totalProducts
+          }
           sortBy={sortBy}
           onSortByChange={handleSortByChange}
           setShowFilter={setShowFilter}
