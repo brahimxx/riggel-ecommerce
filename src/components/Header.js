@@ -1,10 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { CloseOutlined, LinkOutlined, MenuOutlined } from "@ant-design/icons";
+import { CloseOutlined, MenuOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
 import CartIcon from "./CartIcon";
 import { Spin } from "antd";
+import { Suspense } from "react";
 
 const Header = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
