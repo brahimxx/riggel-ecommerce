@@ -8,16 +8,15 @@ import {
   SafetyOutlined,
   MessageOutlined,
 } from "@ant-design/icons";
-import Link from "next/link";
 import { useCartContext } from "@/components/CartContext";
 import { getSalePrice } from "@/lib/api";
-
+import { useRouter } from "next/navigation";
 import CartProductCard from "@/components/CartProductCard";
 
 const shoppingcart = () => {
   const { cart, updateQuantity, removeFromCart } = useCartContext();
 
-  console.log("Cart contents:", cart);
+  const router = useRouter();
 
   const subtotal = cart.items
     .reduce((sum, item) => {
@@ -31,12 +30,12 @@ const shoppingcart = () => {
   return (
     <>
       <div className="relative flex flex-col items-start justify-start lg:h-full max-w-screen-2xl mx-auto px-4 gap-8 mt-10 mb-20">
-        <Link
-          href="/shop"
-          className="font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] rounded-full text-sm py-[10px] text-center"
+        <button
+          onClick={() => router.back()}
+          className="font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] rounded-full text-sm py-[10px] text-center flex items-center justify-center gap-2"
         >
           <ArrowLeftOutlined /> Continue Shopping
-        </Link>
+        </button>
 
         <div className="flex flex-col lg:flex-row w-full justify-between ">
           <div className="flex flex-col lg:w-[60%] ">

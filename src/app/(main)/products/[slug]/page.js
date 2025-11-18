@@ -151,10 +151,12 @@ export default async function ProductPage({ params }) {
   const tabs = ["", <ProductReviewsTab key="reviews" reviews={reviews} />, ""];
 
   return (
-    <div className="flex flex-col max-w-screen-2xl mx-auto px-4 overflow-hidden">
-      <ProductShowcase product={product} />
-      <ProductTabs>{tabs}</ProductTabs>
+    <>
+      <div className="flex flex-col max-w-screen-2xl mx-auto px-4 overflow-hidden">
+        <ProductShowcase product={product} />
+        <ProductTabs>{tabs}</ProductTabs>
+      </div>
       <YouMightAlsoLike />
-    </div>
+    </>
   );
 }

@@ -73,14 +73,26 @@ const CartIcon = ({ className = "!text-2xl" }) => {
   );
 
   return (
-    <Popover placement="bottomRight" title={title} content={content}>
-      <Badge count={totalItems} size="small" offset={[3, -2]} color="red">
-        <ShoppingCartOutlined
-          className={`cursor-pointer ${className}`}
-          style={{ fontSize: "1.8em" }}
-        />
-      </Badge>
-    </Popover>
+    <>
+      <div className="hidden lg:block">
+        <Popover placement="bottomRight" title={title} content={content}>
+          <Badge count={totalItems} size="small" offset={[3, -2]} color="red">
+            <ShoppingCartOutlined
+              className={`cursor-pointer ${className}`}
+              style={{ fontSize: "1.8em" }}
+            />
+          </Badge>
+        </Popover>
+      </div>
+      <div className="lg:hidden">
+        <Badge count={totalItems} size="small" offset={[3, -2]} color="red">
+          <ShoppingCartOutlined
+            className={`cursor-pointer ${className}`}
+            style={{ fontSize: "1.8em" }}
+          />
+        </Badge>
+      </div>
+    </>
   );
 };
 
