@@ -1,9 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { CloseOutlined, LinkOutlined, MenuOutlined } from "@ant-design/icons";
+import { CloseOutlined, MenuOutlined } from "@ant-design/icons";
+import { Spin } from "antd";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
 import CartIcon from "./CartIcon";
+import { Suspense } from "react";
 
 const Header = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -84,7 +86,15 @@ const Header = () => {
           </div>
           <div className="flex flex-row gap-5 items-center">
             <div className="flex">
-              <SearchBar />
+              <Suspense
+                fallback={
+                  <div style={{ textAlign: "center", padding: "20px" }}>
+                    <Spin size="large" />
+                  </div>
+                }
+              >
+                <SearchBar />
+              </Suspense>
               <button
                 onClick={toggleDrawer}
                 type="button"
