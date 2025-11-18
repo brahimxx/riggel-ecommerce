@@ -43,16 +43,28 @@ const FilterSidebar = ({
         <SlidersOutlined className="!text-gray-400 text-xl" />
       </div>
 
-      {/* Favorites Filter Section */}
+      {/* Favorites Filter Section - FIXED */}
       <div className="border-b border-gray-300/60 py-6 flex items-center">
-        <Checkbox checked={showFavoritesOnly} onChange={onFavoritesToggle}>
+        <Checkbox
+          checked={showFavoritesOnly}
+          onChange={(e) => {
+            e.stopPropagation();
+            onFavoritesToggle(e);
+          }}
+        >
           Show Favorites Only
         </Checkbox>
       </div>
 
-      {/* On Sale Filter Section */}
+      {/* On Sale Filter Section - FIXED */}
       <div className="border-b border-gray-300/60 py-6 flex items-center">
-        <Checkbox checked={showOnSaleOnly} onChange={onOnSaleToggle}>
+        <Checkbox
+          checked={showOnSaleOnly}
+          onChange={(e) => {
+            e.stopPropagation();
+            onOnSaleToggle(e);
+          }}
+        >
           Show On Sale Only
         </Checkbox>
       </div>

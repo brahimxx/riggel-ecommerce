@@ -116,16 +116,19 @@ const ShopPage = () => {
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setShowFavoritesOnly(checked);
+    setCurrentPage(1); // ✅ Reset page immediately
   };
 
   useEffect(() => {
     setShowFavoritesOnly(searchParams?.favorites === "1");
   }, [searchParams]);
 
+  // ✅ FIXED: Reset page inside handler
   const handleColorToggle = (color) => {
     setSelectedColors((prev) =>
       prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
     );
+    setCurrentPage(1); // ✅ Reset page immediately
   };
 
   const handleOnSaleToggle = (e) => {
@@ -138,20 +141,27 @@ const ShopPage = () => {
     }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     setShowOnSaleOnly(checked);
+    setCurrentPage(1); // ✅ Reset page immediately
   };
 
+  // ✅ FIXED: Reset page inside handler
   const handleSizeToggle = (size) => {
     setSelectedSizes((prev) =>
       prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
     );
+    setCurrentPage(1); // ✅ Reset page immediately
   };
 
+  // ✅ FIXED: Reset page inside handler
   const handlePriceChange = (value) => {
     setPriceRange(value);
+    setCurrentPage(1); // ✅ Reset page immediately
   };
 
+  // ✅ FIXED: Reset page inside handler
   const handleCategorySelect = (category) => {
     setSelectedCategory((prev) => (prev === category ? null : category));
+    setCurrentPage(1); // ✅ Reset page immediately
   };
 
   const onPageChange = (page) => {
@@ -211,16 +221,17 @@ const ShopPage = () => {
     showOnSaleOnly,
   ]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    selectedColors,
-    selectedSizes,
-    priceRange,
-    selectedCategory,
-    sortBy,
-    searchParams,
-  ]);
+  // ❌ REMOVED: This useEffect was causing double fetching
+  // useEffect(() => {
+  //   setCurrentPage(1);
+  // }, [
+  //   selectedColors,
+  //   selectedSizes,
+  //   priceRange,
+  //   selectedCategory,
+  //   sortBy,
+  //   searchParams,
+  // ]);
 
   const favoriteProductIds = (favorites.items || []).map(
     (item) => item.productId
@@ -277,10 +288,8 @@ const ShopPage = () => {
     return <p>No products found matching your criteria.</p>;
   };
 
-  console.log("Rendering ShopPage with products:", products);
   return (
     <>
-      {/* Wrap only the SearchParamsProvider in Suspense */}
       <Suspense
         fallback={
           <div style={{ textAlign: "center", padding: "20px" }}>
@@ -326,6 +335,10 @@ const ShopPage = () => {
           sizes={allAvailableSizes}
           selectedSizes={selectedSizes}
           onSizeToggle={handleSizeToggle}
+          showOnSaleOnly={showOnSaleOnly}
+          onOnSaleToggle={handleOnSaleToggle}
+          showFavoritesOnly={showFavoritesOnly}
+          onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
         />
 
         <div className="w-full lg:w-[80%]">

@@ -16,16 +16,15 @@ const ShopHeader = ({
   const startItem = (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalProducts);
 
-  // Don't render the header if there are no products
-  if (totalProducts === 0) {
-    return null;
-  }
-
   return (
-    <div className="flex justify-between  items-center mb-8 text-[14px] lg:text-sm text-gray-600">
-      <p className="hidden lg:block">
-        Showing {startItem}-{endItem} of {totalProducts} Products
-      </p>
+    <div className="flex justify-between items-center mb-8 text-[14px] lg:text-sm text-gray-600">
+      {/* Only hide the product count on desktop when there are no products */}
+      {totalProducts > 0 && (
+        <p className="hidden lg:block">
+          Showing {startItem}-{endItem} of {totalProducts} Products
+        </p>
+      )}
+
       <div className="flex items-center gap-2 justify-between w-full lg:w-auto">
         <div>
           <span>Sort by:</span>
@@ -33,7 +32,7 @@ const ShopHeader = ({
             value={sortBy}
             onChange={onSortByChange}
             variant="borderless"
-            className="lg:w-[150px] "
+            className="lg:w-[150px]"
           >
             <Select.Option value="created_at_desc">Newest</Select.Option>
             <Select.Option value="popularity_desc">
@@ -50,7 +49,7 @@ const ShopHeader = ({
           className="cursor-pointer lg:hidden rounded-full bg-[#F0EEED] w-8 h-8 sm:w-12 sm:h-12 flex justify-center items-center"
           onClick={() => setShowFilter(!showFilter)}
         >
-          <SlidersOutlined className="sm:text-lg " />
+          <SlidersOutlined className="sm:text-lg" />
         </div>
       </div>
     </div>

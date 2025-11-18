@@ -17,6 +17,10 @@ const FilterDrawer = ({
   sizes,
   selectedSizes,
   onSizeToggle,
+  showFavoritesOnly,
+  onFavoritesToggle,
+  showOnSaleOnly,
+  onOnSaleToggle,
 }) => {
   const drawerRef = useRef(null);
   const contentRef = useRef(null);
@@ -80,7 +84,7 @@ const FilterDrawer = ({
     }
   };
 
-  // Handle drag to close
+  // Handle drag to close - ONLY for drag handle
   const handleTouchStart = (e) => {
     checkScrollPosition();
     dragRef.current.startY = e.touches[0].clientY;
@@ -128,12 +132,12 @@ const FilterDrawer = ({
     <>
       {/* Backdrop with fade animation */}
       <div
-        className={`fixed inset-0 bg-black/50 z-40  lg:hidden transition-opacity duration-300 ease-out ${
+        className={`fixed inset-0 bg-black/50 z-40 lg:hidden transition-opacity duration-300 ease-out ${
           isAnimating ? "opacity-100" : "opacity-0"
         }`}
       />
 
-      {/* Drawer with slide-up animation */}
+      {/* Drawer with slide-up animation - REMOVED touch handlers from here */}
       <div
         ref={drawerRef}
         className={`fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-3xl max-h-[85vh] overflow-hidden lg:hidden ${
@@ -150,16 +154,18 @@ const FilterDrawer = ({
             ? "none"
             : "transform 400ms cubic-bezier(0.32, 0.72, 0, 1)",
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
-        {/* Drag handle */}
-        <div className="w-full py-4 flex justify-center touch-none">
+        {/* Drag handle - Touch handlers ONLY here now */}
+        <div
+          className="w-full py-4 flex justify-center touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="w-12 h-1.5 bg-gray-300 rounded-full transition-all duration-200 active:w-16 active:bg-gray-400" />
         </div>
 
-        {/* Filter content */}
+        {/* Filter content - No drag interference */}
         <div
           ref={contentRef}
           className="overflow-y-auto px-4 pb-6 overscroll-contain"
@@ -172,7 +178,7 @@ const FilterDrawer = ({
               onClick={() => setShowFilter(false)}
               className="text-gray-500 hover:text-gray-700 text-2xl transition-colors duration-200 hover:scale-110 active:scale-95"
             >
-              x
+              ×
             </button>
           </div>
 
@@ -188,6 +194,10 @@ const FilterDrawer = ({
             sizes={sizes}
             selectedSizes={selectedSizes}
             onSizeToggle={onSizeToggle}
+            showFavoritesOnly={showFavoritesOnly}
+            onFavoritesToggle={onFavoritesToggle}
+            showOnSaleOnly={showOnSaleOnly}
+            onOnSaleToggle={onOnSaleToggle}
           />
         </div>
       </div>
