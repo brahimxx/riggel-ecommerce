@@ -1,5 +1,6 @@
 "use client";
 import "@ant-design/v5-patch-for-react-19";
+<<<<<<< HEAD
 import { useState, useEffect } from "react";
 import { Pagination, Spin } from "antd";
 import FilterSidebar from "@/components/FilterSidebar";
@@ -9,6 +10,18 @@ import { getProducts, getCategories, getAttributes } from "@/lib/api";
 import ShopHeader from "@/components/ShopHeader";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useFavorites } from "@/hooks/useFavorites";
+=======
+import { useState, useEffect, Suspense } from "react";
+import { Pagination, Spin } from "antd";
+import FilterSidebar from "@/components/FilterSidebar";
+import FilterDrawer from "@/components/FilterDrawer";
+import ProductCard from "@/components/ProductCard";
+import { getProducts, getCategories, getAttributes } from "@/lib/api";
+import ShopHeader from "@/components/ShopHeader";
+import { useRouter, usePathname } from "next/navigation";
+import { useFavorites } from "@/hooks/useFavorites";
+import SearchParamsProvider from "@/components/SearchParamsProvider";
+>>>>>>> main
 
 const PAGE_SIZE = 12;
 
@@ -17,7 +30,11 @@ const ShopPage = () => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+<<<<<<< HEAD
   const searchParams = useSearchParams();
+=======
+  const [searchParams, setSearchParams] = useState({});
+>>>>>>> main
   const router = useRouter();
   const pathname = usePathname();
 
@@ -37,6 +54,7 @@ const ShopPage = () => {
   const [allCategories, setAllCategories] = useState([]);
 
   const [sortBy, setSortBy] = useState(() => {
+<<<<<<< HEAD
     return searchParams.get("sortBy") || "created_at_desc";
   });
 
@@ -50,6 +68,21 @@ const ShopPage = () => {
       setSortBy(urlSortBy);
     }
   }, [searchParams]);
+=======
+    return searchParams?.sortBy || "created_at_desc";
+  });
+
+  const [showOnSaleOnly, setShowOnSaleOnly] = useState(
+    () => searchParams?.on_sale === "true"
+  );
+
+  useEffect(() => {
+    const urlSortBy = searchParams?.sortBy || "created_at_desc";
+    if (urlSortBy !== sortBy) {
+      setSortBy(urlSortBy);
+    }
+  }, [searchParams, sortBy]);
+>>>>>>> main
 
   useEffect(() => {
     const fetchFilterData = async () => {
@@ -85,10 +118,16 @@ const ShopPage = () => {
     fetchFilterData();
   }, []);
 
+<<<<<<< HEAD
   // After setAllCategories
   useEffect(() => {
     if (allCategories.length) {
       const urlCategoryId = searchParams.get("category_id");
+=======
+  useEffect(() => {
+    if (allCategories.length) {
+      const urlCategoryId = searchParams?.category_id;
+>>>>>>> main
       if (urlCategoryId) {
         const found = allCategories.find(
           (cat) => String(cat.category_id) === urlCategoryId
@@ -108,7 +147,11 @@ const ShopPage = () => {
   }, [allCategories, searchParams]);
 
   const handleFavoritesToggle = (checked) => {
+<<<<<<< HEAD
     const params = new URLSearchParams(searchParams.toString());
+=======
+    const params = new URLSearchParams(searchParams);
+>>>>>>> main
     if (checked) {
       params.set("favorites", "1");
     } else {
@@ -119,7 +162,11 @@ const ShopPage = () => {
   };
 
   useEffect(() => {
+<<<<<<< HEAD
     setShowFavoritesOnly(searchParams.get("favorites") === "1");
+=======
+    setShowFavoritesOnly(searchParams?.favorites === "1");
+>>>>>>> main
   }, [searchParams]);
 
   const handleColorToggle = (color) => {
@@ -130,7 +177,11 @@ const ShopPage = () => {
 
   const handleOnSaleToggle = (e) => {
     const checked = e.target.checked;
+<<<<<<< HEAD
     const params = new URLSearchParams(searchParams.toString());
+=======
+    const params = new URLSearchParams(searchParams);
+>>>>>>> main
     if (checked) {
       params.set("on_sale", "true");
     } else {
@@ -160,7 +211,11 @@ const ShopPage = () => {
   };
 
   const handleSortByChange = (value) => {
+<<<<<<< HEAD
     const params = new URLSearchParams(searchParams.toString());
+=======
+    const params = new URLSearchParams(searchParams);
+>>>>>>> main
     params.set("sortBy", value);
     params.set("page", "1");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -172,8 +227,12 @@ const ShopPage = () => {
     const fetchAndSetProducts = async () => {
       setIsLoading(true);
       setError(null);
+<<<<<<< HEAD
       const query = searchParams.get("query");
       // If showing favorites only, fetch all products (large limit, always page 1)
+=======
+      const query = searchParams?.query;
+>>>>>>> main
       const isFavorites = showFavoritesOnly;
       const filters = {
         colors: selectedColors,
@@ -208,6 +267,11 @@ const ShopPage = () => {
     currentPage,
     sortBy,
     searchParams,
+<<<<<<< HEAD
+=======
+    showFavoritesOnly,
+    showOnSaleOnly,
+>>>>>>> main
   ]);
 
   useEffect(() => {
@@ -242,7 +306,10 @@ const ShopPage = () => {
       return <p className="text-red-500">{error}</p>;
     }
     if (filteredProducts.length > 0) {
+<<<<<<< HEAD
       // Pagination for favorites only: slice the filteredProducts array
+=======
+>>>>>>> main
       const paginatedProducts = showFavoritesOnly
         ? filteredProducts.slice(
             (currentPage - 1) * PAGE_SIZE,
@@ -279,10 +346,49 @@ const ShopPage = () => {
 
   console.log("Rendering ShopPage with products:", products);
   return (
+<<<<<<< HEAD
     <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-4 mt-10 mb-20">
       {/* Desktop sidebar */}
       <div className="lg:w-[20%] hidden lg:block">
         <FilterSidebar
+=======
+    <>
+      {/* Wrap only the SearchParamsProvider in Suspense */}
+      <Suspense
+        fallback={
+          <div style={{ textAlign: "center", padding: "20px" }}>
+            <Spin size="large" />
+          </div>
+        }
+      >
+        <SearchParamsProvider onParamsChange={setSearchParams} />
+      </Suspense>
+
+      <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-4 mt-10 mb-20">
+        <div className="lg:w-[20%] hidden lg:block">
+          <FilterSidebar
+            priceRange={priceRange}
+            onPriceChange={handlePriceChange}
+            categories={allCategories}
+            selectedCategory={selectedCategory}
+            onCategorySelect={handleCategorySelect}
+            colors={allAvailableColors}
+            selectedColors={selectedColors}
+            onColorToggle={handleColorToggle}
+            sizes={allAvailableSizes}
+            selectedSizes={selectedSizes}
+            onSizeToggle={handleSizeToggle}
+            showFavoritesOnly={showFavoritesOnly}
+            onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
+            showOnSaleOnly={showOnSaleOnly}
+            onOnSaleToggle={handleOnSaleToggle}
+          />
+        </div>
+
+        <FilterDrawer
+          showFilter={showFilter}
+          setShowFilter={setShowFilter}
+>>>>>>> main
           priceRange={priceRange}
           onPriceChange={handlePriceChange}
           categories={allCategories}
@@ -294,6 +400,7 @@ const ShopPage = () => {
           sizes={allAvailableSizes}
           selectedSizes={selectedSizes}
           onSizeToggle={handleSizeToggle}
+<<<<<<< HEAD
           showFavoritesOnly={showFavoritesOnly}
           onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
           showOnSaleOnly={showOnSaleOnly}
@@ -334,6 +441,26 @@ const ShopPage = () => {
         {renderContent()}
       </div>
     </div>
+=======
+        />
+
+        <div className="w-full lg:w-[80%]">
+          <ShopHeader
+            currentPage={currentPage}
+            pageSize={PAGE_SIZE}
+            totalProducts={
+              showFavoritesOnly ? filteredProducts.length : totalProducts
+            }
+            sortBy={sortBy}
+            onSortByChange={handleSortByChange}
+            setShowFilter={setShowFilter}
+            showFilter={showFilter}
+          />
+          {renderContent()}
+        </div>
+      </div>
+    </>
+>>>>>>> main
   );
 };
 
