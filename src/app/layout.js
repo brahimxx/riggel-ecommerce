@@ -1,4 +1,5 @@
 // src/app/layout.js
+import AntdStyledComponentsRegistry from "../components/AntdStyledComponentsRegistry";
 import "./styles/globals.css";
 
 export const metadata = {
@@ -12,7 +13,9 @@ export default function RootLayout({ children }) {
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
-      <body>{children}</body>
+      <body>
+        <AntdStyledComponentsRegistry>{children}</AntdStyledComponentsRegistry>
+      </body>
     </html>
   );
 }
