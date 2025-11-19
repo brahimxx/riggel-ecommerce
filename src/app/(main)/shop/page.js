@@ -285,7 +285,9 @@ const ShopPage = () => {
 
   return (
     <>
-      <SearchParamsProvider onParamsChange={setSearchParams} />
+      <Suspense fallback={<div></div>}>
+        <SearchParamsProvider onParamsChange={setSearchParams} />
+      </Suspense>
 
       <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-4 mt-10 mb-20">
         <div className="lg:w-[20%] hidden lg:block">
