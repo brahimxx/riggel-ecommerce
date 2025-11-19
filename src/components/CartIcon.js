@@ -86,10 +86,7 @@ const CartIcon = ({ className = "!text-2xl" }) => {
       </div>
       <div className="lg:hidden">
         <Badge count={totalItems} size="small" offset={[3, -2]} color="red">
-          <ShoppingCartOutlined
-            className={`cursor-pointer ${className}`}
-            style={{ fontSize: "1.8em" }}
-          />
+          <ShoppingCartOutlined className={`cursor-pointer  ${className}`} />
         </Badge>
       </div>
     </>

@@ -4,12 +4,27 @@ import { CloseOutlined, MenuOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import SearchBar from "./SearchBar";
 import CartIcon from "./CartIcon";
-import { Spin } from "antd";
 import { Suspense } from "react";
+import Image from "next/image";
 
 const Header = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [startAnim, setStartAnim] = useState(false);
+
+  useEffect(() => {
+    // If page is already fully loaded (e.g. fast reload), start immediately
+    if (document.readyState === "complete") {
+      setStartAnim(true);
+      return;
+    }
+
+    // Otherwise wait for the real window "load" event
+    const handleLoad = () => setStartAnim(true);
+    window.addEventListener("load", handleLoad);
+
+    return () => window.removeEventListener("load", handleLoad);
+  }, []);
 
   const toggleDrawer = () => {
     setIsDrawerOpen(!isDrawerOpen);
@@ -36,14 +51,50 @@ const Header = () => {
         }`}
       >
         <div className="flex flex-wrap items-center justify-between max-w-screen-2xl mx-auto py-6 px-4">
-          <Link
-            href="/"
-            className="flex items-center space-x-3 rtl:space-x-reverse"
-          >
-            <span className="font-integral self-center text-2xl font-semibold whitespace-nowrap">
-              SHOP.CO
-            </span>
-          </Link>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={toggleDrawer}
+              type="button"
+              className="inline-flex items-center py-2 h-10 justify-center text-sm mt-[2px]  text-black rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+              aria-controls="mobile-drawer"
+              aria-expanded={isDrawerOpen}
+            >
+              <span className="sr-only">Open main menu</span>
+              <MenuOutlined className="text-xl" />
+            </button>
+            <Link href="/" className="flex items-center overflow-hidden">
+              {/* R logo */}
+              <div
+                className={`bg-white z-10 ${startAnim ? "riggel-logo-bg" : ""}`}
+              >
+                <Image
+                  src="/logo.png"
+                  alt="Riggel Logo"
+                  width={40}
+                  height={40}
+                  priority
+                />
+              </div>
+
+              {/* Wrapper for fade + text */}
+              <div className="relative flex items-center">
+                {/* Static fade strip from right edge of the image */}
+                <div
+                  className={`
+            z-20 pointer-events-none absolute left-0 top-0 h-full w-8
+            ${startAnim ? "riggel-fade" : ""}`}
+                />
+                <span
+                  className={`font-integral text-2xl font-bold whitespace-nowrap opacity-0 ${
+                    startAnim ? "riggel-text-slide" : ""
+                  }`}
+                >
+                  iggel
+                </span>
+              </div>
+            </Link>
+          </div>
+
           <div
             className="items-center justify-between hidden w-full md:flex md:w-auto"
             id="navbar-search"
@@ -84,30 +135,18 @@ const Header = () => {
               </li>
             </ul>
           </div>
-          <div className="flex flex-row gap-5 items-center">
+          <div className="flex flex-row  items-center justify-center ">
             <div className="flex">
               <Suspense
                 fallback={
-                  <div style={{ textAlign: "center", padding: "20px" }}>
-                    <Spin size="large" />
-                  </div>
+                  <div style={{ textAlign: "center", padding: "20px" }}></div>
                 }
               >
                 <SearchBar />
               </Suspense>
-              <button
-                onClick={toggleDrawer}
-                type="button"
-                className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
-                aria-controls="mobile-drawer"
-                aria-expanded={isDrawerOpen}
-              >
-                <span className="sr-only">Open main menu</span>
-                <MenuOutlined className="text-xl" />
-              </button>
             </div>
-            <Link href="/shoppingcart" className="text-gray-900">
-              <CartIcon className="text-2xl cursor-pointer transition-transform duration-200 ease-in-out hover:scale-110" />
+            <Link href="/shoppingcart" className="text-gray-900 ">
+              <CartIcon className="text-2xl  cursor-pointer transition-transform duration-200 ease-in-out hover:scale-110" />
             </Link>
           </div>
         </div>
@@ -126,13 +165,13 @@ const Header = () => {
 
       {/* Mobile Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
-          isDrawerOpen ? "translate-x-0" : "translate-x-full"
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+          isDrawerOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full border-r border-r-[#F0EEED]">
           {/* Drawer Header */}
-          <div className="flex items-center justify-between p-4 border-b border-l border-[#F0EEED]">
+          <div className="flex items-center justify-between p-4 border-b border-b-[#F0EEED]">
             <span className="font-integral text-xl font-semibold">Menu</span>
             <button
               onClick={toggleDrawer}

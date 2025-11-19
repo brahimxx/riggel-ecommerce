@@ -51,7 +51,7 @@ const Hero = () => {
           </div>
         </div>
 
-        <div className="absolute w-[320px] h-[320px] sm:w-[500px] sm:h-[500px] lg:w-[440px] lg:h-[440px] xl:w-[500px] xl:h-[500px] bottom-0 left-1/2 transform -translate-x-1/2 lg:left-auto lg:transform-none lg:translate-none lg:right-0 ">
+        <div className="absolute w-[320px] min-[325px]:scale-125 min-[498px]:scale-145 min-[498px]:h-[400px]  h-[320px]  sm:w-[500px] lg:scale-100 lg:w-[440px] lg:h-[440px] xl:w-[500px] xl:h-[500px] bottom-0 left-1/2 transform -translate-x-1/2 lg:left-auto lg:transform-none lg:translate-none lg:right-0 ">
           <Image
             src="/images/decorative_images/hero_image.png"
             alt="Hero image"
