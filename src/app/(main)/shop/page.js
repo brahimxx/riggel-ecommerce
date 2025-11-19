@@ -285,15 +285,7 @@ const ShopPage = () => {
 
   return (
     <>
-      <Suspense
-        fallback={
-          <div style={{ textAlign: "center", padding: "20px" }}>
-            <Spin size="large" />
-          </div>
-        }
-      >
-        <SearchParamsProvider onParamsChange={setSearchParams} />
-      </Suspense>
+      <SearchParamsProvider onParamsChange={setSearchParams} />
 
       <div className="relative flex flex-row items-start max-w-screen-2xl mx-auto px-4 gap-4 mt-10 mb-20">
         <div className="lg:w-[20%] hidden lg:block">
