@@ -109,14 +109,21 @@ const ShopPage = () => {
 
   const handleFavoritesToggle = (checked) => {
     const params = new URLSearchParams(searchParams);
+
     if (checked) {
       params.set("favorites", "1");
     } else {
       params.delete("favorites");
     }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+
+    // Immediately show loading state and clear old page data
+    setIsLoading(true);
+    setProducts([]);
+    setTotalProducts(0);
+    setCurrentPage(1);
     setShowFavoritesOnly(checked);
-    setCurrentPage(1); // ✅ Reset page immediately
+
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   useEffect(() => {
@@ -220,18 +227,6 @@ const ShopPage = () => {
     showFavoritesOnly,
     showOnSaleOnly,
   ]);
-
-  // ❌ REMOVED: This useEffect was causing double fetching
-  // useEffect(() => {
-  //   setCurrentPage(1);
-  // }, [
-  //   selectedColors,
-  //   selectedSizes,
-  //   priceRange,
-  //   selectedCategory,
-  //   sortBy,
-  //   searchParams,
-  // ]);
 
   const favoriteProductIds = (favorites.items || []).map(
     (item) => item.productId

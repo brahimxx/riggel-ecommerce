@@ -72,7 +72,7 @@ const ProductCard = ({ product }) => {
 
       <Link
         href={`/products/${product.slug}`}
-        className="group flex flex-col  rounded-3xl xl:h-[440px] gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
+        className="group flex flex-col  rounded-3xl xl:h-[380px]  gap-4 overflow-hidden hover:shadow-[0_0_5px_rgba(0,0,0,0.1)] border border-gray-300/60 "
       >
         <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
           <Image
@@ -154,12 +154,12 @@ const ProductCard = ({ product }) => {
 
           <div className="flex justify-between items-center">
             {salePrice !== null ? (
-              <div className="flex flex-col">
-                <span className="text-[14px] line-through text-gray-400">
-                  ${Number(product.price).toFixed(2)}
-                </span>
+              <div className="flex items-center gap-2">
                 <span className="text-[20px] font-bold text-[#669900]">
                   ${salePrice}
+                </span>
+                <span className="text-[14px] line-through text-gray-400">
+                  ${Number(product.price).toFixed(2)}
                 </span>
               </div>
             ) : (

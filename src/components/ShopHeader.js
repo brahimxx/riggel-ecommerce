@@ -19,13 +19,13 @@ const ShopHeader = ({
   return (
     <div className="flex justify-between items-center mb-8 text-[14px] lg:text-sm text-gray-600">
       {/* Only hide the product count on desktop when there are no products */}
-      {totalProducts > 0 && (
-        <p className="hidden lg:block">
-          Showing {startItem}-{endItem} of {totalProducts} Products
-        </p>
-      )}
+      <p className="hidden lg:block">
+        {totalProducts > 0
+          ? `Showing ${startItem}-${endItem} of ${totalProducts} Products`
+          : "Showing 0 of 0 Products"}
+      </p>
 
-      <div className="flex items-center gap-2 justify-between w-full lg:w-auto">
+      <div className="flex items-center  gap-2 justify-between w-full lg:w-auto">
         <div>
           <span>Sort by:</span>
           <Select
