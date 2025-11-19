@@ -195,7 +195,7 @@ const Header = () => {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/shop?on_sale=true"
                   onClick={toggleDrawer}
                   className="block py-3 px-4 text-gray-900 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                 >
@@ -204,7 +204,7 @@ const Header = () => {
               </li>
               <li>
                 <a
-                  href="#"
+                  href="/shop?sortBy=created_at_desc"
                   onClick={toggleDrawer}
                   className="block py-3 px-4 text-gray-900 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                 >
@@ -213,11 +213,11 @@ const Header = () => {
               </li>
               <li>
                 <a
-                  href="#"
+                  href={`/shop?favorites=1`}
                   onClick={toggleDrawer}
                   className="block py-3 px-4 text-gray-900 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                 >
-                  Brands
+                  Favorites
                 </a>
               </li>
             </ul>
