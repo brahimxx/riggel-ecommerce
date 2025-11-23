@@ -11,7 +11,21 @@ export const revalidate = 300;
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
 
-  const categoryId = searchParams.get("category_id");
+  // Combine all category IDs into a single array for filtering
+  const typeCategoryIdsRaw = searchParams.get("type_category_id") || "";
+  const typeCategoryIds = typeCategoryIdsRaw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+
+  const styleCategoryIdsRaw = searchParams.get("style_category_id") || "";
+  const styleCategoryIds = styleCategoryIdsRaw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+
+  // New logic: OR within style, OR within type, AND between them
+
   const colors = searchParams.get("colors")?.split(",");
   const sizes = searchParams.get("sizes")?.split(",");
   const minPrice = searchParams.get("minPrice");
@@ -59,12 +73,51 @@ export async function GET(req) {
   `);
   }
 
-  // ---- Category filter ----
-  if (categoryId) {
-    whereClauses.push(
-      `EXISTS (SELECT 1 FROM product_categories pc WHERE pc.product_id = p.product_id AND pc.category_id = ?)`
-    );
-    queryParams.push(categoryId);
+  // ---- Category filtering logic ----
+  // If both style and type are selected, require at least one of each (AND between, OR within)
+  // If only one group is selected, filter by that group only
+  if (styleCategoryIds.length > 0 && typeCategoryIds.length > 0) {
+    // AND: style IN (...) AND type IN (...)
+    const stylePlaceholders = styleCategoryIds.map(() => "?").join(",");
+    const typePlaceholders = typeCategoryIds.map(() => "?").join(",");
+    whereClauses.push(`
+      EXISTS (
+        SELECT 1 FROM product_categories pc
+        WHERE pc.product_id = p.product_id
+          AND pc.category_id IN (${stylePlaceholders})
+      )
+    `);
+    queryParams.push(...styleCategoryIds);
+    whereClauses.push(`
+      EXISTS (
+        SELECT 1 FROM product_categories pc
+        WHERE pc.product_id = p.product_id
+          AND pc.category_id IN (${typePlaceholders})
+      )
+    `);
+    queryParams.push(...typeCategoryIds);
+  } else if (styleCategoryIds.length > 0) {
+    // Only style selected
+    const stylePlaceholders = styleCategoryIds.map(() => "?").join(",");
+    whereClauses.push(`
+      EXISTS (
+        SELECT 1 FROM product_categories pc
+        WHERE pc.product_id = p.product_id
+          AND pc.category_id IN (${stylePlaceholders})
+      )
+    `);
+    queryParams.push(...styleCategoryIds);
+  } else if (typeCategoryIds.length > 0) {
+    // Only type selected
+    const typePlaceholders = typeCategoryIds.map(() => "?").join(",");
+    whereClauses.push(`
+      EXISTS (
+        SELECT 1 FROM product_categories pc
+        WHERE pc.product_id = p.product_id
+          AND pc.category_id IN (${typePlaceholders})
+      )
+    `);
+    queryParams.push(...typeCategoryIds);
   }
 
   // ---- Price filter ----

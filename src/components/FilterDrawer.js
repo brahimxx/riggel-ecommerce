@@ -9,8 +9,10 @@ const FilterDrawer = ({
   priceRange,
   onPriceChange,
   categories,
-  selectedCategory,
-  onCategorySelect,
+  selectedTypeCategories,
+  selectedStyleCategories,
+  handleTypeCategoryToggle,
+  handleStyleCategoryToggle,
   colors,
   selectedColors,
   onColorToggle,
@@ -186,8 +188,10 @@ const FilterDrawer = ({
             priceRange={priceRange}
             onPriceChange={onPriceChange}
             categories={categories}
-            selectedCategory={selectedCategory}
-            onCategorySelect={onCategorySelect}
+            selectedTypeCategories={selectedTypeCategories}
+            selectedStyleCategories={selectedStyleCategories}
+            handleTypeCategoryToggle={handleTypeCategoryToggle}
+            handleStyleCategoryToggle={handleStyleCategoryToggle}
             colors={colors}
             selectedColors={selectedColors}
             onColorToggle={onColorToggle}

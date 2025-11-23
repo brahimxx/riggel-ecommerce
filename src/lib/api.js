@@ -18,8 +18,11 @@ export async function getProducts(filters = {}) {
     params.append("minPrice", filters.price[0]);
     params.append("maxPrice", filters.price[1]);
   }
-  if (filters.category_id) {
-    params.append("category_id", filters.category_id);
+  if (filters.type_category_id) {
+    params.append("type_category_id", filters.type_category_id);
+  }
+  if (filters.style_category_id) {
+    params.append("style_category_id", filters.style_category_id);
   }
   if (filters.query) {
     params.append("query", filters.query);

@@ -31,35 +31,54 @@ const ShopPage = () => {
   const [selectedColors, setSelectedColors] = useState([]);
   const [selectedSizes, setSelectedSizes] = useState([]);
   const [priceRange, setPriceRange] = useState([0, 500]);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedTypeCategories, setSelectedTypeCategories] = useState([]);
+  const [selectedStyleCategories, setSelectedStyleCategories] = useState([]);
 
   const [allAvailableColors, setAllAvailableColors] = useState([]);
   const [allAvailableSizes, setAllAvailableSizes] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
 
-  const [sortBy, setSortBy] = useState(() => {
-    return searchParams?.sortBy || "created_at_desc";
-  });
+  const [sortBy, setSortBy] = useState(
+    () => searchParams?.sortBy || "created_at_desc"
+  );
 
   const [showOnSaleOnly, setShowOnSaleOnly] = useState(
     () => searchParams?.on_sale === "true"
   );
 
+  // Helper to update URL search params incrementally
+  const updateSearchParams = (key, value) => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (
+      value === null ||
+      value === false ||
+      (Array.isArray(value) && value.length === 0)
+    ) {
+      params.delete(key);
+    } else {
+      params.set(key, value);
+    }
+
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
   useEffect(() => {
+    // Sync sortBy from URL
     const urlSortBy = searchParams?.sortBy || "created_at_desc";
     if (urlSortBy !== sortBy) {
       setSortBy(urlSortBy);
     }
-  }, [searchParams, sortBy]);
+  }, [searchParams?.sortBy, sortBy]);
 
   useEffect(() => {
+    // Fetch filter data once
     const fetchFilterData = async () => {
       try {
         const [categoriesData, attributesData] = await Promise.all([
           getCategories(),
           getAttributes(),
         ]);
-
         setAllCategories(categoriesData || []);
 
         const colorsAttr = attributesData.find(
@@ -82,93 +101,162 @@ const ShopPage = () => {
         setAllAvailableSizes([]);
       }
     };
-
     fetchFilterData();
   }, []);
 
   useEffect(() => {
-    if (allCategories.length) {
-      const urlCategoryId = searchParams?.category_id;
-      if (urlCategoryId) {
-        const found = allCategories.find(
-          (cat) => String(cat.category_id) === urlCategoryId
-        );
-        if (
-          found &&
-          (!selectedCategory ||
-            found.category_id !== selectedCategory.category_id)
-        ) {
-          setSelectedCategory(found);
-        }
-      } else {
-        setSelectedCategory(null);
-      }
-    }
-    // eslint-disable-next-line
-  }, [allCategories, searchParams]);
-
-  const handleFavoritesToggle = (checked) => {
-    const params = new URLSearchParams(searchParams);
-
-    if (checked) {
-      params.set("favorites", "1");
+    if (searchParams?.type_category_id) {
+      setSelectedTypeCategories(
+        allCategories.filter(
+          (cat) =>
+            (searchParams.type_category_id || "")
+              .split(",")
+              .includes(String(cat.category_id)) && cat.category_type === "type"
+        )
+      );
     } else {
-      params.delete("favorites");
+      setSelectedTypeCategories([]);
     }
-
-    // Immediately show loading state and clear old page data
-    setIsLoading(true);
-    setProducts([]);
-    setTotalProducts(0);
-    setCurrentPage(1);
-    setShowFavoritesOnly(checked);
-
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  };
+  }, [searchParams?.type_category_id, allCategories]);
 
   useEffect(() => {
-    setShowFavoritesOnly(searchParams?.favorites === "1");
-  }, [searchParams]);
+    if (searchParams?.style_category_id) {
+      setSelectedStyleCategories(
+        allCategories.filter(
+          (cat) =>
+            (searchParams.style_category_id || "")
+              .split(",")
+              .includes(String(cat.category_id)) &&
+            cat.category_type === "style"
+        )
+      );
+    } else {
+      setSelectedStyleCategories([]);
+    }
+  }, [searchParams?.style_category_id, allCategories]);
 
-  // ✅ FIXED: Reset page inside handler
-  const handleColorToggle = (color) => {
-    setSelectedColors((prev) =>
-      prev.includes(color) ? prev.filter((c) => c !== color) : [...prev, color]
-    );
-    setCurrentPage(1); // ✅ Reset page immediately
+  // Synchronize favorites filter from URL
+  useEffect(() => {
+    setShowFavoritesOnly(searchParams?.favorites === "1");
+  }, [searchParams?.favorites]);
+
+  // Synchronize onSale filter from URL
+  useEffect(() => {
+    setShowOnSaleOnly(searchParams?.on_sale === "true");
+  }, [searchParams?.on_sale]);
+
+  // Synchronize colors array from URL
+  useEffect(() => {
+    const colors = searchParams?.colors ? searchParams.colors.split(",") : [];
+    setSelectedColors(colors);
+  }, [searchParams?.colors]);
+
+  // Synchronize sizes array from URL
+  useEffect(() => {
+    const sizes = searchParams?.sizes ? searchParams.sizes.split(",") : [];
+    setSelectedSizes(sizes);
+  }, [searchParams?.sizes]);
+
+  // Synchronize price range from URL ("min-max" format), fallback if missing
+  useEffect(() => {
+    if (searchParams?.price) {
+      const [min, max] = searchParams.price.split("-").map(Number);
+      if (!isNaN(min) && !isNaN(max)) {
+        setPriceRange([min, max]);
+        return;
+      }
+    }
+    setPriceRange([0, 500]);
+  }, [searchParams?.price]);
+
+  // Handlers update URL params and local state, reset page on change
+  const handleFavoritesToggle = (checked) => {
+    updateSearchParams("favorites", checked ? "1" : null);
+    setShowFavoritesOnly(checked);
+    setCurrentPage(1);
   };
 
   const handleOnSaleToggle = (e) => {
     const checked = e.target.checked;
-    const params = new URLSearchParams(searchParams);
-    if (checked) {
-      params.set("on_sale", "true");
-    } else {
-      params.delete("on_sale");
-    }
-    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    updateSearchParams("on_sale", checked ? "true" : null);
     setShowOnSaleOnly(checked);
-    setCurrentPage(1); // ✅ Reset page immediately
+    setCurrentPage(1);
   };
 
-  // ✅ FIXED: Reset page inside handler
-  const handleSizeToggle = (size) => {
-    setSelectedSizes((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+  const handleColorToggle = (color) => {
+    let newColors = selectedColors.includes(color)
+      ? selectedColors.filter((c) => c !== color)
+      : [...selectedColors, color];
+    updateSearchParams(
+      "colors",
+      newColors.length > 0 ? newColors.join(",") : null
     );
-    setCurrentPage(1); // ✅ Reset page immediately
+    setSelectedColors(newColors);
+    setCurrentPage(1);
   };
 
-  // ✅ FIXED: Reset page inside handler
+  const handleSizeToggle = (size) => {
+    let newSizes = selectedSizes.includes(size)
+      ? selectedSizes.filter((s) => s !== size)
+      : [...selectedSizes, size];
+    updateSearchParams(
+      "sizes",
+      newSizes.length > 0 ? newSizes.join(",") : null
+    );
+    setSelectedSizes(newSizes);
+    setCurrentPage(1);
+  };
+
   const handlePriceChange = (value) => {
+    updateSearchParams("price", `${value[0]}-${value[1]}`);
     setPriceRange(value);
-    setCurrentPage(1); // ✅ Reset page immediately
+    setCurrentPage(1);
   };
 
-  // ✅ FIXED: Reset page inside handler
-  const handleCategorySelect = (category) => {
-    setSelectedCategory((prev) => (prev === category ? null : category));
-    setCurrentPage(1); // ✅ Reset page immediately
+  const handleTypeCategoryToggle = (category) => {
+    let newCats;
+    if (
+      selectedTypeCategories.some(
+        (cat) => cat.category_id === category.category_id
+      )
+    ) {
+      newCats = selectedTypeCategories.filter(
+        (cat) => cat.category_id !== category.category_id
+      );
+    } else {
+      newCats = [...selectedTypeCategories, category];
+    }
+    setSelectedTypeCategories(newCats);
+    updateSearchParams(
+      "type_category_id",
+      newCats.length > 0
+        ? newCats.map((cat) => cat.category_id).join(",")
+        : null
+    );
+    setCurrentPage(1);
+  };
+
+  const handleStyleCategoryToggle = (category) => {
+    let newCats;
+    if (
+      selectedStyleCategories.some(
+        (cat) => cat.category_id === category.category_id
+      )
+    ) {
+      newCats = selectedStyleCategories.filter(
+        (cat) => cat.category_id !== category.category_id
+      );
+    } else {
+      newCats = [...selectedStyleCategories, category];
+    }
+    setSelectedStyleCategories(newCats);
+    updateSearchParams(
+      "style_category_id",
+      newCats.length > 0
+        ? newCats.map((cat) => cat.category_id).join(",")
+        : null
+    );
+    setCurrentPage(1);
   };
 
   const onPageChange = (page) => {
@@ -177,7 +265,7 @@ const ShopPage = () => {
   };
 
   const handleSortByChange = (value) => {
-    const params = new URLSearchParams(searchParams);
+    const params = new URLSearchParams(window.location.search);
     params.set("sortBy", value);
     params.set("page", "1");
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
@@ -185,6 +273,7 @@ const ShopPage = () => {
     setCurrentPage(1);
   };
 
+  // Fetch products applying filters server-side except favorites which are filtered client-side
   useEffect(() => {
     const fetchAndSetProducts = async () => {
       setIsLoading(true);
@@ -195,14 +284,24 @@ const ShopPage = () => {
         colors: selectedColors,
         sizes: selectedSizes,
         price: priceRange,
-        category_id: selectedCategory ? selectedCategory.category_id : null,
-        query: query,
+        type_category_id:
+          selectedTypeCategories.length > 0
+            ? selectedTypeCategories.map((c) => c.category_id).join(",")
+            : null,
+        style_category_id:
+          selectedStyleCategories.length > 0
+            ? selectedStyleCategories.map((c) => c.category_id).join(",")
+            : null,
+        query,
         page: isFavorites ? 1 : currentPage,
         limit: isFavorites ? 1000 : PAGE_SIZE,
-        sortBy: sortBy,
+        sortBy,
         onSale: showOnSaleOnly,
       };
+
       try {
+        console.log("Sending filters to API:", filters);
+
         const response = await getProducts(filters);
         setProducts(response.products || []);
         setTotalProducts(response.total || 0);
@@ -220,7 +319,8 @@ const ShopPage = () => {
     selectedColors,
     selectedSizes,
     priceRange,
-    selectedCategory,
+    selectedStyleCategories,
+    selectedTypeCategories,
     currentPage,
     sortBy,
     searchParams,
@@ -231,11 +331,12 @@ const ShopPage = () => {
   const favoriteProductIds = (favorites.items || []).map(
     (item) => item.productId
   );
-  const filteredProducts = showFavoritesOnly
-    ? products.filter((product) =>
-        favoriteProductIds.includes(product.product_id)
-      )
-    : products;
+
+  // Filter client-side only for favorites (assumed client-side only), all other filters server-side
+  const filteredProducts = products.filter(
+    (product) =>
+      !showFavoritesOnly || favoriteProductIds.includes(product.product_id)
+  );
 
   const renderContent = () => {
     if (isLoading) {
@@ -249,19 +350,16 @@ const ShopPage = () => {
       return <p className="text-red-500">{error}</p>;
     }
     if (filteredProducts.length > 0) {
-      const paginatedProducts = showFavoritesOnly
-        ? filteredProducts.slice(
-            (currentPage - 1) * PAGE_SIZE,
-            currentPage * PAGE_SIZE
-          )
-        : filteredProducts;
-      const totalToShow = showFavoritesOnly
-        ? filteredProducts.length
-        : totalProducts;
+      const paginatedProducts = filteredProducts.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+      );
+      const totalToShow = filteredProducts.length;
       const showPagination = totalToShow > PAGE_SIZE;
+
       return (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2  lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 gap-y-8">
             {paginatedProducts.map((product) => (
               <ProductCard key={product.product_id} product={product} />
             ))}
@@ -295,8 +393,10 @@ const ShopPage = () => {
             priceRange={priceRange}
             onPriceChange={handlePriceChange}
             categories={allCategories}
-            selectedCategory={selectedCategory}
-            onCategorySelect={handleCategorySelect}
+            selectedTypeCategories={selectedTypeCategories}
+            selectedStyleCategories={selectedStyleCategories}
+            handleTypeCategoryToggle={handleTypeCategoryToggle}
+            handleStyleCategoryToggle={handleStyleCategoryToggle}
             colors={allAvailableColors}
             selectedColors={selectedColors}
             onColorToggle={handleColorToggle}
@@ -316,8 +416,10 @@ const ShopPage = () => {
           priceRange={priceRange}
           onPriceChange={handlePriceChange}
           categories={allCategories}
-          selectedCategory={selectedCategory}
-          onCategorySelect={handleCategorySelect}
+          selectedTypeCategories={selectedTypeCategories}
+          selectedStyleCategories={selectedStyleCategories}
+          handleTypeCategoryToggle={handleTypeCategoryToggle}
+          handleStyleCategoryToggle={handleStyleCategoryToggle}
           colors={allAvailableColors}
           selectedColors={selectedColors}
           onColorToggle={handleColorToggle}

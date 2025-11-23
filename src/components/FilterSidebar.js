@@ -6,25 +6,21 @@ import ColorFilter from "@/components/ColorFilter";
 import SizeFilter from "@/components/SizeFilter";
 
 const FilterSidebar = ({
-  // Price Filter Props
   priceRange,
   onPriceChange,
-  // Category Filter Props
   categories,
-  selectedCategory,
-  onCategorySelect,
-  // Color Filter Props
+  selectedTypeCategories,
+  selectedStyleCategories,
+  handleTypeCategoryToggle,
+  handleStyleCategoryToggle,
   colors,
   selectedColors,
   onColorToggle,
-  // Size Filter Props
   sizes,
   selectedSizes,
   onSizeToggle,
-  // Favorites Filter Props
   showFavoritesOnly,
   onFavoritesToggle,
-  // On Sale Filter Props
   showOnSaleOnly,
   onOnSaleToggle,
 }) => {
@@ -89,14 +85,12 @@ const FilterSidebar = ({
       <ul className="flex flex-col gap-4 border-b border-gray-300/60 py-6">
         <h3 className="font-semibold text-gray-800 mb-2">Product Type</h3>
         {typeCategories.map((category) => (
-          <li
-            key={category.category_id}
-            className="flex justify-between items-center hover:text-gray-900 text-gray-600"
-          >
+          <li key={category.category_id}>
             <Checkbox
-              className="cursor-pointer"
-              onChange={() => onCategorySelect(category)}
-              checked={selectedCategory?.category_id === category.category_id}
+              checked={selectedTypeCategories.some(
+                (cat) => cat.category_id === category.category_id
+              )}
+              onChange={() => handleTypeCategoryToggle(category)}
             >
               {category.name}
             </Checkbox>
@@ -108,14 +102,12 @@ const FilterSidebar = ({
       <ul className="flex flex-col gap-4 border-b border-gray-300/60 py-6">
         <h3 className="font-semibold text-gray-800 mb-2">Style / Occasion</h3>
         {styleCategories.map((category) => (
-          <li
-            key={category.category_id}
-            className="flex justify-between items-center hover:text-gray-900 text-gray-600"
-          >
+          <li key={category.category_id}>
             <Checkbox
-              className="cursor-pointer"
-              onChange={() => onCategorySelect(category)}
-              checked={selectedCategory?.category_id === category.category_id}
+              checked={selectedStyleCategories.some(
+                (cat) => cat.category_id === category.category_id
+              )}
+              onChange={() => handleStyleCategoryToggle(category)}
             >
               {category.name}
             </Checkbox>
