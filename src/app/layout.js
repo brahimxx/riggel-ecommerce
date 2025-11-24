@@ -5,7 +5,7 @@ import { ConfigProvider } from "antd";
 
 const customTheme = {
   token: {
-    colorPrimary: "#black",
+    colorPrimary: "black",
     colorSuccess: "#52c41a",
     colorWarning: "#faad14",
     colorError: "#f5222d",

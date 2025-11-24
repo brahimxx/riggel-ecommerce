@@ -12,7 +12,6 @@ import { useCartContext } from "@/components/CartContext";
 import { getSalePrice } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import CartProductCard from "@/components/CartProductCard";
-import { useState } from "react";
 
 const wilayaOptions = [
   { value: "DZ-01", label: "01 - Adrar - [translate:أدرار]" },
@@ -95,111 +94,22 @@ const wilayaOptions = [
   { value: "DZ-69", label: "69 - El Aricha - [translate:العريشة]" },
 ];
 
-const ShoppingCart = () => {
-  const { cart, updateQuantity, removeFromCart, clearCart } = useCartContext();
+const shoppingcart = () => {
+  const { cart, updateQuantity, removeFromCart } = useCartContext();
   const router = useRouter();
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [errors, setErrors] = useState({});
-
-  // Form state variables for customer details
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [wilaya, setWilaya] = useState("");
-  const [town, setTown] = useState("");
-  const [note, setNote] = useState("");
 
   const subtotal = cart.items
     .reduce((sum, item) => {
+      // Always run getSalePrice to ensure up-to-date price
       const priceNow = getSalePrice(item, item.price);
       return sum + priceNow * item.quantity;
     }, 0)
     .toFixed(2);
-
   const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-  const tax = (subtotal * 0.011).toFixed(2);
-  const shippingCost = subtotal >= 200 ? 0 : 15;
-  const totalAmount = (Number(subtotal) + Number(tax) + shippingCost).toFixed(
-    2
-  );
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!name.trim()) newErrors.name = "Name is required";
-    if (!phone.trim() || !/^\d{7,15}$/.test(phone.trim()))
-      newErrors.phone = "Valid phone number is required";
-    if (!wilaya) newErrors.wilaya = "Wilaya is required";
-    if (!town.trim()) newErrors.town = "Town is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handlePlaceOrder = async () => {
-    setLoading(true);
-    setError(null);
-
-    if (!validateForm()) {
-      setLoading(false);
-      return;
-    }
-
-    const shippingAddress = `${wilaya} - ${town}`;
-
-    const order_items = cart.items.map((item) => ({
-      variant_id: item.variantId,
-      quantity: item.quantity,
-      price: Number(getSalePrice(item, item.price)),
-    }));
-
-    const orderData = {
-      client_name: name,
-      phone,
-      shipping_address: shippingAddress,
-      order_date: new Date().toISOString(),
-      status: "pending",
-      email: "m@m.com", // Temporary placeholder
-      total_amount: Number(
-        (subtotal * 1.011 + (subtotal >= 200 ? 0 : 15)).toFixed(2)
-      ),
-      order_items,
-    };
-
-    try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Order submission failed");
-      }
-
-      const result = await res.json();
-      // Store backend result and all cart items for the thank you page
-      localStorage.setItem(
-        "orderSuccess",
-        JSON.stringify({
-          ...result,
-          cart_items: cart.items,
-          shipping_cost: shippingCost,
-          discount: 0,
-        })
-      );
-      router.push("/thankyou");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
-      <div className="relative flex flex-col items-start justify-start lg:h-full max-w-screen-2xl mx-auto px-4 gap-6 mb-20 ">
+      <div className="relative flex flex-col items-start justify-start lg:h-full max-w-screen-2xl mx-auto px-4 gap-6 mb-20">
         <button
           onClick={() => router.back()}
           className="font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] rounded-full text-sm py-[10px] text-center flex items-center justify-center gap-2"
@@ -239,7 +149,7 @@ const ShoppingCart = () => {
             </div>
             <div className="p-4 flex flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl">
               <div>
-                <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center gap-2 mb-2">
                   <MessageOutlined style={{ color: "#3A3A3A" }} />
                   <label
                     htmlFor="message"
@@ -251,10 +161,8 @@ const ShoppingCart = () => {
 
                 <textarea
                   id="message"
-                  rows={4}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  className="block p-2.5 w-full h-[63px] text-sm bg-gray-50 rounded-lg border border-gray-300 focus:outline-black"
+                  rows="4"
+                  className="block p-2.5 w-full h-[63px] text-sm  bg-gray-50 rounded-lg border border-gray-300 focus:outline-black  "
                   placeholder="Any special requests, gift messages, or packaging instructions..."
                 ></textarea>
               </div>
@@ -269,31 +177,24 @@ const ShoppingCart = () => {
             <div className="flex flex-col gap-6 mt-6 lg:gap-3 lg:mt-0">
               <div className="p-4 flex flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl">
                 <p>Customer Details</p>
-                {errors.name && <p className="text-red-500">{errors.name}</p>}
+
                 <input
                   type="text"
                   id="name"
-                  defaultValue="yaw aw"
-                  onChange={(e) => setName(e.target.value)}
                   placeholder="Your full name"
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
                 />
-                {errors.phone && <p className="text-red-500">{errors.phone}</p>}
+
                 <input
                   type="tel"
                   id="phone"
-                  defaultValue="1234567890"
                   placeholder="Your phone number"
-                  onChange={(e) => setPhone(e.target.value)}
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
                 />
-                {errors.wilaya && (
-                  <p className="text-red-500">{errors.wilaya}</p>
-                )}
+
                 <select
                   id="wilaya"
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
-                  onChange={(e) => setWilaya(e.target.value)}
                   defaultValue=""
                 >
                   <option value="" disabled>
@@ -305,13 +206,11 @@ const ShoppingCart = () => {
                     </option>
                   ))}
                 </select>
-                {errors.town && <p className="text-red-500">{errors.town}</p>}
+
                 <input
                   type="text"
                   id="town"
-                  defaultValue="yaw aw"
                   placeholder="Your town"
-                  onChange={(e) => setTown(e.target.value)}
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
                 />
               </div>
@@ -337,16 +236,9 @@ const ShoppingCart = () => {
                     ${(subtotal * 0.011 + Number(subtotal) + 15).toFixed(2)}
                   </p>
                 </div>
-                <button
-                  onClick={handlePlaceOrder}
-                  disabled={loading || cart.items.length === 0}
-                  className="bg-black hover:bg-black/90 text-white rounded-full  py-2 text-md lg:text-lg font-medium transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <CreditCardOutlined className="mr-3" />
-                  {loading ? "Placing Order..." : "Proceed to Checkout"}
+                <button className="bg-black hover:bg-black/90 text-white rounded-full  py-2 text-md lg:text-lg font-medium transition cursor-pointer  ">
+                  <CreditCardOutlined className="mr-3" /> Proceed to Checkout
                 </button>
-                {error && <p className="text-red-500 mt-2">{error}</p>}
-
                 <div className="flex gap-4">
                   <div className="relative flex-grow">
                     <PercentageOutlined className="absolute left-3 top-[19px] -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -400,4 +292,4 @@ const ShoppingCart = () => {
   );
 };
 
-export default ShoppingCart;
+export default shoppingcart;

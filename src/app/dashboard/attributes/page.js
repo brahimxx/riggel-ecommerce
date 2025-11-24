@@ -1,15 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Input,
-  Space,
-  Popconfirm,
-  message,
-} from "antd";
+import { Table, Button, Modal, Form, Input, Space, Popconfirm } from "antd";
+
 // MODIFICATION: Import the new API helpers
 import {
   getAttributes,
@@ -27,6 +19,8 @@ const AttributeDashboard = () => {
   const [form] = Form.useForm();
   const [valuesForm] = Form.useForm();
   const [valuesModalOpen, setValuesModalOpen] = useState(false);
+
+  const { message } = AntdApp.useApp();
 
   const fetchAttributes = async () => {
     setLoading(true);

@@ -30,7 +30,7 @@ export function CartProvider({ children }) {
     }
   }, [cart, isLoaded]);
 
-  // Action methods (copy-paste your safe logic here)
+  // Action methods
   const addToCart = (product, variant, quantity = 1) => {
     setCart((prevCart) => {
       const normalizedVariantId =
@@ -46,11 +46,8 @@ export function CartProvider({ children }) {
         (item, idx) => idx !== existingItemIndex
       );
 
-      // --- Calculate correct price ---
-      // Prefer variant price, fallback to product price
+      // Calculate correct price
       const basePrice = variant?.price || product.price;
-      // Use sale price if product.sale exists
-      // (If sale info is at product.sale, pass product.sale fields. If at product root, just pass product)
       const finalPrice = getSalePrice(product, basePrice);
 
       if (existingItemIndex > -1) {
@@ -69,7 +66,6 @@ export function CartProvider({ children }) {
           image: product.images?.[0]?.url || "",
           slug: product.slug,
           attributes: variant?.attributes || [],
-          // Optionally store sale info for checkout display
           sale: product.sale || null,
         });
       }
@@ -101,9 +97,21 @@ export function CartProvider({ children }) {
     });
   };
 
+  // New clearCart method
+  const clearCart = () => {
+    setCart({ items: [] });
+  };
+
   return (
     <CartContext.Provider
-      value={{ cart, addToCart, updateQuantity, removeFromCart, isLoaded }}
+      value={{
+        cart,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        clearCart,
+        isLoaded,
+      }}
     >
       {children}
     </CartContext.Provider>

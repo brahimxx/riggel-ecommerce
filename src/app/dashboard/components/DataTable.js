@@ -191,7 +191,7 @@ const DataTable = ({
 
   const scroll = {};
   if (yScroll) scroll.y = 240;
-  if (xScroll !== "unset") scroll.x = "100vw";
+  if (xScroll !== "scroll") scroll.x = "100vw";
 
   const tableColumns = columns.map((col) => ({ ...col, ellipsis }));
   if (xScroll === "fixed") {

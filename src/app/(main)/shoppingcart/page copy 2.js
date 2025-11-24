@@ -101,7 +101,6 @@ const ShoppingCart = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [errors, setErrors] = useState({});
 
   // Form state variables for customer details
   const [name, setName] = useState("");
@@ -124,42 +123,25 @@ const ShoppingCart = () => {
     2
   );
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!name.trim()) newErrors.name = "Name is required";
-    if (!phone.trim() || !/^\d{7,15}$/.test(phone.trim()))
-      newErrors.phone = "Valid phone number is required";
-    if (!wilaya) newErrors.wilaya = "Wilaya is required";
-    if (!town.trim()) newErrors.town = "Town is required";
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
   const handlePlaceOrder = async () => {
     setLoading(true);
     setError(null);
-
-    if (!validateForm()) {
-      setLoading(false);
-      return;
-    }
 
     const shippingAddress = `${wilaya} - ${town}`;
 
     const order_items = cart.items.map((item) => ({
       variant_id: item.variantId,
       quantity: item.quantity,
-      price: Number(getSalePrice(item, item.price)),
+      price: getSalePrice(item, item.price),
     }));
 
     const orderData = {
       client_name: name,
+      email: "", // You can add an email input if needed or use empty string
       phone,
       shipping_address: shippingAddress,
       order_date: new Date().toISOString(),
       status: "pending",
-      email: "m@m.com", // Temporary placeholder
       total_amount: Number(
         (subtotal * 1.011 + (subtotal >= 200 ? 0 : 15)).toFixed(2)
       ),
@@ -179,17 +161,9 @@ const ShoppingCart = () => {
       }
 
       const result = await res.json();
-      // Store backend result and all cart items for the thank you page
-      localStorage.setItem(
-        "orderSuccess",
-        JSON.stringify({
-          ...result,
-          cart_items: cart.items,
-          shipping_cost: shippingCost,
-          discount: 0,
-        })
-      );
-      router.push("/thankyou");
+      console.log("Order successful:", result);
+      // Optionally clear the cart, reset form, navigate to thank you page, etc.
+      // e.g., router.push('/thank-you');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -239,7 +213,7 @@ const ShoppingCart = () => {
             </div>
             <div className="p-4 flex flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl">
               <div>
-                <div className="flex items-center gap-1 mb-2">
+                <div className="flex items-center gap-2 mb-2">
                   <MessageOutlined style={{ color: "#3A3A3A" }} />
                   <label
                     htmlFor="message"
@@ -265,78 +239,59 @@ const ShoppingCart = () => {
             </div>
           </div>
 
-          <div className="lg:w-[38%] h-screen flex flex-col gap-6  lg:mt-0 lg:sticky right-0 top-[90px]">
+          <div className="lg:w-[38%] lg:h-screen flex flex-col gap-6  lg:mt-0 lg:sticky right-0 top-[90px]">
             <div className="flex flex-col gap-6 mt-6 lg:gap-3 lg:mt-0">
               <div className="p-4 flex flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl">
                 <p>Customer Details</p>
-                {errors.name && <p className="text-red-500">{errors.name}</p>}
+
                 <input
                   type="text"
                   id="name"
-                  defaultValue="yaw aw"
-                  onChange={(e) => setName(e.target.value)}
                   placeholder="Your full name"
-                  className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="..."
                 />
-                {errors.phone && <p className="text-red-500">{errors.phone}</p>}
                 <input
                   type="tel"
                   id="phone"
-                  defaultValue="1234567890"
                   placeholder="Your phone number"
+                  value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
+                  className="..."
                 />
-                {errors.wilaya && (
-                  <p className="text-red-500">{errors.wilaya}</p>
-                )}
                 <select
                   id="wilaya"
-                  className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
+                  value={wilaya}
                   onChange={(e) => setWilaya(e.target.value)}
-                  defaultValue=""
+                  className="..."
                 >
                   <option value="" disabled>
                     Select Wilaya
                   </option>
-                  {wilayaOptions.map((wilaya) => (
-                    <option key={wilaya.value} value={wilaya.value}>
-                      {wilaya.label}
+                  {wilayaOptions.map((w) => (
+                    <option key={w.value} value={w.value}>
+                      {w.label}
                     </option>
                   ))}
                 </select>
-                {errors.town && <p className="text-red-500">{errors.town}</p>}
                 <input
                   type="text"
                   id="town"
-                  defaultValue="yaw aw"
                   placeholder="Your town"
+                  value={town}
                   onChange={(e) => setTown(e.target.value)}
-                  className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
+                  className="..."
                 />
-              </div>
-              <div className="p-4 flex flex-col gap-4 justify-between border-1  border-gray-300/60 rounded-2xl">
-                <p>Order Summary</p>
-                <div className="flex flex-col pb-4 border-b-1 border-gray-300/60 gap-4">
-                  <div className="flex justify-between">
-                    <p>Subtotal ({totalItems} items)</p>
-                    <p>${subtotal}</p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p>Tax (1.1%)</p>
-                    <p>${(subtotal * 0.011).toFixed(2)} </p>
-                  </div>
-                  <div className="flex justify-between">
-                    <p>Shipping</p>
-                    <p>{subtotal >= 200 ? "Free" : "$15.00"}</p>
-                  </div>
-                </div>
-                <div className="flex justify-between text-[18px] font-bold">
-                  <p>Total</p>
-                  <p>
-                    ${(subtotal * 0.011 + Number(subtotal) + 15).toFixed(2)}
-                  </p>
-                </div>
+                <textarea
+                  id="message"
+                  rows={4}
+                  placeholder="Any special requests..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  className="..."
+                />
+
                 <button
                   onClick={handlePlaceOrder}
                   disabled={loading || cart.items.length === 0}
@@ -346,6 +301,40 @@ const ShoppingCart = () => {
                   {loading ? "Placing Order..." : "Proceed to Checkout"}
                 </button>
                 {error && <p className="text-red-500 mt-2">{error}</p>}
+              </div>
+
+              <div className="p-4 flex flex-col gap-4 justify-between border-1  border-gray-300/60 rounded-2xl">
+                <p>Order Summary</p>
+                <div className="flex flex-col pb-4 border-b-1 border-gray-300/60 gap-4">
+                  <div className="flex justify-between">
+                    <p>Subtotal ({totalItems} items)</p>
+                    <p>${subtotal}</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p>Tax (1.1%)</p>
+                    <p>${tax}</p>
+                  </div>
+                  <div className="flex justify-between">
+                    <p>Shipping</p>
+                    <p>
+                      {shippingCost === 0
+                        ? "Free"
+                        : `$${shippingCost.toFixed(2)}`}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-between text-[18px] font-bold">
+                  <p>Total</p>
+                  <p>${totalAmount}</p>
+                </div>
+                <button
+                  onClick={handlePlaceOrder}
+                  disabled={loading || cart.items.length === 0}
+                  className="bg-black hover:bg-black/90 text-white rounded-full py-2 text-md lg:text-lg font-medium transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <CreditCardOutlined className="mr-3" />
+                  {loading ? "Processing..." : "Proceed to Checkout"}
+                </button>
 
                 <div className="flex gap-4">
                   <div className="relative flex-grow">

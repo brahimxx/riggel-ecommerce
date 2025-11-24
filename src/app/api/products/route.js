@@ -206,44 +206,45 @@ export async function GET(req) {
 
   // ---- Data query with Sale info (MIN() for sale fields) ----
   const dataQuery = `
-    SELECT 
-      p.product_id, p.name, p.slug, p.description, p.created_at,
-      (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
-      (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
-      (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.product_id ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS main_image,
-      (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories,
-      (SELECT JSON_ARRAYAGG(
-        JSON_OBJECT(
-          'variant_id', pv.variant_id,
-          'sku', pv.sku,
-          'price', pv.price,
-          'quantity', pv.quantity,
-          'attributes', (
-            SELECT JSON_ARRAYAGG(JSON_OBJECT('name', a.name, 'value', av.value))
-            FROM variant_values vv
-            JOIN attribute_values av ON vv.value_id = av.value_id
-            JOIN attributes a ON av.attribute_id = a.attribute_id
-            WHERE vv.variant_id = pv.variant_id
+        SELECT
+        p.product_id, p.name, p.slug, p.description, p.created_at,
+        (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
+        (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
+        (SELECT pi.url FROM product_images pi WHERE pi.product_id = p.product_id ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC LIMIT 1) AS main_image,
+        (SELECT JSON_ARRAYAGG(JSON_OBJECT('category_id', c.category_id, 'name', c.name)) FROM product_categories pc JOIN categories c ON pc.category_id = c.category_id WHERE pc.product_id = p.product_id) AS categories,
+        (SELECT JSON_ARRAYAGG(
+          JSON_OBJECT(
+            'variant_id', pv.variant_id,
+            'sku', pv.sku,
+            'price', pv.price,
+            'quantity', pv.quantity,
+            'attributes', (
+              SELECT JSON_ARRAYAGG(JSON_OBJECT('name', a.name, 'value', av.value))
+              FROM variant_values vv
+              JOIN attribute_values av ON vv.value_id = av.value_id
+              JOIN attributes a ON av.attribute_id = a.attribute_id
+              WHERE vv.variant_id = pv.variant_id
+            )
           )
-        )
-      ) FROM product_variants pv WHERE pv.product_id = p.product_id) AS variants,
-      COALESCE((
-        SELECT SUM(oi.quantity) 
-        FROM order_items oi 
-        JOIN product_variants pv ON oi.variant_id = pv.variant_id
-        WHERE pv.product_id = p.product_id
-      ), 0) AS total_orders,
-      MIN(s.id) AS sale_id,
-      MIN(s.name) AS sale_name,
-      MIN(s.discount_type) AS discount_type,
-      MIN(s.discount_value) AS discount_value
-    FROM products p
-    LEFT JOIN sale_product sp ON p.product_id = sp.product_id
-    LEFT JOIN sales s ON sp.sale_id = s.id AND s.start_date <= NOW() AND s.end_date >= NOW()
-    ${whereClause}
-    GROUP BY p.product_id
-    ${orderByClause}
-    LIMIT ? OFFSET ?;
+        ) FROM product_variants pv WHERE pv.product_id = p.product_id) AS variants,
+        (SELECT COALESCE(SUM(pv.quantity), 0) FROM product_variants pv WHERE pv.product_id = p.product_id) AS total_variants_quantities,
+        COALESCE((
+          SELECT SUM(oi.quantity) 
+          FROM order_items oi 
+          JOIN product_variants pv ON oi.variant_id = pv.variant_id
+          WHERE pv.product_id = p.product_id
+        ), 0) AS total_orders,
+        MIN(s.id) AS sale_id,
+        MIN(s.name) AS sale_name,
+        MIN(s.discount_type) AS discount_type,
+        MIN(s.discount_value) AS discount_value
+      FROM products p
+      LEFT JOIN sale_product sp ON p.product_id = sp.product_id
+      LEFT JOIN sales s ON sp.sale_id = s.id AND s.start_date <= NOW() AND s.end_date >= NOW()
+      ${whereClause}
+      GROUP BY p.product_id
+      ${orderByClause}
+      LIMIT ? OFFSET ?;
   `;
 
   // Final query params

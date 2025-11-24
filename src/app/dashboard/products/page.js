@@ -126,6 +126,11 @@ const Products = () => {
       ),
     },
     {
+      title: "Total Quantities",
+      dataIndex: "total_variants_quantities",
+      key: "total_variants_quantities",
+    },
+    {
       title: "Price",
       dataIndex: "price",
       key: "price",

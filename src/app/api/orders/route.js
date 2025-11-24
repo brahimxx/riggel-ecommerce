@@ -41,6 +41,8 @@ export async function POST(req) {
       order_items, // Expected to contain { variant_id, quantity, price }
     } = body;
 
+    console.log(body);
+
     const parsedDate = new Date(order_date);
     if (isNaN(parsedDate.getTime())) {
       conn.release();
