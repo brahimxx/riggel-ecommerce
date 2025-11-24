@@ -27,7 +27,7 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
             width={130}
             height={125}
             quality={100}
-            className="w-[130px] h-[115px] rounded-xl "
+            className="object-contain w-[130px] h-[115px] rounded-xl bg-[#F0EEED]"
           />
         </Link>
 

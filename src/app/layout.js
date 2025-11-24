@@ -1,6 +1,17 @@
 // src/app/layout.js
 import AntdStyledComponentsRegistry from "../components/AntdStyledComponentsRegistry";
 import "./styles/globals.css";
+import { ConfigProvider } from "antd";
+
+const customTheme = {
+  token: {
+    colorPrimary: "#black",
+    colorSuccess: "#52c41a",
+    colorWarning: "#faad14",
+    colorError: "#f5222d",
+    colorInfo: "#5f6163",
+  },
+};
 
 export const metadata = {
   title: "Riggel ecommerce",
@@ -14,7 +25,11 @@ export default function RootLayout({ children }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       </head>
       <body>
-        <AntdStyledComponentsRegistry>{children}</AntdStyledComponentsRegistry>
+        <ConfigProvider theme={customTheme}>
+          <AntdStyledComponentsRegistry>
+            {children}
+          </AntdStyledComponentsRegistry>
+        </ConfigProvider>
       </body>
     </html>
   );

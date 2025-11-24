@@ -72,6 +72,7 @@ const FilterSidebar = ({
           range
           min={0}
           max={500}
+          trackStyle={{ backgroundColor: "#4a5565" }}
           value={priceRange}
           onChange={onPriceChange}
         />

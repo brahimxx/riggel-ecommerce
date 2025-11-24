@@ -74,8 +74,14 @@ const CartIcon = ({ className = "!text-2xl" }) => {
 
   return (
     <>
-      <div className="hidden lg:block">
-        <Popover placement="bottomRight" title={title} content={content}>
+      <div className="hidden lg:block z-50">
+        <Popover
+          placement="bottomRight"
+          title={title}
+          content={content}
+          trigger="hover"
+          fresh={true}
+        >
           <Badge count={totalItems} size="small" offset={[3, -2]} color="red">
             <ShoppingCartOutlined
               className={`cursor-pointer ${className}`}

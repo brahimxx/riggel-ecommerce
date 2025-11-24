@@ -83,7 +83,7 @@ const ProductCard = ({ product }) => {
             quality={100}
             fill
             sizes="(max-width: 768px) 100vw, 300px"
-            className="object-fit transition-transform duration-300 ease-in-out group-hover:scale-105"
+            className="object-contain bg-[#F0EEED] transition-transform duration-300 ease-in-out group-hover:scale-105"
           />
           {salePrice !== null && (
             <span className="absolute top-3 left-3 bg-[#669900] text-white text-xs px-2 py-1 rounded-lg shadow-md font-semibold z-10">

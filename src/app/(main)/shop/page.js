@@ -341,7 +341,7 @@ const ShopPage = () => {
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="text-center py-10">
+        <div className="text-center py-10 flex justify-center items-center h-[50vh]">
           <Spin size="large" />
         </div>
       );

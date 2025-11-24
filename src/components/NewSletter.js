@@ -5,7 +5,7 @@ const NewsLetter = () => {
   return (
     <div className=" relative   ">
       <div className="flex flex-col lg:flex-row font-integral justify-between py-[32px] lg:py-[36px] px-[24px] lg:px-[64px] bg-black rounded-3xl  lg:mx-auto h-[300px] lg:h-[200px] z-10 mx-4 max-w-[calc(1536px-120px)] ">
-        <h2 className="text-white font-integral text-[26px] sm:text-[32px] sm:text-center lg:text-left lg:text-[36px] xl:text-[40px] font-extrabold lg:w-[60%] xl:w-[50%]">
+        <h2 className="text-white font-integral text-[26px] sm:text-[28px] sm:text-center lg:text-left lg:text-[36px] xl:text-[40px] font-extrabold lg:w-[60%] xl:w-[50%]">
           Stay up to date about our latest offers
         </h2>
         <form className="flex flex-col w-full lg:w-[300px] xl:w-[349px] h-[108px] justify-between">
