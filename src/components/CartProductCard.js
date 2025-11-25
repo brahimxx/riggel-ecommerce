@@ -6,20 +6,27 @@ import { getSalePrice } from "@/lib/api";
 import { Popconfirm } from "antd";
 
 const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
+  console.log("CartProductCard render:", product);
   const basePrice = product.price;
   const saleInfo = product.sale;
   const salePrice = getSalePrice({ sale: saleInfo }, basePrice);
+
+  // Helper to check availability
+  const isOutOfStock = Number(product.variant.quantity) === 0;
+
   const handleQuantityChange = (newQuantity) => {
     // Call the update function from the parent
     onUpdateQuantity(product.productId, product.variantId, newQuantity);
   };
+
   const handleRemove = () => {
     // Call the remove function from the parent
     onRemove(product.productId, product.variantId);
   };
+
   return (
     <div className="py-8">
-      <div className="flex h-[100px] sm:h-[115px] gap-3 ">
+      <div className="flex h-[100px] sm:h-[115px] gap-3">
         <Link href={"/products/" + product.slug}>
           <Image
             src={product.image}
@@ -27,25 +34,27 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
             width={130}
             height={125}
             quality={100}
-            className="object-contain w-[130px] h-[115px] rounded-xl bg-[#F0EEED]"
+            className={`object-contain w-[130px] h-[115px] rounded-xl bg-[#F0EEED] ${
+              isOutOfStock ? "opacity-50 grayscale" : ""
+            }`}
           />
         </Link>
 
         <div className="flex w-full">
           <div className="flex flex-col w-full justify-between">
             <div className="flex justify-between flex-col md:flex-row">
-              <div className="flex flex-col justify-between  md:w-[50%]">
-                <div
-                  href={"/products/" + product.slug}
-                  className="flex items-center justify-between md:justify-start text-[12px] md:text-[16px] text-nowrap font-bold "
-                >
+              <div className="flex flex-col justify-between md:w-[50%]">
+                <div className="flex items-center justify-between md:justify-start text-[12px] md:text-[16px] text-nowrap font-bold">
                   <Link
                     href={"/products/" + product.slug}
-                    className="!text-black"
+                    className={isOutOfStock ? "!text-gray-400" : "!text-black"}
                   >
                     {product.name}
                   </Link>
-                  {saleInfo && salePrice !== basePrice.toString() ? (
+
+                  {!isOutOfStock &&
+                  saleInfo &&
+                  salePrice !== basePrice.toString() ? (
                     <>
                       <span className="hidden md:block ml-2 bg-[#669900] text-white text-xs px-2 py-1 rounded">
                         {saleInfo?.name ? `${saleInfo.name}` : ""}
@@ -54,6 +63,8 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
                   ) : (
                     <span className="font-bold"></span>
                   )}
+
+                  {/* Mobile Remove Button - Kept Red */}
                   <Popconfirm
                     title="Remove this item from cart?"
                     onConfirm={handleRemove}
@@ -65,12 +76,15 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
                     </div>
                   </Popconfirm>
                 </div>
+
                 <div className="flex md:flex-col gap-2">
                   {product.attributes && product.attributes.length > 0 ? (
                     product.attributes.map((attr, index) => (
                       <p
                         key={index}
-                        className="text-[12px] md:text-[14px] text-gray-800/70"
+                        className={`text-[12px] md:text-[14px] ${
+                          isOutOfStock ? "text-gray-300" : "text-gray-800/70"
+                        }`}
                       >
                         {attr.name}: {attr.value}
                       </p>
@@ -81,51 +95,74 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
                 </div>
               </div>
 
-              <div className="hidden md:block text-[12px] md:text-[14px] md:pr-5 text-right">
-                {saleInfo && salePrice !== basePrice.toString() ? (
-                  <>
-                    <span className="line-through mr-2 text-gray-400 bh">
-                      ${Number(basePrice).toFixed(2)}
-                    </span>
-                    <span className="font-bold text-[#669900]">
-                      ${salePrice}
-                    </span>
-                  </>
-                ) : (
-                  <span className="font-bold">
-                    ${Number(basePrice).toFixed(2)}
+              <div className="hidden md:block text-[12px] md:text-[14px] md:pr-5 text-right items-center">
+                {isOutOfStock ? (
+                  <span className="font-bold text-red-500 text-center">
+                    Out of stock
                   </span>
+                ) : (
+                  <>
+                    {saleInfo && salePrice !== basePrice.toString() ? (
+                      <>
+                        <span className="line-through mr-2 text-gray-400 bh">
+                          ${Number(basePrice).toFixed(2)}
+                        </span>
+                        <span className="font-bold text-[#669900]">
+                          ${salePrice}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-bold">
+                        ${Number(basePrice).toFixed(2)}
+                      </span>
+                    )}
+                    <p className="text-gray-800/70">
+                      ${(Number(salePrice) * product.quantity).toFixed(2)} total
+                    </p>
+                  </>
                 )}
-                <p className=" text-gray-800/70 ">
-                  ${(Number(salePrice) * product.quantity).toFixed(2)} total
-                </p>
               </div>
             </div>
 
             <div className="flex text-[12px] justify-between items-start md:items-center">
-              <QuantityCartBarSmall
-                quantity={product.quantity}
-                onChange={handleQuantityChange}
-              />
-              <div className="md:hidden text-[12px] md:text-[14px] md:pr-5 text-right">
-                {saleInfo && salePrice !== basePrice.toString() ? (
-                  <>
-                    <span className="line-through mr-2 text-gray-400 bh">
-                      ${Number(basePrice).toFixed(2)}
-                    </span>
-                    <span className="font-bold text-[#669900]">
-                      ${salePrice}
-                    </span>
-                  </>
-                ) : (
-                  <span className="font-bold">
-                    ${Number(basePrice).toFixed(2)}
-                  </span>
-                )}
-                <p className=" text-gray-800/70 ">
-                  ${(Number(salePrice) * product.quantity).toFixed(2)} total
+              {isOutOfStock ? (
+                <p className="text-[12px] text-gray-500">
+                  This item is currently unavailable.
                 </p>
+              ) : (
+                <QuantityCartBarSmall
+                  quantity={product.quantity}
+                  onChange={handleQuantityChange}
+                />
+              )}
+
+              <div className="md:hidden text-[12px] md:text-[14px] md:pr-5 text-right">
+                {isOutOfStock ? (
+                  <span className="font-bold text-red-500">Out of stock</span>
+                ) : (
+                  <>
+                    {saleInfo && salePrice !== basePrice.toString() ? (
+                      <>
+                        <span className="line-through mr-2 text-gray-400 bh">
+                          ${Number(basePrice).toFixed(2)}
+                        </span>
+                        <span className="font-bold text-[#669900]">
+                          ${salePrice}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-bold">
+                        ${Number(basePrice).toFixed(2)}
+                      </span>
+                    )}
+                    <p className="text-gray-800/70">
+                      ${(Number(salePrice) * product.quantity).toFixed(2)} total
+                    </p>
+                  </>
+                )}
               </div>
+
+              {/* Desktop Remove Button - Kept Red */}
               <Popconfirm
                 title="Remove this item from cart?"
                 onConfirm={handleRemove}

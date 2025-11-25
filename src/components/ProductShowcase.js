@@ -13,6 +13,7 @@ const ProductShowcase = ({ product }) => {
   const [selectedVariant, setSelectedVariant] = useState({});
   const [quantity, setQuantity] = useState(1);
 
+  console.log("ProductShowcase product:", product);
   const { addToCart } = useCartContext();
   const basePrice = selectedVariant?.price || product.price;
   const sale = product.sale;
@@ -67,7 +68,6 @@ const ProductShowcase = ({ product }) => {
     }
   };
 
-  console.log(product);
   return (
     <>
       <div className="flex-col lg:flex lg:flex-row ">
@@ -120,13 +120,23 @@ const ProductShowcase = ({ product }) => {
           />
           <div className="flex gap-4 pt-[10px] border-gray-200/60">
             <QuantityCartBar quantity={quantity} setQuantity={setQuantity} />
-            <button
-              onClick={handleAddToCart}
-              className="bg-black hover:bg-black/90 text-white rounded-full  py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
-              aria-label="Add to Cart"
-            >
-              Add to Cart
-            </button>
+            {Number(product.total_variants_quantities) === 0 ? (
+              <button
+                disabled
+                className="bg-gray-200 text-gray-500 rounded-full py-2 text-lg font-medium transition min-w-[180px] cursor-not-allowed lg:min-w-0 w-full"
+                aria-label="Out of Stock"
+              >
+                Out of Stock
+              </button>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                className="bg-black hover:bg-black/90 text-white rounded-full py-2 text-lg font-medium transition min-w-[180px] cursor-pointer lg:min-w-0 w-full"
+                aria-label="Add to Cart"
+              >
+                Add to Cart
+              </button>
+            )}
             <FavoriteButton product={product} className="text-3xl" />
           </div>
         </div>

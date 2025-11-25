@@ -106,6 +106,7 @@ const ShoppingCart = () => {
   // Form state variables for customer details
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [wilaya, setWilaya] = useState("");
   const [town, setTown] = useState("");
   const [note, setNote] = useState("");
@@ -159,7 +160,7 @@ const ShoppingCart = () => {
       shipping_address: shippingAddress,
       order_date: new Date().toISOString(),
       status: "pending",
-      email: "m@m.com", // Temporary placeholder
+      email,
       total_amount: Number(
         (subtotal * 1.011 + (subtotal >= 200 ? 0 : 15)).toFixed(2)
       ),
@@ -179,17 +180,8 @@ const ShoppingCart = () => {
       }
 
       const result = await res.json();
-      // Store backend result and all cart items for the thank you page
-      localStorage.setItem(
-        "orderSuccess",
-        JSON.stringify({
-          ...result,
-          cart_items: cart.items,
-          shipping_cost: shippingCost,
-          discount: 0,
-        })
-      );
-      router.push("/thankyou");
+      console.log(result.order_token);
+      router.push(`/thankyou?token=${result.order_token}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -285,6 +277,15 @@ const ShoppingCart = () => {
                   defaultValue="1234567890"
                   placeholder="Your phone number"
                   onChange={(e) => setPhone(e.target.value)}
+                  className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
+                />
+                {errors.email && <p className="text-red-500">{errors.email}</p>}
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  placeholder="Your email address"
+                  onChange={(e) => setEmail(e.target.value)}
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
                 />
                 {errors.wilaya && (

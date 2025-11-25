@@ -300,8 +300,6 @@ const ShopPage = () => {
       };
 
       try {
-        console.log("Sending filters to API:", filters);
-
         const response = await getProducts(filters);
         setProducts(response.products || []);
         setTotalProducts(response.total || 0);
@@ -350,11 +348,18 @@ const ShopPage = () => {
       return <p className="text-red-500">{error}</p>;
     }
     if (filteredProducts.length > 0) {
-      const paginatedProducts = filteredProducts.slice(
-        (currentPage - 1) * PAGE_SIZE,
-        currentPage * PAGE_SIZE
-      );
-      const totalToShow = filteredProducts.length;
+      // For favorites -> client-side pagination
+      const paginatedProducts = showFavoritesOnly
+        ? filteredProducts.slice(
+            (currentPage - 1) * PAGE_SIZE,
+            currentPage * PAGE_SIZE
+          )
+        : products; // For normal case, backend already paginated
+
+      const totalToShow = showFavoritesOnly
+        ? filteredProducts.length
+        : totalProducts; // <- use API total here
+
       const showPagination = totalToShow > PAGE_SIZE;
 
       return (

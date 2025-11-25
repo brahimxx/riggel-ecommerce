@@ -73,10 +73,11 @@ export async function getCategories() {
 
 // --- NEW FUNCTIONS FOR ORDERS ---
 
+// Fetch all orders (admin list)
 export async function getOrders() {
   try {
     const response = await fetch("/api/orders", {
-      next: "no-store", // Cache orders list
+      cache: "no-store", // do not cache the list
     });
     if (!response.ok) {
       throw new Error(`Failed to fetch orders: ${response.statusText}`);
@@ -88,20 +89,30 @@ export async function getOrders() {
   }
 }
 
-export async function getOrderById(id) {
+// Generic: works with numeric id *or* order_token
+export async function getOrder(identifier) {
   try {
-    const response = await fetch(`/api/orders/${id}`, {
-      cache: "no-store", // Fetch fresh details for editing
+    const response = await fetch(`/api/orders/${identifier}`, {
+      cache: "no-store", // always fetch fresh
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to fetch order ${id}`);
+      throw new Error(errorData.error || `Failed to fetch order ${identifier}`);
     }
     return response.json();
   } catch (error) {
-    console.error(`Error in getOrderById for id ${id}:`, error);
+    console.error(`Error in getOrder for identifier ${identifier}:`, error);
     throw error;
   }
+}
+
+// Convenience wrappers (optional)
+export function getOrderById(id) {
+  return getOrder(id); // e.g. admin panel
+}
+
+export function getOrderByToken(token) {
+  return getOrder(token); // e.g. public thank-you page
 }
 
 // --- NEW FUNCTIONS FOR ATTRIBUTES ---

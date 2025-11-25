@@ -39,7 +39,7 @@ export async function GET(req, { params }) {
           SELECT SUM(pv.quantity)
           FROM product_variants pv
           WHERE pv.product_id = p.product_id
-        ) AS total_quantity
+        ) AS total_variants_quantities
       FROM 
         products p 
       WHERE 

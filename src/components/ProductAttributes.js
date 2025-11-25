@@ -24,11 +24,17 @@ const ProductAttributes = ({ attributes, variants, setSelectedVariant }) => {
       if (typeof variant !== "object" || !Array.isArray(variant.attributes)) {
         return false;
       }
-      return Object.entries(potentialSelection).every(([name, val]) =>
-        variant.attributes.some(
-          (attr) => attr.name === name && attr.value === val
-        )
+
+      // Check if attributes match
+      const attributesMatch = Object.entries(potentialSelection).every(
+        ([name, val]) =>
+          variant.attributes.some(
+            (attr) => attr.name === name && attr.value === val
+          )
       );
+      const isInStock = (variant.quantity || 0) > 0;
+
+      return attributesMatch && isInStock;
     });
   };
 

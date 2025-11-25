@@ -21,7 +21,7 @@ async function getProduct(slug) {
         p.created_at,
         (SELECT AVG(r.rating) FROM reviews r WHERE r.product_id = p.product_id) AS rating,
         (SELECT MIN(pv.price) FROM product_variants pv WHERE pv.product_id = p.product_id) AS price,
-        (SELECT SUM(pv.quantity) FROM product_variants pv WHERE pv.product_id = p.product_id) AS total_quantity
+        (SELECT SUM(pv.quantity) FROM product_variants pv WHERE pv.product_id = p.product_id) AS total_variants_quantities
       FROM products p 
       WHERE p.slug = ?`,
       [slug]

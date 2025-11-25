@@ -32,6 +32,7 @@ export function CartProvider({ children }) {
 
   // Action methods
   const addToCart = (product, variant, quantity = 1) => {
+    console.log("Adding to cart:", { product, variant, quantity });
     setCart((prevCart) => {
       const normalizedVariantId =
         typeof variant?.variant_id === "undefined" ? null : variant?.variant_id;
@@ -54,12 +55,16 @@ export function CartProvider({ children }) {
         const existingItem = prevCart.items[existingItemIndex];
         newItems.push({
           ...existingItem,
+          variant: variant || existingItem.variant || null,
+          attributes: variant?.attributes || existingItem.attributes || [],
+          price: finalPrice, // optional: keep price in sync with new variant/sale
           quantity: existingItem.quantity + quantity,
         });
       } else {
         newItems.push({
           productId: product.product_id,
           variantId: normalizedVariantId,
+          variant: variant || null,
           name: product.name,
           price: finalPrice,
           quantity,
@@ -69,6 +74,8 @@ export function CartProvider({ children }) {
           sale: product.sale || null,
         });
       }
+
+      console.log("New cart items:", newItems);
 
       return { items: newItems };
     });

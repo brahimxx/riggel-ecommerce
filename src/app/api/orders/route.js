@@ -1,6 +1,7 @@
 // app/api/orders/route.js
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
+import { sendOrderConfirmationEmail } from "@/lib/mailgun";
 
 // GET: Returns a summary list of all orders
 export async function GET(req) {
@@ -9,7 +10,7 @@ export async function GET(req) {
       SELECT 
         o.*,
         COUNT(oi.order_item_id) AS item_count,
-        COALESCE(SUM(oi.quantity), 0) AS total_quantity
+        COALESCE(SUM(oi.quantity), 0) AS total_variants_quantities
       FROM orders o
       LEFT JOIN order_items oi ON oi.order_id = o.order_id
       GROUP BY o.order_id
@@ -28,6 +29,7 @@ export async function GET(req) {
 // POST: Creates a new order using product variants
 export async function POST(req) {
   const conn = await pool.getConnection();
+
   try {
     const body = await req.json();
     const {
@@ -73,10 +75,19 @@ export async function POST(req) {
 
     await conn.beginTransaction();
 
-    // 1. Insert the main order record
+    // 1. Insert the main order record with a UUID token
     const [orderRes] = await conn.query(
-      `INSERT INTO orders (client_name, email, phone, shipping_address, order_date, status, total_amount)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO orders (
+         client_name,
+         email,
+         phone,
+         shipping_address,
+         order_date,
+         status,
+         total_amount,
+         order_token
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, UUID())`,
       [
         client_name.trim(),
         email.trim(),
@@ -87,6 +98,7 @@ export async function POST(req) {
         total_amount,
       ]
     );
+
     const order_id = orderRes.insertId;
 
     // 2. Process each order item, checking variant stock
@@ -118,9 +130,10 @@ export async function POST(req) {
         conn.release();
         return NextResponse.json(
           {
-            error: `Insufficient stock for variant ID ${item.variant_id}.`,
+            error:
+              "One or more items in your cart are out of stock. Please review your cart.",
           },
-          { status: 409 } // 409 Conflict is suitable for stock issues
+          { status: 409 }
         );
       }
 
@@ -134,7 +147,7 @@ export async function POST(req) {
 
     await conn.commit();
 
-    // 5. Return the newly created order with its items
+    // 5. Return the newly created order with its items (including order_token)
     const [orderRows] = await conn.query(
       `SELECT * FROM orders WHERE order_id = ?`,
       [order_id]
@@ -146,8 +159,27 @@ export async function POST(req) {
 
     conn.release();
 
+    const order = orderRows[0];
+
+    // Build public URL for this order (thank-you page with token)
+    const origin =
+      req.headers.get("origin") ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      "http://localhost:3000";
+    const publicUrl = `${origin}/thankyou?token=${order.order_token}`;
+
+    // Fire-and-forget email; do not block the response if Mailgun fails
+    sendOrderConfirmationEmail({
+      to: order.email,
+      order,
+      items: itemsRows,
+      publicUrl,
+    }).catch((err) => {
+      console.error("Failed to send order confirmation email:", err);
+    });
+
     return NextResponse.json(
-      { ...orderRows[0], order_items: itemsRows },
+      { ...order, order_items: itemsRows },
       { status: 201 }
     );
   } catch (error) {

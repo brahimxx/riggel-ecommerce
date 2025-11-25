@@ -3,47 +3,21 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
 // GET: Fetches a single order with detailed variant information for each item
-// Supports BOTH:
-// - /api/orders/123          -> by order_id (number)
-// - /api/orders/<uuid-token> -> by order_token (string)
 export async function GET(req, { params }) {
-  const { id } = await params; // ✅ await params
-  const identifier = id;
-
-  if (!identifier) {
-    return NextResponse.json(
-      { error: "Invalid order identifier." },
-      { status: 400 }
-    );
+  const id = Number(params.id);
+  if (!id) {
+    return NextResponse.json({ error: "Invalid order id." }, { status: 400 });
   }
 
   try {
-    // Decide whether identifier is numeric (order_id) or token (order_token)
-    const numericId = Number(identifier);
-    let whereClause;
-    let whereValue;
-
-    if (!Number.isNaN(numericId) && numericId > 0) {
-      // Admin / internal usage: /api/orders/123
-      whereClause = "order_id = ?";
-      whereValue = numericId;
-    } else {
-      // Public token usage: /api/orders/<uuid>
-      whereClause = "order_token = ?";
-      whereValue = identifier;
-    }
-
     const [orders] = await pool.query(
-      `SELECT * FROM orders WHERE ${whereClause}`,
-      [whereValue]
+      `SELECT * FROM orders WHERE order_id = ?`,
+      [id]
     );
 
     if (orders.length === 0) {
       return NextResponse.json({ error: "Order not found." }, { status: 404 });
     }
-
-    const order = orders[0];
-    const orderId = order.order_id;
 
     // Join with product_variants and products to get full item details
     const [orderItems] = await pool.query(
@@ -55,13 +29,6 @@ export async function GET(req, { params }) {
         oi.quantity,
         oi.price,
         p.name AS product_name,
-        (
-          SELECT pi.url
-          FROM product_images pi
-          WHERE pi.product_id = p.product_id
-          ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC
-          LIMIT 1
-        ) AS product_image,
         pv.sku,
         (
           SELECT GROUP_CONCAT(av.value SEPARATOR ', ')
@@ -74,10 +41,10 @@ export async function GET(req, { params }) {
       LEFT JOIN products p ON pv.product_id = p.product_id
       WHERE oi.order_id = ?
       `,
-      [orderId]
+      [id]
     );
 
-    return NextResponse.json({ ...order, order_items: orderItems });
+    return NextResponse.json({ ...orders[0], order_items: orderItems });
   } catch (error) {
     console.error("GET /api/orders/[id] error:", error);
     return NextResponse.json(
@@ -88,11 +55,9 @@ export async function GET(req, { params }) {
 }
 
 // PUT: Updates an order, correctly adjusting stock for product variants
-// Here we keep it strictly numeric (admin only)
 export async function PUT(req, { params }) {
-  const { id } = await params; // ✅ await params
-  const numericId = Number(id);
-  if (!Number.isInteger(numericId) || numericId <= 0) {
+  const id = Number(params.id);
+  if (!id) {
     return NextResponse.json({ error: "Invalid order id." }, { status: 400 });
   }
 
@@ -112,10 +77,12 @@ export async function PUT(req, { params }) {
       order_items, // Expects { variant_id, quantity, price }
     } = body;
 
+    // ... (Your validation for body fields can remain here)
+
     // 1. Refund stock from old items using variant_id
     const [oldItems] = await conn.query(
       "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
-      [numericId]
+      [id]
     );
     for (const oldItem of oldItems) {
       if (oldItem.variant_id) {
@@ -131,12 +98,8 @@ export async function PUT(req, { params }) {
       .toISOString()
       .slice(0, 19)
       .replace("T", " ");
-
     await conn.query(
-      `UPDATE orders 
-       SET client_name = ?, email = ?, phone = ?, shipping_address = ?, 
-           order_date = ?, status = ?, total_amount = ?
-       WHERE order_id = ?`,
+      `UPDATE orders SET client_name = ?, email = ?, phone = ?, shipping_address = ?, order_date = ?, status = ?, total_amount = ? WHERE order_id = ?`,
       [
         client_name,
         email,
@@ -145,19 +108,17 @@ export async function PUT(req, { params }) {
         mysqlDate,
         status,
         total_amount,
-        numericId,
+        id,
       ]
     );
 
     // 3. Delete old order items
-    await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [numericId]);
+    await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [id]);
 
     // 4. Deduct stock and insert new items using variant_id
     for (const item of order_items) {
       const [updateResult] = await conn.query(
-        `UPDATE product_variants 
-         SET quantity = quantity - ? 
-         WHERE variant_id = ? AND quantity >= ?`,
+        `UPDATE product_variants SET quantity = quantity - ? WHERE variant_id = ? AND quantity >= ?`,
         [item.quantity, item.variant_id, item.quantity]
       );
 
@@ -168,9 +129,8 @@ export async function PUT(req, { params }) {
       }
 
       await conn.query(
-        `INSERT INTO order_items (order_id, variant_id, quantity, price)
-         VALUES (?, ?, ?, ?)`,
-        [numericId, item.variant_id, item.quantity, item.price]
+        `INSERT INTO order_items (order_id, variant_id, quantity, price) VALUES (?, ?, ?, ?)`,
+        [id, item.variant_id, item.quantity, item.price]
       );
     }
 
@@ -190,11 +150,9 @@ export async function PUT(req, { params }) {
 }
 
 // DELETE: Deletes an order and restores stock to the correct product variants
-// Also kept numeric-only (admin operation)
 export async function DELETE(req, { params }) {
-  const { id } = await params; // ✅ await params
-  const numericId = Number(id);
-  if (!Number.isInteger(numericId) || numericId <= 0) {
+  const id = Number(params.id);
+  if (!id) {
     return NextResponse.json({ error: "Invalid order id." }, { status: 400 });
   }
 
@@ -205,7 +163,7 @@ export async function DELETE(req, { params }) {
     // 1. Get items from the order to restore stock
     const [orderItems] = await conn.query(
       "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
-      [numericId]
+      [id]
     );
 
     // 2. Restore stock for each variant
@@ -219,10 +177,10 @@ export async function DELETE(req, { params }) {
     }
 
     // 3. Delete the order and its dependents (cascade or manual)
-    await conn.query("DELETE FROM payments WHERE order_id = ?", [numericId]);
-    await conn.query("DELETE FROM order_items WHERE order_id = ?", [numericId]);
+    await conn.query("DELETE FROM payments WHERE order_id = ?", [id]);
+    await conn.query("DELETE FROM order_items WHERE order_id = ?", [id]);
     const [result] = await conn.query("DELETE FROM orders WHERE order_id = ?", [
-      numericId,
+      id,
     ]);
 
     if (result.affectedRows === 0) {
