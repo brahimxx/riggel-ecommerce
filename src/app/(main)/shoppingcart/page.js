@@ -180,7 +180,7 @@ const ShoppingCart = () => {
       }
 
       const result = await res.json();
-      console.log(result.order_token);
+
       router.push(`/thankyou?token=${result.order_token}`);
     } catch (err) {
       setError(err.message);

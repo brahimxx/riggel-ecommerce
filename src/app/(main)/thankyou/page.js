@@ -31,7 +31,6 @@ const OrderSummaryCard = ({ product }) => {
   return (
     <div className="py-4 border-b border-gray-100 last:border-0">
       <div className="flex h-[80px] sm:h-[90px] gap-3">
-        {/* Image Section */}
         <div className="relative shrink-0">
           <div className="relative w-[80px] h-[80px] sm:w-[90px] sm:h-[90px] rounded-xl bg-[#F0EEED] overflow-hidden">
             <Image
@@ -40,17 +39,14 @@ const OrderSummaryCard = ({ product }) => {
               fill
               className="object-contain p-1"
             />
-            {/* Quantity Badge */}
             <span className="absolute top-0 right-0 bg-gray-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-bl-lg z-10">
               x{quantity}
             </span>
           </div>
         </div>
 
-        {/* Details Section */}
         <div className="flex w-full flex-col justify-center">
           <div className="flex justify-between items-start">
-            {/* Left: Name & Attributes */}
             <div className="flex flex-col gap-1 pr-2">
               <p className="text-[13px] sm:text-[15px] font-bold text-black line-clamp-2 leading-tight">
                 {product.name}
@@ -70,7 +66,6 @@ const OrderSummaryCard = ({ product }) => {
               </div>
             </div>
 
-            {/* Right: Price */}
             <div className="text-right whitespace-nowrap">
               <p className="text-[13px] sm:text-[15px] font-bold text-black">
                 ${total}
@@ -142,27 +137,34 @@ const ThankYou = () => {
     }));
   }, [order]);
 
-  const subtotal = useMemo(
+  // Numeric subtotal
+  const subtotalNumber = useMemo(
     () =>
-      cartItems
-        .reduce(
-          (sum, item) =>
-            sum + Number(item.price || 0) * Number(item.quantity || 0),
-          0
-        )
-        .toFixed(2),
+      cartItems.reduce(
+        (sum, item) =>
+          sum + Number(item.price || 0) * Number(item.quantity || 0),
+        0
+      ),
     [cartItems]
   );
+  const subtotal = subtotalNumber.toFixed(2);
 
-  const shippingCost = useMemo(
-    () => (Number(subtotal) >= 200 ? 0 : 15),
-    [subtotal]
+  // Same tax and shipping logic as checkout
+  const taxNumber = useMemo(() => subtotalNumber * 0.011, [subtotalNumber]);
+  const taxFormatted = taxNumber.toFixed(2);
+
+  const shippingCostNumber = useMemo(
+    () => (subtotalNumber >= 200 ? 0 : 15),
+    [subtotalNumber]
   );
+  const shippingFormatted = shippingCostNumber.toFixed(2);
+
   const discount = 0;
 
+  // Total from DB is the source of truth; fall back to recomputed
   const totalAmount = order
     ? Number(order.total_amount).toFixed(2)
-    : (Number(subtotal) * 1.011 + shippingCost).toFixed(2);
+    : (subtotalNumber + taxNumber + shippingCostNumber).toFixed(2);
 
   if (loading) {
     return (
@@ -178,11 +180,10 @@ const ThankYou = () => {
     return (
       <div className="min-h-screen flex items-center justify-center ">
         <div className="bg-white p-8 rounded-2xl shadow-lg text-center">
-          <p className="text-gray-600 font-bold text-lg">Order not found.</p>
           {fetchError && (
-            <p className="text-red-500 text-sm mt-2">{fetchError}</p>
+            <p className="text-gray-600 font-bold text-lg">{fetchError}</p>
           )}
-          <a href="/" className="text-[#669900] mt-4 inline-block underline">
+          <a href="/" className="text-gray-400 mt-4 inline-block underline">
             Back to Home
           </a>
         </div>
@@ -205,8 +206,7 @@ const ThankYou = () => {
         </div>
         <hr className="w-[60%] my-4 border-gray-200" />
         <div className="font-semibold mb-7 text-center text-lg">
-          Order number{" "}
-          <span className="font-bold text-[#669900]">#{order_id || "..."}</span>
+          Order number <span className="font-bold ">#{order_id || "..."}</span>
         </div>
 
         <div className="w-full rounded-xl p-4 sm:p-6">
@@ -214,7 +214,6 @@ const ThankYou = () => {
             Order Summary
           </div>
 
-          {/* Items */}
           <div className="max-h-[300px] overflow-y-auto pr-1">
             {cartItems.map((item, idx) => (
               <OrderSummaryCard key={idx} product={item} />
@@ -223,15 +222,21 @@ const ThankYou = () => {
 
           <hr className="my-4 border-gray-200" />
 
-          {/* Totals */}
+          {/* Totals with full breakdown */}
           <div className="flex flex-col gap-2 text-sm sm:text-base">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
               <span>${subtotal}</span>
             </div>
             <div className="flex justify-between text-gray-600">
+              <span>Tax (1.1%)</span>
+              <span>${taxFormatted}</span>
+            </div>
+            <div className="flex justify-between text-gray-600">
               <span>Shipping</span>
-              <span>${shippingCost.toFixed(2)}</span>
+              <span>
+                {shippingCostNumber === 0 ? "Free" : `$${shippingFormatted}`}
+              </span>
             </div>
             {discount > 0 && (
               <div className="flex justify-between text-green-600 font-medium">
