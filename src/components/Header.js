@@ -136,7 +136,7 @@ const Header = () => {
             </ul>
           </div>
           <div className="flex flex-row  items-center justify-center ">
-            <div className="flex min-w-[200px]">
+            <div className="flex md:min-w-[200px]">
               <Suspense
                 fallback={
                   <div style={{ textAlign: "center", padding: "20px" }}></div>

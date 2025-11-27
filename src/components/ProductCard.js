@@ -65,7 +65,7 @@ const ProductCard = ({ product }) => {
 
   const salePrice = getSalePrice(product);
   return (
-    <div className="mx-auto relative w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:max-w-[300px]">
+    <div className="mx-auto relative max-[325px]:w-[280px] w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:max-w-[300px]">
       <div className="absolute z-1 right-4 top-4">
         <FavoriteButton product={product} />
       </div>
@@ -77,7 +77,7 @@ const ProductCard = ({ product }) => {
         // Define the common inner content of the card
         const CardContent = (
           <>
-            <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
+            <div className="relative w-full h-[270px]  xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
               <Image
                 src={
                   product.main_image ||
