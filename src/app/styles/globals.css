@@ -108,3 +108,8 @@ body {
 .riggel-logo-bg {
   animation: var(--animate-riggel-logo-bg);
 }
+
+.ant-message-top {
+  z-index: 1 !important;
+  top: 88px !important;
+}
