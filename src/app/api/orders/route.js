@@ -1,7 +1,7 @@
 // app/api/orders/route.js
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { sendOrderConfirmationEmail } from "@/lib/mailgun";
+import { sendOrderConfirmationEmail } from "@/lib/brevo";
 
 // GET: Returns a summary list of all orders
 export async function GET(req) {
@@ -168,15 +168,16 @@ export async function POST(req) {
       "http://localhost:3000";
     const publicUrl = `${origin}/thankyou?token=${order.order_token}`;
 
-    // Fire-and-forget email; do not block the response if Mailgun fails
-    sendOrderConfirmationEmail({
-      to: order.email,
-      order,
-      items: itemsRows,
-      publicUrl,
-    }).catch((err) => {
-      console.error("Failed to send order confirmation email:", err);
-    });
+    // Replace lines 170-177 in your POST handler with this:
+    const emailResult = await sendOrderConfirmationEmail(orderRows[0]);
+    if (!emailResult.success) {
+      console.warn("Email failed but order saved:", emailResult.error);
+    }
+
+    return NextResponse.json(
+      { ...order, order_items: itemsRows },
+      { status: 201 }
+    );
 
     return NextResponse.json(
       { ...order, order_items: itemsRows },

@@ -12,7 +12,6 @@
     "@ant-design/v5-patch-for-react-19": "^1.0.3",
     "antd": "^5.26.6",
     "bcrypt": "^6.0.0",
-    "form-data": "^4.0.5",
     "jose": "^6.0.12",
     "js-cookie": "^3.0.5",
     "mailgun.js": "^12.2.0",
