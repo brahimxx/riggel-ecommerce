@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { Button, Checkbox, Form, Input, Flex, Alert, message } from "antd";
+import { Button, Checkbox, Form, Input, Flex, Alert, App } from "antd";
 
 const LoginPage = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
+  const { message } = App.useApp();
   const onFinish = async (values) => {
     setLoading(true);
     setError(null);
@@ -28,7 +28,7 @@ const LoginPage = () => {
         throw new Error(data.error || "Login failed. Please try again.");
       }
 
-      message.success("Login successful! Redirecting...");
+      message?.success("Login successful! Redirecting...");
       // Redirect to the dashboard or another protected page
       router.push("/dashboard");
     } catch (err) {

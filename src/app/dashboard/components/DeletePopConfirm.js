@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, message, Popconfirm } from "antd";
+import { Button, App, Popconfirm } from "antd";
 
 const DeletePopConfirm = ({
   title,
@@ -8,12 +8,13 @@ const DeletePopConfirm = ({
   onConfirm, // accept onConfirm as prop
   onCancel,
 }) => {
+  const { message } = App.useApp();
   // Default cancel handler if none passed
   const handleCancel = (e) => {
     if (onCancel) onCancel(e);
     else {
       console.log(e);
-      message.error("Click on No");
+      message?.error("Click on No");
     }
   };
 
@@ -22,7 +23,7 @@ const DeletePopConfirm = ({
     if (onConfirm) onConfirm(e);
     else {
       console.log(e);
-      message.success("Click on Yes");
+      message?.success("Click on Yes");
     }
   };
 

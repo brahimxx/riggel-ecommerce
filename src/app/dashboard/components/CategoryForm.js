@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Button, Form, Input, Select, message } from "antd";
+import { Button, Form, Input, Select, App } from "antd";
 
 const { TextArea } = Input;
 
 const CategoryForm = ({ category = null, categories = [], onSuccess }) => {
   const [form] = Form.useForm();
+  const { message } = App.useApp();
 
   // Track category name for any reactive control if needed
   const [categoryName, setCategoryName] = useState(category?.name || "");
@@ -57,7 +58,7 @@ const CategoryForm = ({ category = null, categories = [], onSuccess }) => {
         throw new Error(errorRes.error || "API request failed");
       }
 
-      message.success(
+      message?.success(
         `Category ${category ? "updated" : "created"} successfully`
       );
       onSuccess && onSuccess();
@@ -66,7 +67,7 @@ const CategoryForm = ({ category = null, categories = [], onSuccess }) => {
       setCategoryName("");
     } catch (err) {
       console.error(err);
-      message.error(
+      message?.error(
         err.message || "Something went wrong while submitting the form."
       );
     }

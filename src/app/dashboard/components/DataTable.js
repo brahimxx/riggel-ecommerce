@@ -4,7 +4,7 @@ import {
   DeleteOutlined,
   AppstoreAddOutlined,
 } from "@ant-design/icons";
-import { Button, Form, Radio, Space, Switch, Table, message } from "antd";
+import { Button, Form, Radio, Space, Switch, Table, App } from "antd";
 import DeletePopConfirm from "./DeletePopConfirm";
 
 const defaultExpandable = {
@@ -37,6 +37,8 @@ const DataTable = ({
   const [expandableState, setExpandable] = useState(expandable);
   const [showTitleUI, setShowTitleUI] = useState(showTitle);
   const [showFooterUI, setShowFooterUI] = useState(showFooter);
+
+  const { message } = App.useApp();
 
   // Extract pagination info and products array from response
   const { validData, paginationInfo } = useMemo(() => {

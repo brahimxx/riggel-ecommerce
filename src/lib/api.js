@@ -130,12 +130,12 @@ export async function getAttributes() {
   }
 }
 
-export async function createAttribute(name) {
+export async function createAttribute(name, values = []) {
   try {
     const response = await fetch("/api/attributes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, values }), // ✅ Added values support
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -148,13 +148,13 @@ export async function createAttribute(name) {
   }
 }
 
-export async function updateAttribute(id, name) {
+export async function updateAttribute(id, name, values = []) {
   try {
-    // Assuming your API for updating a name is PUT /api/attributes/[id]
     const response = await fetch(`/api/attributes/${id}`, {
+      // ✅ Fixed path
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, values }), // ✅ Added values support
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -169,12 +169,11 @@ export async function updateAttribute(id, name) {
 
 export async function updateAttributeValues(id, values) {
   try {
-    // This function handles updating the list of values for an attribute.
-    // Your component already used PUT /api/attributes for this.
-    const response = await fetch("/api/attributes", {
+    const response = await fetch(`/api/attributes/${id}`, {
+      // ✅ Fixed path - was /api/attributes
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attribute_id: id, values }),
+      body: JSON.stringify({ values }), // ✅ Removed attribute_id from body
     });
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));

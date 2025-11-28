@@ -7,7 +7,7 @@ import {
   Input,
   InputNumber,
   Select,
-  message,
+  App,
   Progress,
   Space,
   Divider,
@@ -33,6 +33,8 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
   const [uploadProgress, setUploadProgress] = useState(null);
   const [productName, setProductName] = useState(product?.name || "");
   const [attributes, setAttributes] = useState([]);
+
+  const { message } = App.useApp();
 
   // Fetch all attributes and their values for variants
   useEffect(() => {
@@ -143,11 +145,11 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
   };
   const beforeUpload = (file) => {
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      message.error("Only JPG, PNG, GIF, or WEBP images are allowed.");
+      message?.error("Only JPG, PNG, GIF, or WEBP images are allowed.");
       return Upload.LIST_IGNORE;
     }
     if (file.size > MAX_SIZE) {
-      message.error("Image must be smaller than 5MB!");
+      message?.error("Image must be smaller than 5MB!");
       return Upload.LIST_IGNORE;
     }
     return true;
@@ -208,13 +210,13 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         throw new Error(errorRes.error || "API request failed");
       }
 
-      message.success(
+      message?.success(
         `Product ${product ? "updated" : "created"} successfully`
       );
       onSuccess?.();
     } catch (err) {
       console.error(err);
-      message.error(err.message || "Something went wrong.");
+      message?.error(err.message || "Something went wrong.");
     }
   };
 

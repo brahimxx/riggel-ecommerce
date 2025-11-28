@@ -1,5 +1,5 @@
 "use client";
-import { Rate, message } from "antd";
+import { Rate, App } from "antd";
 import { useEffect, useState } from "react";
 import QuantityCartBar from "@/components/QuantityCartBar";
 import ProductGallery from "@/components/ProductGallery";
@@ -12,6 +12,8 @@ const ProductShowcase = ({ product }) => {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const { message } = App.useApp();
 
   const { addToCart } = useCartContext();
   const basePrice = selectedVariant?.price || product.price;
@@ -84,11 +86,11 @@ const ProductShowcase = ({ product }) => {
 
   const handleAddToCart = () => {
     if (!selectedVariant || !selectedVariant.variant_id) {
-      message.error("Please select a valid product variant.");
+      message?.error("Please select a valid product variant.");
       return;
     }
     addToCart(product, selectedVariant, quantity);
-    message.success("Product added to cart!");
+    message?.success("Product added to cart!");
   };
 
   return (

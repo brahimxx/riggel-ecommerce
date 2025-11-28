@@ -2,7 +2,7 @@
 import AntdClientPatch from "@/components/AntdClientPatch";
 import { HeartOutlined, HeartFilled } from "@ant-design/icons";
 import { useFavorites } from "@/hooks/useFavorites";
-import { message } from "antd";
+import { App } from "antd";
 import { useState, useEffect } from "react";
 
 const FavoriteButton = ({ product, className = "!text-2xl" }) => {
@@ -10,6 +10,7 @@ const FavoriteButton = ({ product, className = "!text-2xl" }) => {
   const [animate, setAnimate] = useState(false);
   const [pulse, setPulse] = useState(false);
 
+  const { message } = App.useApp();
   // Trigger pop animation when favorite toggles
   useEffect(() => {
     if (isLoaded) {
@@ -23,10 +24,10 @@ const FavoriteButton = ({ product, className = "!text-2xl" }) => {
     e.preventDefault();
     if (isFavorite(product.product_id)) {
       toggleFavorite(product);
-      message.success("Removed from favorites!");
+      message?.success("Removed from favorites!");
     } else {
       toggleFavorite(product);
-      message.success("Added to favorites!");
+      message?.success("Added to favorites!");
     }
   };
 

@@ -6,7 +6,7 @@ import {
   Button,
   DatePicker,
   Select,
-  message,
+  App,
   InputNumber,
 } from "antd";
 import { getProducts } from "@/lib/api"; // You’ll need to create this helper
@@ -20,6 +20,7 @@ const SalesForm = ({ sale, onSuccess }) => {
   const [submitting, setSubmitting] = useState(false);
   const [products, setProducts] = useState([]);
   const isEditing = !!sale;
+  const { message } = App.useApp();
 
   // Fetch products for multi-select on mount
   useEffect(() => {
@@ -79,13 +80,13 @@ const SalesForm = ({ sale, onSuccess }) => {
         return res.json();
       })
       .then(() => {
-        message.success(
+        message?.success(
           `Sale ${isEditing ? "updated" : "added"} successfully!`
         );
         onSuccess();
       })
       .catch((err) => {
-        message.error(err.message);
+        message?.error(err.message);
       })
       .finally(() => {
         setSubmitting(false);

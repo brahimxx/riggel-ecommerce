@@ -1,6 +1,15 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Table, Button, Modal, Form, Input, Space, Popconfirm } from "antd";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Space,
+  Popconfirm,
+  App,
+} from "antd";
 
 // MODIFICATION: Import the new API helpers
 import {
@@ -20,7 +29,7 @@ const AttributeDashboard = () => {
   const [valuesForm] = Form.useForm();
   const [valuesModalOpen, setValuesModalOpen] = useState(false);
 
-  const { message } = AntdApp.useApp();
+  const { message } = App.useApp();
 
   const fetchAttributes = async () => {
     setLoading(true);
@@ -28,7 +37,7 @@ const AttributeDashboard = () => {
       const data = await getAttributes();
       setAttributes(data);
     } catch (err) {
-      message.error(err.message || "Failed to fetch attributes");
+      message?.error(err.message || "Failed to fetch attributes");
     } finally {
       setLoading(false);
     }
@@ -60,10 +69,10 @@ const AttributeDashboard = () => {
   const handleDelete = async (attribute_id) => {
     try {
       await deleteAttribute(attribute_id);
-      message.success("Attribute deleted successfully");
+      message?.success("Attribute deleted successfully");
       fetchAttributes(); // Refresh the list
     } catch (err) {
-      message.error(err.message || "Failed to delete attribute");
+      message?.error(err.message || "Failed to delete attribute");
     }
   };
 
@@ -73,17 +82,17 @@ const AttributeDashboard = () => {
       if (editingAttr) {
         // Update existing attribute
         await updateAttribute(editingAttr.attribute_id, values.name);
-        message.success("Attribute updated successfully");
+        message?.success("Attribute updated successfully");
       } else {
         // Create new attribute
         await createAttribute(values.name);
-        message.success("Attribute created successfully");
+        message?.success("Attribute created successfully");
       }
       setModalOpen(false);
       fetchAttributes(); // Refresh the list
     } catch (err) {
       // Validation errors are handled by the form, this catches API errors
-      message.error(err.message || "Failed to save attribute");
+      message?.error(err.message || "Failed to save attribute");
     }
   };
 
@@ -91,11 +100,11 @@ const AttributeDashboard = () => {
     try {
       const values = await valuesForm.validateFields();
       await updateAttributeValues(editingAttr.attribute_id, values.values);
-      message.success("Values updated successfully");
+      message?.success("Values updated successfully");
       setValuesModalOpen(false);
       fetchAttributes(); // Refresh the list
     } catch (err) {
-      message.error(err.message || "Failed to update values");
+      message?.error(err.message || "Failed to update values");
     }
   };
 

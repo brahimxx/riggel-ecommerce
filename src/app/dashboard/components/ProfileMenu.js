@@ -4,16 +4,17 @@ import {
   SettingOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
-import { Avatar, Space, Dropdown, message } from "antd";
+import { Avatar, Space, Dropdown, App } from "antd";
 import { useRouter } from "next/navigation";
 
 const ProfileMenu = () => {
   const router = useRouter();
+  const { message } = App.useApp();
 
   const handleMenuClick = ({ key }) => {
     switch (key) {
       case "1":
-        message.info("My Account is disabled.");
+        message?.info("My Account is disabled.");
         break;
       case "2":
         router.push("/profile"); // Navigate to profile page

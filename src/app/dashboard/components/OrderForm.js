@@ -8,7 +8,7 @@ import {
   DatePicker,
   Select,
   Table,
-  message,
+  App,
   Divider,
 } from "antd";
 import dayjs from "dayjs";
@@ -27,6 +27,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
   const [form] = Form.useForm();
   const [orderItems, setOrderItems] = useState([]);
   const [tempIdCounter, setTempIdCounter] = useState(0);
+  const { message } = App.useApp();
 
   // Create a flattened list of all variants from all products
   const variantsList = useMemo(() => {
@@ -92,16 +93,16 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
 
   const onFinish = async (values) => {
     if (orderItems.length === 0)
-      return message.error("At least one order item is required");
+      return message?.error("At least one order item is required");
 
     for (const item of orderItems) {
       if (!item.variant_id)
-        return message.error("All order items must have a variant selected");
+        return message?.error("All order items must have a variant selected");
       const variant = variantsList.find(
         (v) => v.variant_id === item.variant_id
       );
       if (!variant)
-        return message.error(`Variant with ID ${item.variant_id} not found.`);
+        return message?.error(`Variant with ID ${item.variant_id} not found.`);
 
       const originalItem = order?.order_items?.find(
         (oi) => oi.variant_id === item.variant_id
@@ -110,7 +111,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
       const effectiveAvailable = variant.quantity + reservedQty;
 
       if (item.quantity > effectiveAvailable) {
-        return message.error(
+        return message?.error(
           `Not enough stock for "${variant.display_name}". Available: ${effectiveAvailable}`
         );
       }
@@ -140,10 +141,10 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || "API request failed");
       }
-      message.success(`Order ${order ? "updated" : "created"} successfully`);
+      message?.success(`Order ${order ? "updated" : "created"} successfully`);
       onSuccess?.();
     } catch (err) {
-      message.error(err.message || "Error submitting order.");
+      message?.error(err.message || "Error submitting order.");
     }
   };
 

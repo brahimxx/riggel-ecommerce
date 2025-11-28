@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Form, Input, Button, Select, message } from "antd";
+import { Form, Input, Button, Select, App } from "antd";
 
 const { Option } = Select;
 
@@ -8,6 +8,7 @@ const UserForm = ({ user, onSuccess }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const isEditing = !!user;
+  const { message } = App.useApp();
 
   // Set form fields when the modal opens for editing
   useEffect(() => {
@@ -47,13 +48,13 @@ const UserForm = ({ user, onSuccess }) => {
         return res.json();
       })
       .then(() => {
-        message.success(
+        message?.success(
           `User ${isEditing ? "updated" : "added"} successfully!`
         );
         onSuccess(); // Trigger parent to refresh and close modal
       })
       .catch((err) => {
-        message.error(err.message);
+        message?.error(err.message);
       })
       .finally(() => {
         setSubmitting(false);
