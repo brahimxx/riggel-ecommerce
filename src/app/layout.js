@@ -9,7 +9,7 @@ const customTheme = {
     colorSuccess: "#52c41a",
     colorWarning: "#faad14",
     colorError: "#f5222d",
-    colorInfo: "#5f6163",
+    colorInfo: "black",
   },
 };
 

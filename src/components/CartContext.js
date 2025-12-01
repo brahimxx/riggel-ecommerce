@@ -1,6 +1,12 @@
 "use client";
 import { getSalePrice } from "@/lib/api";
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
 import Cookies from "js-cookie";
 
 const CART_COOKIE_KEY = "cart";
@@ -22,6 +28,38 @@ export function CartProvider({ children }) {
     }
     setIsLoaded(true);
   }, []);
+
+  // Sync from other tabs via storage event (works if any tab uses localStorage too)
+  // + poll cookies every 500ms as fallback since cookies have no native events
+  const syncCart = useCallback(() => {
+    const cartCookie = Cookies.get(CART_COOKIE_KEY);
+    if (cartCookie) {
+      try {
+        const parsedCart = JSON.parse(cartCookie);
+        if (JSON.stringify(parsedCart) !== JSON.stringify(cart)) {
+          setCart(parsedCart);
+        }
+      } catch {
+        // ignore invalid JSON
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    // Listen for localStorage changes (if other tabs use it)
+    const handleStorage = (e) => {
+      if (e.key === CART_COOKIE_KEY) syncCart();
+    };
+    window.addEventListener("storage", handleStorage);
+
+    // Poll cookies as backup (cookies don't emit events)
+    const interval = setInterval(syncCart, 500);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      clearInterval(interval);
+    };
+  }, [syncCart]);
 
   // Save to cookie whenever cart changes
   useEffect(() => {
