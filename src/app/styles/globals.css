@@ -105,8 +105,3 @@ body {
   z-index: 1 !important;
   top: 88px !important;
 }
-/* In QuantityCartBarSmall */
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
