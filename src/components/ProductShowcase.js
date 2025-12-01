@@ -84,11 +84,20 @@ const ProductShowcase = ({ product }) => {
     // Depend only on primitive id + images, so it fires only when variant changes
   }, [selectedVariant?.variant_id, product.images]);
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedVariant || !selectedVariant.variant_id) {
       message?.error("Please select a valid product variant.");
       return;
     }
+
+    // ✅ STOCK CHECK before adding
+    const available = selectedVariant.quantity;
+    if (quantity > available) {
+      message?.error(`Only ${available} available.`);
+      setQuantity(available); // Auto-adjust
+      return;
+    }
+
     addToCart(product, selectedVariant, quantity);
     message?.success("Product added to cart!");
   };
@@ -152,7 +161,11 @@ const ProductShowcase = ({ product }) => {
         />
 
         <div className="flex gap-4 pt-[10px] border-gray-200/60">
-          <QuantityCartBar quantity={quantity} setQuantity={setQuantity} />
+          <QuantityCartBar
+            quantity={quantity}
+            setQuantity={setQuantity}
+            maxQuantity={selectedVariant?.quantity || 999}
+          />
           {Number(product.total_variants_quantities) === 0 ? (
             <button
               disabled

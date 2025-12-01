@@ -16,6 +16,30 @@ export function CartProvider({ children }) {
   const [cart, setCart] = useState({ items: [] });
   const [isLoaded, setIsLoaded] = useState(false);
 
+  const checkStockAvailability = async (productId, variantId) => {
+    try {
+      // FIXED: Remove ?variant= param - your API includes all variants
+      const res = await fetch(`/api/products/by-id/${productId}`);
+      if (!res.ok) return 999;
+
+      const product = await res.json();
+
+      // Your API returns variants array with quantity
+      if (variantId) {
+        const variant = product.variants?.find(
+          (v) => v.variant_id == variantId
+        );
+        return variant?.quantity || 999;
+      }
+
+      // No variant = use first variant or product default
+      return product.variants?.[0]?.quantity || 999;
+    } catch (error) {
+      console.error("Stock check failed:", error);
+      return 999; // Graceful fallback
+    }
+  };
+
   // Load from cookie on mount
   useEffect(() => {
     const cartCookie = Cookies.get(CART_COOKIE_KEY);
@@ -69,8 +93,15 @@ export function CartProvider({ children }) {
   }, [cart, isLoaded]);
 
   // Action methods
-  const addToCart = (product, variant, quantity = 1) => {
-    console.log("Adding to cart:", { product, variant, quantity });
+  const addToCart = async (product, variant, quantity = 1) => {
+    const available = await checkStockAvailability(
+      product.product_id,
+      variant?.variant_id
+    );
+    if (quantity > available) {
+      alert(`Only ${available} available`);
+      return;
+    }
     setCart((prevCart) => {
       const normalizedVariantId =
         typeof variant?.variant_id === "undefined" ? null : variant?.variant_id;
@@ -156,6 +187,7 @@ export function CartProvider({ children }) {
         removeFromCart,
         clearCart,
         isLoaded,
+        checkStockAvailability,
       }}
     >
       {children}

@@ -12,7 +12,7 @@ import { useCartContext } from "@/components/CartContext";
 import { getSalePrice } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import CartProductCard from "@/components/CartProductCard";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const wilayaOptions = [
   { value: "DZ-01", label: "01 - Adrar - [translate:أدرار]" },
@@ -96,8 +96,39 @@ const wilayaOptions = [
 ];
 
 const ShoppingCart = () => {
-  const { cart, updateQuantity, removeFromCart, clearCart } = useCartContext();
+  const {
+    cart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    checkStockAvailability,
+  } = useCartContext();
   const router = useRouter();
+
+  const clearedWarningsRef = useRef(new Set());
+
+  const handleUpdateQuantity = (productId, variantId, newQuantity) => {
+    updateQuantity(productId, variantId, newQuantity);
+
+    const key = `${productId}-${variantId || "none"}`;
+    clearedWarningsRef.current.add(key);
+
+    setStockErrors((prevErrors) => {
+      if (!prevErrors[key]) return prevErrors;
+      const newErrors = { ...prevErrors };
+      delete newErrors[key];
+      return newErrors;
+    });
+
+    // Remove the key from cleared set after debounce delay
+    setTimeout(() => {
+      clearedWarningsRef.current.delete(key);
+    }, 3500);
+  };
+
+  const [stockStatus, setStockStatus] = useState({}); // {productId-variantId: availableStock}
+  const [stockErrors, setStockErrors] = useState({}); // per-item warnings
+  const checkAllStockRef = useRef(); // Debounce ref
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -125,6 +156,53 @@ const ShoppingCart = () => {
     2
   );
 
+  const checkAllStock = async () => {
+    const newStatus = {};
+    const newErrors = {};
+
+    for (const item of cart.items) {
+      const key = `${item.productId}-${item.variantId || "none"}`;
+      const available = await checkStockAvailability(
+        item.productId,
+        item.variantId
+      );
+      newStatus[key] = available;
+
+      if (item.quantity > available && !clearedWarningsRef.current.has(key)) {
+        newErrors[
+          key
+        ] = `Only ${available} available (you have ${item.quantity})`;
+      }
+    }
+
+    setStockStatus(newStatus);
+    setStockErrors(newErrors);
+  };
+
+  useEffect(() => {
+    if (cart.items.length === 0) return;
+
+    // IMMEDIATE check on mount + cart changes
+    checkAllStock();
+
+    // Debounced refresh every 3s
+    if (checkAllStockRef.current) {
+      clearTimeout(checkAllStockRef.current);
+    }
+
+    checkAllStockRef.current = setTimeout(checkAllStock, 3000);
+
+    return () => {
+      if (checkAllStockRef.current) clearTimeout(checkAllStockRef.current);
+    };
+  }, [cart.items.length]); // Keep simple deps
+
+  // Pass stock info to CartProductCard
+  const getStockForItem = (item) => {
+    const key = `${item.productId}-${item.variantId || "none"}`;
+    return stockStatus[key] || 999;
+  };
+
   const validateForm = () => {
     const newErrors = {};
     if (!name.trim()) newErrors.name = "Name is required";
@@ -146,8 +224,34 @@ const ShoppingCart = () => {
       return;
     }
 
-    const shippingAddress = `${wilaya} - ${town}`;
+    // ✅ CRITICAL: Final stock validation before order
+    try {
+      const stockIssues = [];
 
+      for (const item of cart.items) {
+        const available = await checkStockAvailability(
+          item.productId,
+          item.variantId
+        );
+        if (item.quantity > available) {
+          stockIssues.push(
+            `${item.name}: Only ${available} available (you have ${item.quantity})`
+          );
+        }
+      }
+
+      if (stockIssues.length > 0) {
+        setError(`Stock changed:\n• ${stockIssues.join("\n• ")}`);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      setError("Stock check failed. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    const shippingAddress = `${wilaya} - ${town}`;
     const order_items = cart.items.map((item) => ({
       variant_id: item.variantId,
       quantity: item.quantity,
@@ -180,7 +284,6 @@ const ShoppingCart = () => {
       }
 
       const result = await res.json();
-
       router.push(`/thankyou?token=${result.order_token}`);
     } catch (err) {
       setError(err.message);
@@ -219,8 +322,14 @@ const ShoppingCart = () => {
                     >
                       <CartProductCard
                         product={item}
-                        onUpdateQuantity={updateQuantity}
+                        onUpdateQuantity={handleUpdateQuantity}
                         onRemove={removeFromCart}
+                        maxStock={getStockForItem(item)} // ← PASS MAX STOCK
+                        stockError={
+                          stockErrors[
+                            `${item.productId}-${item.variantId || "none"}`
+                          ]
+                        }
                       />
                     </div>
                   ))
@@ -257,7 +366,7 @@ const ShoppingCart = () => {
             </div>
           </div>
 
-          <div className="lg:w-[38%] h-screen flex flex-col gap-6  lg:mt-0 lg:sticky right-0 top-[90px]">
+          <div className="lg:mb-10 lg:w-[38%] h-screen flex flex-col gap-6  lg:mt-0 lg:sticky right-0 top-[90px]">
             <div className="flex flex-col gap-6 mt-6 lg:gap-3 lg:mt-0">
               <div className="p-4 flex flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl">
                 <p>Customer Details</p>
@@ -338,6 +447,7 @@ const ShoppingCart = () => {
                     ${(subtotal * 0.011 + Number(subtotal) + 15).toFixed(2)}
                   </p>
                 </div>
+                {error && <p className="text-red-500 mt-2">{error}</p>}
                 <button
                   onClick={handlePlaceOrder}
                   disabled={loading || cart.items.length === 0}
@@ -346,7 +456,6 @@ const ShoppingCart = () => {
                   <CreditCardOutlined className="mr-3" />
                   {loading ? "Placing Order..." : "Proceed to Checkout"}
                 </button>
-                {error && <p className="text-red-500 mt-2">{error}</p>}
 
                 <div className="flex gap-4">
                   <div className="relative flex-grow">

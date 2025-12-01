@@ -40,7 +40,7 @@ export async function POST(req) {
       order_date,
       status,
       total_amount,
-      order_items, // Expected to contain { variant_id, quantity, price }
+      order_items,
     } = body;
 
     console.log(body);
@@ -69,6 +69,26 @@ export async function POST(req) {
       conn.release();
       return NextResponse.json(
         { error: "Missing or invalid required fields." },
+        { status: 400 }
+      );
+    }
+
+    // ✅ EMAIL VALIDATION
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      conn.release();
+      return NextResponse.json(
+        { error: "Invalid email format." },
+        { status: 400 }
+      );
+    }
+
+    // ✅ PHONE VALIDATION (7-15 digits, optional + prefix)
+    const phoneRegex = /^\+?\d{7,15}$/;
+    if (phone && !phoneRegex.test(phone.trim().replace(/[\s\-()]/g, ""))) {
+      conn.release();
+      return NextResponse.json(
+        { error: "Invalid phone number format. Must be 7-15 digits." },
         { status: 400 }
       );
     }
@@ -161,23 +181,11 @@ export async function POST(req) {
 
     const order = orderRows[0];
 
-    // Build public URL for this order (thank-you page with token)
-    const origin =
-      req.headers.get("origin") ||
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      "http://localhost:3000";
-    const publicUrl = `${origin}/thankyou?token=${order.order_token}`;
-
-    // Replace lines 170-177 in your POST handler with this:
+    // Send confirmation email
     const emailResult = await sendOrderConfirmationEmail(orderRows[0]);
     if (!emailResult.success) {
       console.warn("Email failed but order saved:", emailResult.error);
     }
-
-    return NextResponse.json(
-      { ...order, order_items: itemsRows },
-      { status: 201 }
-    );
 
     return NextResponse.json(
       { ...order, order_items: itemsRows },

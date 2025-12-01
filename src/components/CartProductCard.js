@@ -5,27 +5,47 @@ import Link from "next/link";
 import { getSalePrice } from "@/lib/api";
 import { Popconfirm } from "antd";
 
-const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
+const CartProductCard = ({
+  product,
+  onUpdateQuantity,
+  onRemove,
+  maxStock = 999,
+  stockError,
+}) => {
   console.log("CartProductCard render:", product);
   const basePrice = product.price;
   const saleInfo = product.sale;
   const salePrice = getSalePrice({ sale: saleInfo }, basePrice);
+  const available = maxStock;
 
   // Helper to check availability
-  const isOutOfStock = Number(product.variant.quantity) === 0;
+  const isOutOfStock = Number(product.variant?.quantity) === 0;
 
   const handleQuantityChange = (newQuantity) => {
-    // Call the update function from the parent
-    onUpdateQuantity(product.productId, product.variantId, newQuantity);
+    if (newQuantity <= available && newQuantity >= 1) {
+      onUpdateQuantity(product.productId, product.variantId, newQuantity);
+    }
   };
 
   const handleRemove = () => {
-    // Call the remove function from the parent
     onRemove(product.productId, product.variantId);
   };
 
   return (
     <div className="py-8">
+      {/* Warning banner if quantity exceeds stock */}
+      {stockError && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-2 rounded mb-2 text-sm">
+          ⚠️ {stockError}{" "}
+          <button
+            onClick={() => handleQuantityChange(available)}
+            className="underline font-medium ml-2 cursor-pointer"
+          >
+            Adjust to available
+          </button>
+        </div>
+      )}
+
       <div className="flex h-[100px] sm:h-[115px] gap-3">
         <Link href={"/products/" + product.slug}>
           <Image
@@ -55,16 +75,13 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
                   {!isOutOfStock &&
                   saleInfo &&
                   salePrice !== basePrice.toString() ? (
-                    <>
-                      <span className="hidden md:block ml-2 bg-[#669900] text-white text-xs px-2 py-1 rounded">
-                        {saleInfo?.name ? `${saleInfo.name}` : ""}
-                      </span>
-                    </>
+                    <span className="hidden md:block ml-2 bg-[#669900] text-white text-xs px-2 py-1 rounded">
+                      {saleInfo?.name || ""}
+                    </span>
                   ) : (
                     <span className="font-bold"></span>
                   )}
 
-                  {/* Mobile Remove Button - Kept Red */}
                   <Popconfirm
                     title="Remove this item from cart?"
                     onConfirm={handleRemove}
@@ -124,16 +141,25 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
               </div>
             </div>
 
-            <div className="flex text-[12px] justify-between items-start md:items-center">
+            <div className="flex md:flex-row text-[12px] justify-between items-start md:items-center">
               {isOutOfStock ? (
                 <p className="text-[12px] text-gray-500">
                   This item is currently unavailable.
                 </p>
               ) : (
-                <QuantityCartBarSmall
-                  quantity={product.quantity}
-                  onChange={handleQuantityChange}
-                />
+                <>
+                  <QuantityCartBarSmall
+                    quantity={product.quantity}
+                    onChange={handleQuantityChange}
+                    maxQuantity={available}
+                  />
+                  {/* Show ONLY when at max stock */}
+                  {product.quantity >= available && available < 999 && (
+                    <span className="hidden md:block text-yellow-600 font-medium bg-yellow-100 p-2 rounded-full text-xs ml-1">
+                      Max reached
+                    </span>
+                  )}
+                </>
               )}
 
               <div className="md:hidden text-[12px] md:text-[14px] md:pr-5 text-right">
@@ -160,9 +186,13 @@ const CartProductCard = ({ product, onUpdateQuantity, onRemove }) => {
                     </p>
                   </>
                 )}
+                {product.quantity >= available && available < 999 && (
+                  <span className="md:hidden text-yellow-600 font-medium bg-yellow-100 -mx-2 p-2 py-0.5 rounded-full text-xs ml-1">
+                    Max reached
+                  </span>
+                )}
               </div>
 
-              {/* Desktop Remove Button - Kept Red */}
               <Popconfirm
                 title="Remove this item from cart?"
                 onConfirm={handleRemove}

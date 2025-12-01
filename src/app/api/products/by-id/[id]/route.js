@@ -5,17 +5,18 @@ import slugify from "slugify";
 import fs from "fs/promises";
 import path from "path";
 
-// GET /api/products/[id]
 export async function GET(req, { params }) {
-  const id = Number(params.id); // 'id' comes directly from params
-  if (!id) {
+  const { id } = await params; // Correct async access of params.id
+  const numericId = Number(id);
+
+  if (!numericId || isNaN(numericId)) {
     return NextResponse.json({ error: "Invalid product id." }, { status: 400 });
   }
 
   try {
     const [rows] = await pool.query(
       `SELECT product_id, name, slug, description, created_at FROM products WHERE product_id = ?`,
-      [id]
+      [numericId]
     );
     if (rows.length === 0) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -27,7 +28,7 @@ export async function GET(req, { params }) {
        FROM categories c
        JOIN product_categories pc ON c.category_id = pc.category_id
        WHERE pc.product_id = ?`,
-      [id]
+      [numericId]
     );
 
     const [variantsRaw] = await pool.query(
@@ -46,7 +47,7 @@ export async function GET(req, { params }) {
       FROM product_variants pv
       WHERE pv.product_id = ?
       `,
-      [id]
+      [numericId]
     );
 
     const variants = variantsRaw.map((v) => ({
@@ -59,12 +60,12 @@ export async function GET(req, { params }) {
 
     const [images] = await pool.query(
       `SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC`,
-      [id]
+      [numericId]
     );
 
     return NextResponse.json({ ...product, categories, variants, images });
   } catch (error) {
-    console.error(`GET /api/products/${id} error:`, error);
+    console.error(`GET /api/products/${numericId} error:`, error);
     return NextResponse.json(
       { error: "Failed to fetch product." },
       { status: 500 }
@@ -72,10 +73,11 @@ export async function GET(req, { params }) {
   }
 }
 
-// PUT /api/products/[id] - **Corrected and Complete Version**
 export async function PUT(req, { params }) {
-  const id = Number(params.id);
-  if (!id) {
+  const { id: paramId } = await params;
+  const id = Number(paramId);
+
+  if (!id || isNaN(id)) {
     return NextResponse.json({ error: "Invalid product id." }, { status: 400 });
   }
 
@@ -271,11 +273,11 @@ export async function PUT(req, { params }) {
   }
 }
 
-// DELETE /api/products/[id] - This function is correct.
 export async function DELETE(req, { params }) {
-  // ... (Your existing DELETE code is correct and does not need changes)
-  const id = Number(params.id);
-  if (!id) {
+  const { id: paramId } = await params;
+  const id = Number(paramId);
+
+  if (!id || isNaN(id)) {
     return NextResponse.json({ error: "Invalid product id." }, { status: 400 });
   }
 
