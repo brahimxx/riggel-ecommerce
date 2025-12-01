@@ -2,8 +2,55 @@ import Image from "next/image";
 import { Rate } from "antd";
 import Link from "next/link";
 import FavoriteButton from "@/components/FavoriteButton";
+import React from "react";
 
-const ProductCard = ({ product }) => {
+// Custom comparison function for deep object comparison
+const arePropsEqual = (prevProps, nextProps) => {
+  // Simple primitive comparisons first
+  if (prevProps.product.product_id !== nextProps.product.product_id) {
+    return false;
+  }
+
+  // Compare key product fields that affect rendering
+  const prev = prevProps.product;
+  const next = nextProps.product;
+
+  return (
+    prev.name === next.name &&
+    prev.slug === next.slug &&
+    prev.price === next.price &&
+    prev.rating === next.rating &&
+    prev.total_variants_quantities === next.total_variants_quantities &&
+    prev.total_orders === next.total_orders &&
+    prev.main_image === next.main_image &&
+    // Sale fields
+    prev.sale_id === next.sale_id &&
+    prev.discount_type === next.discount_type &&
+    prev.discount_value === next.discount_value &&
+    prev.sale_name === next.sale_name &&
+    // Deep comparison for variants (only check structure, not every variant)
+    JSON.stringify(
+      prev.variants?.map((v) => ({
+        quantity: v.quantity,
+        attributes: v.attributes?.map((a) => ({
+          name: a.name,
+          value: a.value,
+        })),
+      }))
+    ) ===
+      JSON.stringify(
+        next.variants?.map((v) => ({
+          quantity: v.quantity,
+          attributes: v.attributes?.map((a) => ({
+            name: a.name,
+            value: a.value,
+          })),
+        }))
+      )
+  );
+};
+
+const ProductCard = React.memo(({ product }) => {
   const colors = [
     ...new Set(
       product.variants
@@ -64,6 +111,7 @@ const ProductCard = ({ product }) => {
   };
 
   const salePrice = getSalePrice(product);
+
   return (
     <div className="mx-auto relative max-[325px]:w-[280px] w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:max-w-[300px]">
       <div className="absolute z-1 right-4 top-4">
@@ -77,7 +125,7 @@ const ProductCard = ({ product }) => {
         // Define the common inner content of the card
         const CardContent = (
           <>
-            <div className="relative w-full h-[270px]  xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
+            <div className="relative w-full h-[270px] xl:w-full xl:h-[300px] rounded-3xl xl:rounded-t-3xl rounded-b-none overflow-hidden bg-[#F0EEED]">
               <Image
                 src={
                   product.main_image ||
@@ -215,6 +263,8 @@ const ProductCard = ({ product }) => {
       })()}
     </div>
   );
-};
+}, arePropsEqual);
+
+ProductCard.displayName = "ProductCard";
 
 export default ProductCard;
