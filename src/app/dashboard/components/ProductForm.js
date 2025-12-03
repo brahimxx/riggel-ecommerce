@@ -11,28 +11,32 @@ import {
   Progress,
   Space,
   Divider,
+  Alert,
 } from "antd";
 import { PlusOutlined, MinusCircleOutlined } from "@ant-design/icons";
 
-// (Keep your ALLOWED_IMAGE_TYPES and MAX_SIZE constants)
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/gif",
   "image/webp",
 ];
-const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 const { TextArea } = Input;
 
-const ProductForm = ({ product = null, categories, onSuccess }) => {
+const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const [images, setImages] = useState([]);
+  const [pendingFiles, setPendingFiles] = useState([]); // Files waiting to be uploaded
+  const [deletedImageUrls, setDeletedImageUrls] = useState([]);
   const [variantOptions, setVariantOptions] = useState([]);
   const PRODUCT_IMAGE_VALUE = "product";
   const [uploadProgress, setUploadProgress] = useState(null);
   const [productName, setProductName] = useState(product?.name || "");
   const [attributes, setAttributes] = useState([]);
+  const [uploadError, setUploadError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { message } = App.useApp();
 
@@ -44,10 +48,82 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       .catch(() => setAttributes([]));
   }, []);
 
+  // Helper function to create variant option from variant data
+  const createVariantOption = (variant, index) => {
+    if (!variant) {
+      return {
+        label: `Variant ${index + 1}`,
+        value: `temp-${index}`,
+        index: index,
+      };
+    }
+
+    const attributes = Array.isArray(variant.attributes)
+      ? variant.attributes.reduce((acc, attr) => {
+          acc[attr.name] = attr.value;
+          return acc;
+        }, {})
+      : variant.attributes || {};
+
+    const variantForLabel = {
+      sku: variant.sku,
+      variant_id: variant.variant_id,
+      attributes: attributes,
+    };
+
+    return {
+      label: generateVariantLabel(variantForLabel, index),
+      value: variant.variant_id ? Number(variant.variant_id) : `temp-${index}`,
+      index: index,
+    };
+  };
+
+  const generateVariantLabel = (variant, index) => {
+    if (!variant) {
+      return `Variant ${index + 1}`;
+    }
+
+    if (variant.sku && typeof variant.sku === "string" && variant.sku.trim()) {
+      return variant.sku;
+    }
+
+    if (variant.attributes && typeof variant.attributes === "object") {
+      const attrLabels = Object.entries(variant.attributes)
+        .filter(([_, value]) => value && value !== "")
+        .map(([key, value]) => value)
+        .join(" / ");
+
+      if (attrLabels) {
+        return attrLabels;
+      }
+    }
+
+    return `Variant ${index + 1}`;
+  };
+
+  const updateVariantOptions = () => {
+    try {
+      const formVariants = form.getFieldValue("variants");
+
+      if (!Array.isArray(formVariants) || formVariants.length === 0) {
+        setVariantOptions([]);
+        return;
+      }
+
+      const options = formVariants.map((variant, index) =>
+        createVariantOption(variant, index)
+      );
+
+      setVariantOptions(options);
+    } catch (error) {
+      console.error("Error updating variant options:", error);
+      setVariantOptions([]);
+    }
+  };
+
   // Set initial form values, including variants
   useEffect(() => {
     if (product) {
-      // Transform variant attributes array to object for AntD Form
       const variants = (product.variants || []).map((v) => ({
         ...v,
         attributes: Array.isArray(v.attributes)
@@ -58,7 +134,6 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           : v.attributes || {},
       }));
 
-      // MODIFICATION: Set 'category_ids' from the product's 'categories' array
       form.setFieldsValue({
         ...product,
         category_ids: product.categories
@@ -66,21 +141,43 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
           : [],
         variants,
       });
-      setImages(product.images || []);
+
+      // Load images and ensure variant_id is a number (or null)
+      const loadedImages = (product.images || []).map((img) => {
+        const variantId = img.variant_id ? Number(img.variant_id) : null;
+
+        return {
+          id: img.id,
+          url: img.url,
+          filename: img.filename || null,
+          originalName: img.original_filename || img.originalName || null,
+          mimeType: img.mime_type || img.mimeType || null,
+          size: img.size || null,
+          alt_text: img.alt_text || "",
+          sort_order: img.sort_order || 0,
+          is_primary: img.is_primary || false,
+          variant_id: variantId,
+          isPending: false, // Already uploaded
+        };
+      });
+
+      setImages(loadedImages);
       setProductName(product.name || "");
-      // Set variant options for image assignment
-      setVariantOptions(
-        (product.variants || []).map((v) => ({
-          label: v.sku || `Variant ${v.variant_id}`,
-          value: v.variant_id,
-        }))
+
+      // Use createVariantOption for consistent labels
+      const options = (product.variants || []).map((v, index) =>
+        createVariantOption(v, index)
       );
+
+      setVariantOptions(options);
     } else {
       form.resetFields();
-      form.setFieldsValue({ variants: [{}] }); // Start with one empty variant
+      form.setFieldsValue({ variants: [{}] });
       setImages([]);
       setProductName("");
       setVariantOptions([]);
+
+      setTimeout(() => updateVariantOptions(), 0);
     }
   }, [product, form]);
 
@@ -88,85 +185,194 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     if (changedValues.name !== undefined) {
       setProductName(changedValues.name);
     }
+
+    if (changedValues.variants !== undefined) {
+      updateVariantOptions();
+    }
   };
 
-  // --- All your image handling functions (customRequest, beforeUpload, etc.) remain unchanged ---
   const getProductId = () => product?.product_id || productName || "new";
-  const handleUploadSuccess = (response) => {
+
+  // Upload a single file to server
+  const uploadFileToServer = async (file, productId) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("productId", productId);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Upload failed");
+    }
+
+    return await response.json();
+  };
+
+  // Handle file selection (no upload yet, just preview)
+  const beforeUpload = (file) => {
+    setUploadError(null);
+
+    // Validate file type
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      const error = "Only JPG, PNG, GIF, or WEBP images are allowed.";
+      setUploadError(error);
+      return Upload.LIST_IGNORE;
+    }
+
+    // Validate file size
+    if (file.size > MAX_SIZE) {
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      const error = `Image is too large (${sizeMB}MB). Maximum size is 5MB.`;
+      setUploadError(error);
+      return Upload.LIST_IGNORE;
+    }
+
+    // Create preview URL using browser's File API
+    const previewUrl = URL.createObjectURL(file);
+
+    // Add to pending files and images state
+    setPendingFiles((prev) => [...prev, file]);
     setImages((imgs) => [
       ...imgs,
       {
         id: null,
-        url: response.url,
+        url: previewUrl, // Browser preview URL
+        file: file, // Keep reference to File object
+        isPending: true, // Mark as not yet uploaded
+        filename: null,
+        originalName: file.name,
+        mimeType: file.type,
+        size: file.size,
         alt_text: "",
         sort_order: imgs.length,
         is_primary: imgs.length === 0,
         variant_id: null,
       },
     ]);
+
+    return false; // Prevent automatic upload
   };
-  const customRequest = (options) => {
-    const { file, onSuccess, onError, onProgress } = options;
-    try {
-      const productId = getProductId();
-      if (!productId)
-        throw new Error("Product ID or name required before uploading images.");
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("productId", productId);
-      const xhr = new XMLHttpRequest();
-      xhr.open("POST", "/api/upload");
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) {
-          const percent = (event.loaded / event.total) * 100;
-          setUploadProgress(percent);
-          onProgress({ percent });
-        }
-      };
-      xhr.onload = () => {
-        setUploadProgress(null);
-        if (xhr.status < 200 || xhr.status >= 300) {
-          onError(new Error(xhr.statusText));
-          return;
-        }
-        const response = JSON.parse(xhr.responseText);
-        handleUploadSuccess(response);
-        onSuccess(response);
-      };
-      xhr.onerror = () => {
-        setUploadProgress(null);
-        onError(new Error(xhr.statusText));
-      };
-      xhr.send(formData);
-    } catch (err) {
-      onError(err);
-      setUploadProgress(null);
+
+  const removeImage = (idx) => {
+    const removedImage = images[idx];
+
+    // Revoke object URL to free memory (for pending images)
+    if (removedImage.isPending && removedImage.url) {
+      URL.revokeObjectURL(removedImage.url);
     }
-  };
-  const beforeUpload = (file) => {
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      message?.error("Only JPG, PNG, GIF, or WEBP images are allowed.");
-      return Upload.LIST_IGNORE;
+
+    // NEW: Track deleted image URLs for cleanup (for already uploaded images)
+    if (!removedImage.isPending && removedImage.url) {
+      setDeletedImageUrls((prev) => [...prev, removedImage.url]);
     }
-    if (file.size > MAX_SIZE) {
-      message?.error("Image must be smaller than 5MB!");
-      return Upload.LIST_IGNORE;
-    }
-    return true;
-  };
-  const removeImage = (idx) =>
+
     setImages((imgs) => imgs.filter((_, i) => i !== idx));
+    setPendingFiles((files) => files.filter((_, i) => i !== idx));
+  };
+
   const moveImage = (from, to) => {
     setImages((imgs) => {
       const arr = [...imgs];
       const [img] = arr.splice(from, 1);
       arr.splice(to, 0, img);
-      return arr;
+      return arr.map((image, index) => ({
+        ...image,
+        sort_order: index,
+        is_primary: index === 0,
+      }));
     });
   };
 
+  // Upload all pending files before submitting
+  const uploadAllPendingFiles = async (productId) => {
+    const uploadedImages = [];
+    let uploadedCount = 0;
+
+    for (let i = 0; i < images.length; i++) {
+      const img = images[i];
+
+      if (img.isPending && img.file) {
+        try {
+          setUploadProgress((uploadedCount / images.length) * 100);
+
+          const response = await uploadFileToServer(img.file, productId);
+
+          uploadedImages.push({
+            url: response.url,
+            filename: response.filename,
+            originalName: response.originalName,
+            mimeType: response.mimeType,
+            size: response.size,
+            alt_text: img.alt_text,
+            is_primary: img.is_primary,
+            sort_order: img.sort_order,
+            variant_id: img.variant_id,
+            variant_index:
+              typeof img.variant_id === "string" &&
+              img.variant_id.startsWith("temp-")
+                ? parseInt(img.variant_id.replace("temp-", ""))
+                : null,
+          });
+
+          uploadedCount++;
+        } catch (error) {
+          throw new Error(
+            `Failed to upload ${img.originalName}: ${error.message}`
+          );
+        }
+      } else {
+        // Already uploaded (editing existing product)
+        let variantId = img.variant_id;
+        let variantIndex = null;
+
+        if (typeof variantId === "string" && variantId.startsWith("temp-")) {
+          variantIndex = parseInt(variantId.replace("temp-", ""));
+          variantId = null;
+        }
+
+        uploadedImages.push({
+          url: img.url,
+          filename: img.filename,
+          originalName: img.originalName,
+          mimeType: img.mimeType,
+          size: img.size,
+          alt_text: img.alt_text,
+          is_primary: img.is_primary,
+          sort_order: img.sort_order,
+          variant_id: variantId,
+          variant_index: variantIndex,
+        });
+      }
+    }
+
+    setUploadProgress(null);
+    return uploadedImages;
+  };
+
   const onFinish = async (values) => {
+    if (isSubmitting) return;
+
     try {
+      setIsSubmitting(true);
+
+      if (images.length === 0) {
+        message?.warning("Please upload at least one product image.");
+        return;
+      }
+
+      const productId = getProductId();
+
+      // Upload all pending images first
+      if (pendingFiles.length > 0) {
+        message?.loading("Uploading images...");
+      }
+      const uploadedImages = await uploadAllPendingFiles(productId);
+      message?.destroy();
+
       const variants = (values.variants || []).map((variant) => {
         const attrs = attributes.map((attr) => ({
           name: attr.name,
@@ -178,22 +384,18 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         };
       });
 
-      // MODIFICATION: The 'category_ids' field from the form is now used directly.
       const payload = {
-        ...values, // This will include 'name', 'description', and 'category_ids'
+        ...values,
         variants,
-        images: images.map((img, idx) => ({
-          ...img,
-          alt_text: `Image of ${values.name}`,
-          is_primary: idx === 0,
-          sort_order: idx,
-          variant_id: img.variant_id || null,
-        })),
+        images: uploadedImages,
       };
 
-      // The API now expects `category_ids` instead of `category_id`.
-      // Since the form field is named `category_ids`, we don't need to do anything extra here.
-      delete payload.category_id; // Clean up any lingering old field, just in case.
+      // Only include deletedImages when editing (not when creating)
+      if (product && deletedImageUrls.length > 0) {
+        payload.deletedImages = deletedImageUrls;
+      }
+
+      delete payload.category_id;
 
       const url = product
         ? `/api/products/by-id/${product.product_id}`
@@ -210,6 +412,16 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         throw new Error(errorRes.error || "API request failed");
       }
 
+      // Clean up preview URLs
+      images.forEach((img) => {
+        if (img.isPending && img.url) {
+          URL.revokeObjectURL(img.url);
+        }
+      });
+
+      // Clear deleted images tracking
+      setDeletedImageUrls([]);
+
       message?.success(
         `Product ${product ? "updated" : "created"} successfully`
       );
@@ -217,7 +429,26 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
     } catch (err) {
       console.error(err);
       message?.error(err.message || "Something went wrong.");
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Clean up preview URLs
+    images.forEach((img) => {
+      if (img.isPending && img.url) {
+        URL.revokeObjectURL(img.url);
+      }
+    });
+
+    setImages([]);
+    setPendingFiles([]);
+    setDeletedImageUrls([]); // NEW: Clear deleted images
+    setUploadError(null);
+    form.resetFields();
+
+    if (onCancel) onCancel();
   };
 
   return (
@@ -231,7 +462,6 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         <Input placeholder="Product Name" />
       </Form.Item>
 
-      {/* MODIFICATION: Updated to a multi-select for categories */}
       <Form.Item
         name="category_ids"
         label="Categories"
@@ -282,7 +512,10 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                   label="SKU"
                   style={{ flex: 1 }}
                 >
-                  <Input placeholder="SKU" />
+                  <Input
+                    placeholder="SKU (auto-generated if empty)"
+                    onChange={() => updateVariantOptions()}
+                  />
                 </Form.Item>
                 <Form.Item
                   {...restField}
@@ -302,7 +535,6 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                 >
                   <InputNumber min={0} style={{ width: "100%" }} />
                 </Form.Item>
-                {/* Attribute dropdowns for each attribute */}
                 {attributes.map((attr) => (
                   <Form.Item
                     key={attr.attribute_id}
@@ -311,7 +543,10 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                     style={{ flex: 1 }}
                     rules={[{ required: true, message: `Select ${attr.name}` }]}
                   >
-                    <Select placeholder={`Select ${attr.name}`}>
+                    <Select
+                      placeholder={`Select ${attr.name}`}
+                      onChange={() => updateVariantOptions()}
+                    >
                       {attr.values.map((val) => (
                         <Select.Option key={val.value_id} value={val.value}>
                           {val.value}
@@ -320,13 +555,21 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                     </Select>
                   </Form.Item>
                 ))}
-                <MinusCircleOutlined onClick={() => remove(name)} />
+                <MinusCircleOutlined
+                  onClick={() => {
+                    remove(name);
+                    setTimeout(() => updateVariantOptions(), 0);
+                  }}
+                />
               </Space>
             ))}
             <Form.Item>
               <Button
                 type="dashed"
-                onClick={() => add()}
+                onClick={() => {
+                  add();
+                  setTimeout(() => updateVariantOptions(), 0);
+                }}
                 block
                 icon={<PlusOutlined />}
               >
@@ -343,25 +586,54 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
         <Upload
           listType="picture-card"
           showUploadList={false}
-          customRequest={customRequest}
           beforeUpload={beforeUpload}
           multiple
           accept={ALLOWED_IMAGE_TYPES.join(",")}
-          disabled={!productName && !product?.product_id}
+          disabled={(!productName && !product?.product_id) || isSubmitting}
         >
           <button
             type="button"
             style={{ border: 0, background: "none" }}
-            disabled={!productName && !product?.product_id}
+            disabled={(!productName && !product?.product_id) || isSubmitting}
           >
-            <PlusOutlined /> <div style={{ marginTop: 8 }}>Upload</div>
+            <PlusOutlined />{" "}
+            <div style={{ marginTop: 8 }}>
+              {isSubmitting ? "Uploading..." : "Select Images"}
+            </div>
           </button>
         </Upload>
-        {uploadProgress !== null && (
-          <div style={{ marginTop: 8 }}>
-            <Progress percent={Math.round(uploadProgress)} size="small" />
+
+        {!productName && !product?.product_id && (
+          <div style={{ color: "#999", fontSize: "12px", marginTop: 4 }}>
+            Enter a product name first to enable image selection
           </div>
         )}
+
+        {uploadError && (
+          <Alert
+            message="Upload Error"
+            description={uploadError}
+            type="error"
+            showIcon
+            closable
+            onClose={() => setUploadError(null)}
+            style={{ marginTop: 8 }}
+          />
+        )}
+
+        {uploadProgress !== null && (
+          <div style={{ marginTop: 8 }}>
+            <Progress
+              percent={Math.round(uploadProgress)}
+              size="small"
+              status="active"
+            />
+            <div style={{ fontSize: "12px", color: "#666", marginTop: 4 }}>
+              Uploading images... Please wait.
+            </div>
+          </div>
+        )}
+
         <div style={{ marginTop: 16 }}>
           {images.map((img, idx) => (
             <div
@@ -371,24 +643,47 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                 alignItems: "center",
                 marginBottom: 10,
                 gap: 10,
+                padding: 10,
+                border: "1px solid #f0f0f0",
+                borderRadius: 4,
+                backgroundColor: img.isPending ? "#fffbe6" : "transparent",
               }}
             >
               <img
                 src={img.url}
-                alt={`Image of ${
-                  form.getFieldValue("name") || product?.name || "product"
-                }`}
-                style={{ width: 90, height: 90, objectFit: "cover" }}
+                alt={img.originalName || `Image ${idx + 1}`}
+                style={{
+                  width: 90,
+                  height: 90,
+                  objectFit: "cover",
+                  borderRadius: 4,
+                }}
               />
-              <span style={{ width: 130 }}>
-                {idx === 0 && (
-                  <span style={{ color: "green", fontWeight: "bold" }}>
-                    Main Image
-                  </span>
-                )}
-              </span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: "bold", marginBottom: 4 }}>
+                  {idx === 0 && (
+                    <span style={{ color: "green" }}>★ Main Image</span>
+                  )}
+                  {idx > 0 && `Image ${idx + 1}`}
+                  {img.isPending && (
+                    <span
+                      style={{
+                        color: "#faad14",
+                        marginLeft: 8,
+                        fontSize: "12px",
+                      }}
+                    >
+                      (Not uploaded yet)
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: "12px", color: "#666" }}>
+                  {img.originalName && `Original: ${img.originalName}`}
+                  {img.size && ` (${(img.size / 1024).toFixed(1)} KB)`}
+                </div>
+              </div>
               <Select
-                style={{ width: 160 }}
+                style={{ width: 180 }}
                 value={
                   img.variant_id === null || img.variant_id === undefined
                     ? PRODUCT_IMAGE_VALUE
@@ -408,6 +703,7 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
                   );
                 }}
                 placeholder="Assign to Variant"
+                disabled={isSubmitting}
               >
                 <Select.Option value={PRODUCT_IMAGE_VALUE}>
                   Product (All Variants)
@@ -420,19 +716,24 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
               </Select>
               <Button
                 size="small"
-                disabled={idx === 0}
+                disabled={idx === 0 || isSubmitting}
                 onClick={() => moveImage(idx, idx - 1)}
               >
                 ↑
               </Button>
               <Button
                 size="small"
-                disabled={idx === images.length - 1}
+                disabled={idx === images.length - 1 || isSubmitting}
                 onClick={() => moveImage(idx, idx + 1)}
               >
                 ↓
               </Button>
-              <Button danger size="small" onClick={() => removeImage(idx)}>
+              <Button
+                danger
+                size="small"
+                onClick={() => removeImage(idx)}
+                disabled={isSubmitting}
+              >
                 Remove
               </Button>
             </div>
@@ -441,13 +742,19 @@ const ProductForm = ({ product = null, categories, onSuccess }) => {
       </Form.Item>
 
       <Form.Item>
-        <Button
-          type="primary"
-          htmlType="submit"
-          disabled={uploadProgress !== null}
-        >
-          {product ? "Update Product" : "Create Product"}
-        </Button>
+        <Space>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isSubmitting}
+            disabled={uploadProgress !== null}
+          >
+            {product ? "Update Product" : "Create Product"}
+          </Button>
+          <Button onClick={handleCancel} disabled={isSubmitting}>
+            Cancel
+          </Button>
+        </Space>
       </Form.Item>
     </Form>
   );

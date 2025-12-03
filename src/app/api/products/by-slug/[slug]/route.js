@@ -17,7 +17,7 @@ export async function GET(req, { params }) {
   }
 
   try {
-    // 1. Fetch the base product, now without the direct category_id
+    // 1. Fetch the base product with all metrics
     const [rows] = await pool.query(
       `SELECT 
         p.product_id, 
@@ -39,7 +39,13 @@ export async function GET(req, { params }) {
           SELECT SUM(pv.quantity)
           FROM product_variants pv
           WHERE pv.product_id = p.product_id
-        ) AS total_variants_quantities
+        ) AS total_variants_quantities,
+        COALESCE((
+          SELECT SUM(oi.quantity) 
+          FROM order_items oi 
+          JOIN product_variants pv ON oi.variant_id = pv.variant_id
+          WHERE pv.product_id = p.product_id
+        ), 0) AS total_orders
       FROM 
         products p 
       WHERE 
@@ -53,7 +59,7 @@ export async function GET(req, { params }) {
 
     const product = rows[0];
 
-    // 2. MODIFICATION: Fetch all categories for this product using the junction table
+    // 2. Fetch all categories for this product (many-to-many)
     const [categories] = await pool.query(
       `SELECT c.* 
        FROM categories c
@@ -62,7 +68,7 @@ export async function GET(req, { params }) {
       [product.product_id]
     );
 
-    // 3. Fetch all variants for this product
+    // 3. Fetch all variants with attributes
     const [variantsRaw] = await pool.query(
       `
       SELECT 
@@ -93,14 +99,53 @@ export async function GET(req, { params }) {
           : v.attributes || [],
     }));
 
-    // 4. Fetch all images
+    // 4. Fetch all images with enhanced security fields
     const [images] = await pool.query(
-      `SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC`,
+      `SELECT 
+        id, 
+        product_id, 
+        variant_id,
+        url, 
+        filename, 
+        original_filename, 
+        alt_text, 
+        sort_order, 
+        is_primary, 
+        mime_type 
+      FROM product_images 
+      WHERE product_id = ? 
+      ORDER BY is_primary DESC, sort_order ASC, id ASC`,
       [product.product_id]
     );
 
-    // 5. Combine and return
-    return NextResponse.json({ ...product, categories, variants, images });
+    // 5. Fetch active sale information
+    const [saleInfo] = await pool.query(
+      `SELECT 
+        s.id AS sale_id,
+        s.name AS sale_name,
+        s.discount_type,
+        s.discount_value
+      FROM sales s
+      JOIN sale_product sp ON s.id = sp.sale_id
+      WHERE sp.product_id = ?
+        AND s.start_date <= NOW() 
+        AND s.end_date >= NOW()
+      LIMIT 1`,
+      [product.product_id]
+    );
+
+    // 6. Combine and return with sale info
+    return NextResponse.json({
+      ...product,
+      categories,
+      variants,
+      images,
+      // Add sale info if exists
+      sale_id: saleInfo.length > 0 ? saleInfo[0].sale_id : null,
+      sale_name: saleInfo.length > 0 ? saleInfo[0].sale_name : null,
+      discount_type: saleInfo.length > 0 ? saleInfo[0].discount_type : null,
+      discount_value: saleInfo.length > 0 ? saleInfo[0].discount_value : null,
+    });
   } catch (error) {
     console.error("GET /api/products/by-slug/[slug] error:", error);
     return NextResponse.json(

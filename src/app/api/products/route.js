@@ -2,6 +2,11 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import slugify from "slugify";
+import { randomBytes } from "crypto";
+import path from "path";
+
+// Define max file size (5MB)
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 
 // Cache JSON for 5 minutes (ISR for the route)
 export const revalidate = 300;
@@ -300,6 +305,50 @@ export async function GET(req) {
 
 // -- POST: Create new product with variants (Adjusted for many-to-many categories)
 export async function POST(req) {
+  // Helper function to generate secure filenames
+  function generateSecureFilename(originalFilename, mimeType) {
+    // Generate a cryptographically secure random name
+    const randomName = randomBytes(16).toString("hex");
+
+    // Get safe extension from MIME type (don't trust client extension)
+    const extensionMap = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/gif": "gif",
+    };
+
+    const extension = extensionMap[mimeType] || "jpg";
+
+    return `${randomName}.${extension}`;
+  }
+
+  // Helper to validate file type from content (not just extension)
+  function validateImageMimeType(mimeType) {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+    return allowedTypes.includes(mimeType);
+  }
+
+  // Sanitize filename (if you must preserve original name)
+  function sanitizeFilename(filename) {
+    // Remove any path separators and null bytes
+    let sanitized = filename.replace(/[\/\\]/g, "");
+    sanitized = sanitized.replace(/\0/g, "");
+
+    // Remove special characters that could cause issues
+    sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+    // Prevent starting with dots (hidden files)
+    sanitized = sanitized.replace(/^\.+/, "");
+
+    // Limit length
+    if (sanitized.length > 200) {
+      const ext = path.extname(sanitized);
+      sanitized = sanitized.substring(0, 200 - ext.length) + ext;
+    }
+
+    return sanitized || "unnamed";
+  }
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -412,22 +461,93 @@ export async function POST(req) {
       }
     }
 
-    // 5) Insert images (if any) (No changes needed)
+    // 5) Insert images (if any) - ENHANCED VERSION
     if (Array.isArray(images)) {
+      // First, get all created variant IDs in order
+      const [createdVariants] = await connection.query(
+        `SELECT variant_id FROM product_variants WHERE product_id = ? ORDER BY variant_id ASC`,
+        [product_id]
+      );
+
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
+
+        // Validate image before processing
+        if (!img.url || !img.mimeType) {
+          console.warn(`Skipping invalid image at index ${i}`);
+          continue;
+        }
+
+        // Validate file size
+        if (img.size && img.size > MAX_FILE_SIZE) {
+          const sizeMB = (img.size / (1024 * 1024)).toFixed(2);
+          console.warn(`Image at index ${i} exceeds size limit: ${sizeMB}MB`);
+          await connection.rollback();
+          return NextResponse.json(
+            {
+              error: `Image "${
+                img.originalName || `image-${i}`
+              }" is too large (${sizeMB}MB). Maximum file size is ${
+                MAX_FILE_SIZE / (1024 * 1024)
+              }MB.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Validate MIME type
+        if (!validateImageMimeType(img.mimeType)) {
+          console.warn(
+            `Invalid MIME type ${img.mimeType} for image at index ${i}`
+          );
+          await connection.rollback();
+          return NextResponse.json(
+            {
+              error: `Invalid file type for image "${
+                img.originalName || `image-${i}`
+              }". Only JPEG, PNG, WebP, and GIF are allowed.`,
+            },
+            { status: 400 }
+          );
+        }
+
+        // Generate secure filename
+        const secureFilename = generateSecureFilename(
+          img.originalName || `image-${i}`,
+          img.mimeType
+        );
+
+        // Sanitize original filename
+        const sanitizedOriginal = img.originalName
+          ? sanitizeFilename(img.originalName)
+          : `image-${i}.jpg`;
+
+        // NEW: Map variant_index to actual variant_id
+        let actualVariantId = img.variant_id || null;
+
+        if (img.variant_index !== null && img.variant_index !== undefined) {
+          // Use the variant index to get the actual variant_id
+          if (createdVariants[img.variant_index]) {
+            actualVariantId = createdVariants[img.variant_index].variant_id;
+          }
+        }
+
         await connection.query(
           `
-                INSERT INTO product_images
-                    (product_id, url, alt_text, sort_order, is_primary)
-                VALUES (?, ?, ?, ?, ?)
-                `,
+      INSERT INTO product_images
+        (product_id, variant_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
           [
             product_id,
+            actualVariantId, // Use the mapped variant_id
             img.url,
+            secureFilename,
+            sanitizedOriginal,
             img.alt_text || "",
             img.sort_order ?? i,
             img.is_primary === true || i === 0,
+            img.mimeType,
           ]
         );
       }

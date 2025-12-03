@@ -117,7 +117,7 @@ export default async function NewArrivals() {
   ));
 
   return (
-    <div className="flex flex-col pt-[50px] px-4 lg:pt-[72px] max-w-screen-2xl mx-auto">
+    <div className="flex flex-col py-[50px] px-4 lg:py-[72px] max-w-screen-2xl mx-auto">
       <h2 className="self-center font-integral leading-none text-[32px] lg:text-[40px] xl:text-[48px] font-extrabold">
         New Arrivals
       </h2>
