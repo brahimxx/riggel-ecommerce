@@ -85,7 +85,7 @@ const Header = () => {
             ${startAnim ? "riggel-fade" : ""}`}
                 />
                 <span
-                  className={`font-integral text-2xl font-bold whitespace-nowrap opacity-0 ${
+                  className={`font-integral text-[#669900] text-2xl font-bold whitespace-nowrap opacity-0 ${
                     startAnim ? "riggel-text-slide" : ""
                   }`}
                 >

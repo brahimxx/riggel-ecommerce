@@ -1,17 +1,32 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   EditOutlined,
   DeleteOutlined,
-  AppstoreAddOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  ColumnHeightOutlined,
 } from "@ant-design/icons";
-import { Button, Form, Radio, Space, Switch, Table, App } from "antd";
+import {
+  Button,
+  Space,
+  Table,
+  App,
+  Tooltip,
+  Card,
+  Segmented,
+  Typography,
+} from "antd";
 import DeletePopConfirm from "./DeletePopConfirm";
 
+const { Title } = Typography;
+
 const defaultExpandable = {
-  expandedRowRender: (record) => <p>{record.description}</p>,
+  expandedRowRender: (record) => (
+    <p className="m-0 pl-4 text-gray-500">
+      {record.description || "No description available."}
+    </p>
+  ),
 };
-const defaultTitle = () => "Here is title";
-const defaultFooter = () => "Here is footer";
 
 const DataTable = ({
   data,
@@ -22,275 +37,280 @@ const DataTable = ({
   apiBaseUrl,
   rowKeyField = "id",
   expandable = defaultExpandable,
-  showTitle = false,
-  showFooter = true,
   columnsOverride,
-  onPageChange, // ← NEW: Callback for page changes
-  onPageSizeChange, // ← NEW: Callback for page size changes
+  onPageChange,
+  onPageSizeChange,
+  onReload,
+  title = "Data Management",
 }) => {
-  const [bordered, setBordered] = useState(false);
-  const [size, setSize] = useState("large");
-  const [ellipsis, setEllipsis] = useState(false);
-  const [rowSelection, setRowSelection] = useState({});
-  const [yScroll, setYScroll] = useState(false);
-  const [xScroll, setXScroll] = useState("unset");
-  const [expandableState, setExpandable] = useState(expandable);
-  const [showTitleUI, setShowTitleUI] = useState(showTitle);
-  const [showFooterUI, setShowFooterUI] = useState(showFooter);
-
   const { message } = App.useApp();
 
-  // Extract pagination info and products array from response
+  // UI State
+  const [size, setSize] = useState("middle");
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]); // ← NEW: Track selections
+  const [batchLoading, setBatchLoading] = useState(false); // ← NEW: Loading state for bulk delete
+
+  // 1. Robust Data Extraction
   const { validData, paginationInfo } = useMemo(() => {
     if (!data) return { validData: [], paginationInfo: null };
-
-    // If data is already an array (old format)
-    if (Array.isArray(data)) {
-      return { validData: data, paginationInfo: null };
-    }
-
-    // If data has pagination structure (new format)
     if (data.products && Array.isArray(data.products)) {
       return {
         validData: data.products,
         paginationInfo: data.pagination || null,
       };
     }
-
-    // Alternative format with 'data' property
     if (data.data && Array.isArray(data.data)) {
-      return {
-        validData: data.data,
-        paginationInfo: data.pagination || null,
-      };
+      return { validData: data.data, paginationInfo: data.pagination || null };
     }
-
-    console.warn("DataTable: Unexpected data format", data);
+    if (Array.isArray(data)) {
+      return { validData: data, paginationInfo: null };
+    }
     return { validData: [], paginationInfo: null };
   }, [data]);
 
-  const showModal = (record = null) => {
-    if (record) {
-      if (typeof onEdit === "function") onEdit(record);
-    } else {
-      if (setIsModalOpen) setIsModalOpen(true);
-    }
-  };
-
-  const handleDelete = async (record) => {
-    try {
-      const id = record[rowKeyField];
-      if (!id) throw new Error("Invalid record id for deletion");
-
-      const res = await fetch(`/api/${apiBaseUrl}/${id}`, {
-        method: "DELETE",
-      });
-
+  // Helper: Core Delete Logic (Refactored to be reusable)
+  const deleteItemById = useCallback(
+    async (id) => {
+      const res = await fetch(`/api/${apiBaseUrl}/${id}`, { method: "DELETE" });
       if (!res.ok) {
         let errMsg = `Delete failed (${res.status})`;
         try {
-          const ct = res.headers.get("content-type") || "";
-          if (ct.includes("application/json")) {
-            const data = await res.json();
-            if (data?.error) errMsg = data.error;
-          } else {
-            const text = await res.text();
-            if (text) errMsg = text;
-          }
+          const json = await res.json();
+          errMsg = json?.error || errMsg;
         } catch {}
         throw new Error(errMsg);
       }
+      return true;
+    },
+    [apiBaseUrl]
+  );
 
-      let msg = `${apiBaseUrl.slice(0, -1)} deleted successfully`;
+  // 2. Single Delete Handler
+  const handleDelete = useCallback(
+    async (record) => {
       try {
-        const ct = res.headers.get("content-type") || "";
-        if (ct.includes("application/json")) {
-          const data = await res.json();
-          msg = data?.message || msg;
-        }
-      } catch {}
-
-      message.success(msg);
-
-      if (typeof onDeleteSuccess === "function") {
-        onDeleteSuccess();
+        const id = record[rowKeyField];
+        await deleteItemById(id);
+        message.success("Item deleted successfully");
+        if (typeof onDeleteSuccess === "function") onDeleteSuccess();
+      } catch (error) {
+        message.error(error.message || "Delete failed");
       }
-    } catch (error) {
-      message.error(error.message || "Delete failed");
-    }
-  };
+    },
+    [rowKeyField, deleteItemById, message, onDeleteSuccess]
+  );
 
-  const actionColumn = {
-    title: "Action",
-    key: "action",
-    sorter: true,
-    render: (_, record) => (
-      <Space size="middle">
-        <Button
-          type="primary"
-          icon={<EditOutlined />}
-          onClick={() => showModal(record)}
-        >
-          Edit
-        </Button>
-        <DeletePopConfirm
-          title="Delete"
-          description="Are you sure you want to delete this item?"
-          icon={<DeleteOutlined />}
-          onConfirm={() => handleDelete(record)}
-        />
-      </Space>
-    ),
+  // 3. ← NEW: Bulk Delete Handler
+  const handleBulkDelete = useCallback(async () => {
+    setBatchLoading(true);
+    try {
+      // Execute all deletes in parallel
+      // Note: Ideally, your backend should have a bulk delete endpoint (e.g., POST /delete-batch)
+      // But this works universally by reusing the single delete endpoint.
+      await Promise.all(selectedRowKeys.map((id) => deleteItemById(id)));
+
+      message.success(`${selectedRowKeys.length} items deleted successfully`);
+      setSelectedRowKeys([]); // Clear selection
+      if (typeof onDeleteSuccess === "function") onDeleteSuccess();
+    } catch (error) {
+      message.error("Some items could not be deleted.");
+    } finally {
+      setBatchLoading(false);
+    }
+  }, [selectedRowKeys, deleteItemById, message, onDeleteSuccess]);
+
+  const handleShowModal = useCallback(
+    (record = null) => {
+      if (record) {
+        if (typeof onEdit === "function") onEdit(record);
+      } else {
+        if (setIsModalOpen) setIsModalOpen(true);
+      }
+    },
+    [onEdit, setIsModalOpen]
+  );
+
+  // 4. ← NEW: Row Selection Configuration
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys) => setSelectedRowKeys(newSelectedRowKeys),
+    preserveSelectedRowKeys: true,
   };
 
   const columns = useMemo(() => {
-    if (columnsOverride && columnsOverride.length) {
-      return [...columnsOverride, actionColumn];
-    }
-    if (!validData || validData.length === 0) return [actionColumn];
+    const actionCol = {
+      title: "Action",
+      key: "action",
+      width: 100,
+      fixed: "right",
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="Edit">
+            <Button
+              type="text"
+              size="small"
+              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              icon={<EditOutlined />}
+              onClick={() => handleShowModal(record)}
+            />
+          </Tooltip>
+          <DeletePopConfirm
+            title="Delete"
+            description="Are you sure?"
+            icon={<DeleteOutlined className="text-red-500" />}
+            onConfirm={() => handleDelete(record)}
+          >
+            <Tooltip title="Delete">
+              <Button
+                type="text"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+              />
+            </Tooltip>
+          </DeletePopConfirm>
+        </Space>
+      ),
+    };
+
+    if (columnsOverride?.length) return [...columnsOverride, actionCol];
+    if (!validData?.length) return [actionCol];
 
     const baseCols = Object.keys(validData[0])
       .filter((key) => key !== "key" && typeof validData[0][key] !== "object")
       .map((key) => ({
-        title: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, " "),
+        title: key.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
         dataIndex: key,
         key: key,
         sorter: (a, b) => {
           const aVal = a[key] ?? "";
           const bVal = b[key] ?? "";
-          if (typeof aVal === "number" && typeof bVal === "number")
-            return aVal - bVal;
-          return String(aVal).localeCompare(String(bVal));
+          return typeof aVal === "number"
+            ? aVal - bVal
+            : String(aVal).localeCompare(String(bVal));
         },
+        ellipsis: true,
       }));
-    return [...baseCols, actionColumn];
-  }, [validData, columnsOverride]);
 
-  const handleBorderChange = (checked) => setBordered(checked);
-  const handleSizeChange = (e) => setSize(e.target.value);
-  const handleExpandChange = (checked) =>
-    setExpandable(checked ? defaultExpandable : undefined);
-  const handleEllipsisChange = (checked) => setEllipsis(checked);
-  const handleTitleChange = (checked) => setShowTitleUI(checked);
-  const handleFooterChange = (checked) => setShowFooterUI(checked);
-  const handleRowSelectionChange = (checked) =>
-    setRowSelection(checked ? {} : undefined);
-  const handleYScrollChange = (checked) => setYScroll(checked);
-  const handleXScrollChange = (e) => setXScroll(e.target.value);
+    return [...baseCols, actionCol];
+  }, [validData, columnsOverride, handleShowModal, handleDelete]);
 
-  // ← FIX: Handle pagination changes properly
-  const handleTableChange = (pagination, filters, sorter) => {
-    // Check if page changed
-    if (onPageChange && pagination.current !== paginationInfo?.page) {
-      onPageChange(pagination.current);
+  const handleTableChange = (newPagination) => {
+    const currentPage = paginationInfo?.page || 1;
+    const currentLimit = paginationInfo?.limit || 10;
+
+    if (onPageChange && newPagination.current !== currentPage) {
+      onPageChange(newPagination.current);
     }
-
-    // Check if page size changed
-    if (onPageSizeChange && pagination.pageSize !== paginationInfo?.limit) {
-      onPageSizeChange(pagination.pageSize);
+    if (onPageSizeChange && newPagination.pageSize !== currentLimit) {
+      onPageSizeChange(newPagination.pageSize);
     }
   };
 
-  const scroll = {};
-  if (yScroll) scroll.y = 240;
-  if (xScroll !== "scroll") scroll.x = "100vw";
-
-  const tableColumns = columns.map((col) => ({ ...col, ellipsis }));
-  if (xScroll === "fixed") {
-    tableColumns[0].fixed = true;
-    tableColumns[tableColumns.length - 1].fixed = "right";
-  }
-
-  // ← NEW: Configure pagination based on server response
   const paginationConfig = paginationInfo
     ? {
         current: paginationInfo.page,
         pageSize: paginationInfo.limit,
         total: paginationInfo.total,
         showSizeChanger: true,
-        showTotal: (total, range) =>
-          `${range[0]}-${range[1]} of ${total} items`,
-        pageSizeOptions: ["9", "18", "27", "50", "100"],
-        position: ["bottomRight"],
+        showTotal: (total, range) => (
+          <span className="text-gray-400 text-xs">
+            {range[0]}-{range[1]} of {total}
+          </span>
+        ),
+        pageSizeOptions: ["10", "20", "50", "100"],
       }
-    : { position: ["bottomRight"] };
-
-  const tableProps = {
-    bordered,
-    loading,
-    size,
-    expandable: expandableState,
-    title: showTitleUI ? defaultTitle : undefined,
-    footer: showFooterUI ? defaultFooter : undefined,
-    rowSelection,
-    scroll,
-    tableLayout: "unset",
-  };
+    : false;
 
   return (
-    <div className="flex flex-col">
-      <Form
-        layout="inline"
-        className="table-demo-control-bar"
-        style={{ marginBottom: 16 }}
-      >
-        <Form.Item label="Bordered">
-          <Switch checked={bordered} onChange={handleBorderChange} />
-        </Form.Item>
-        <Form.Item label="Title">
-          <Switch checked={showTitleUI} onChange={handleTitleChange} />
-        </Form.Item>
-        <Form.Item label="Footer">
-          <Switch checked={showFooterUI} onChange={handleFooterChange} />
-        </Form.Item>
-        <Form.Item label="Expandable">
-          <Switch checked={!!expandableState} onChange={handleExpandChange} />
-        </Form.Item>
-        <Form.Item label="Checkbox">
-          <Switch
-            checked={!!rowSelection}
-            onChange={handleRowSelectionChange}
-          />
-        </Form.Item>
-        <Form.Item label="Ellipsis">
-          <Switch checked={!!ellipsis} onChange={handleEllipsisChange} />
-        </Form.Item>
-        <Form.Item label="Size">
-          <Radio.Group value={size} onChange={handleSizeChange}>
-            <Radio.Button value="large">Large</Radio.Button>
-            <Radio.Button value="middle">Middle</Radio.Button>
-            <Radio.Button value="small">Small</Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-        <Form.Item label="Table Scroll">
-          <Radio.Group value={xScroll} onChange={handleXScrollChange}>
-            <Radio.Button value="unset">Unset</Radio.Button>
-            <Radio.Button value="scroll">Scroll</Radio.Button>
-            <Radio.Button value="fixed">Fixed Columns</Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-      </Form>
+    <Card
+      className="shadow-sm border-gray-100 rounded-lg"
+      styles={{ body: { padding: 0 } }}
+      variant={false}
+    >
+      <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex items-center gap-4">
+          <Title level={4} style={{ margin: 0, fontSize: "1.1rem" }}>
+            {title}
+          </Title>
 
-      <div className="w-[80px] mb-5 self-end mr-4">
-        <Button
-          type="primary"
-          icon={<AppstoreAddOutlined />}
-          onClick={() => setIsModalOpen && setIsModalOpen(true)}
-        >
-          Add
-        </Button>
+          {/* ← NEW: Batch Selection Indicator */}
+          {selectedRowKeys.length > 0 && (
+            <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-xs font-medium border border-blue-100">
+              {selectedRowKeys.length} Selected
+            </span>
+          )}
+        </div>
+
+        <Space wrap>
+          {/* ← NEW: Bulk Delete Button (Only visible when selecting) */}
+          {selectedRowKeys.length > 0 && (
+            <DeletePopConfirm
+              title={`Delete ${selectedRowKeys.length} Items?`}
+              description="This action cannot be undone."
+              onConfirm={handleBulkDelete}
+              okText="Yes, Delete All"
+            >
+              <Button
+                danger
+                type="primary"
+                loading={batchLoading}
+                icon={<DeleteOutlined />}
+              >
+                Delete ({selectedRowKeys.length})
+              </Button>
+            </DeletePopConfirm>
+          )}
+
+          <Tooltip title="Table Density">
+            <Segmented
+              options={[
+                {
+                  value: "large",
+                  icon: <ColumnHeightOutlined className="rotate-90" />,
+                },
+                { value: "middle", icon: <ColumnHeightOutlined /> },
+                {
+                  value: "small",
+                  icon: <ColumnHeightOutlined className="-rotate-90" />,
+                },
+              ]}
+              value={size}
+              onChange={setSize}
+            />
+          </Tooltip>
+
+          {onReload && (
+            <Tooltip title="Refresh Data">
+              <Button icon={<ReloadOutlined />} onClick={onReload} />
+            </Tooltip>
+          )}
+
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => handleShowModal(null)}
+            className="bg-blue-600 hover:bg-blue-500"
+          >
+            Add New
+          </Button>
+        </Space>
       </div>
 
       <Table
-        {...tableProps}
-        pagination={paginationConfig}
-        columns={tableColumns}
+        loading={loading}
+        columns={columns}
         dataSource={validData}
         rowKey={(record) => record[rowKeyField]}
-        scroll={scroll}
+        pagination={paginationConfig}
         onChange={handleTableChange}
+        size={size}
+        expandable={expandable} // Use prop passed from parent
+        rowSelection={rowSelection} // ← NEW: Enable selection
+        scroll={{ x: "max-content" }}
+        className="w-full"
       />
-    </div>
+    </Card>
   );
 };
 

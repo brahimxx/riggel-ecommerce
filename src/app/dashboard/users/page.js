@@ -1,10 +1,10 @@
+// app/dashboard/pages/Users.js
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { Modal, Alert } from "antd";
+import { Modal, Alert, App } from "antd";
 import DataTable from "../components/DataTable";
 import UserForm from "../components/UserForm";
-// MODIFICATION: Import your new API helpers
-import { getUsers, getUserById, getRoles } from "@/lib/api";
+import { getUsers, getUserById } from "@/lib/api";
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -12,23 +12,16 @@ const Users = () => {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [roles, setRoles] = useState([]);
 
+  const { message } = App.useApp();
   const isMounted = useRef(true);
 
-  // MODIFICATION: The fetchData function is now cleaner and fetches roles.
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch users and roles in parallel
-      const [usersData, rolesData] = await Promise.all([
-        getUsers(),
-        getRoles(), // Assumes you have roles to pass to the form
-      ]);
-
+      const [usersData] = await Promise.all([getUsers()]);
       if (isMounted.current) {
         setUsers(usersData || []);
-        setRoles(rolesData || []);
       }
     } catch (err) {
       if (isMounted.current) {
@@ -44,7 +37,6 @@ const Users = () => {
   useEffect(() => {
     isMounted.current = true;
     fetchData();
-
     return () => {
       isMounted.current = false;
     };
@@ -62,9 +54,11 @@ const Users = () => {
     fetchData();
     setIsModalOpen(false);
     setEditingUser(null);
+    message.success(
+      editingUser ? "User updated successfully" : "User created successfully"
+    );
   };
 
-  // MODIFICATION: Using the new 'getUserById' helper function.
   const handleEditUser = async (user) => {
     if (!isMounted.current) return;
     setLoading(true);
@@ -81,18 +75,31 @@ const Users = () => {
     }
   };
 
+  const handleAddNew = () => {
+    setEditingUser(null);
+    setIsModalOpen(true);
+  };
+
   return (
     <div>
       {error && (
-        <Alert message="Error" description={error} type="error" showIcon />
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          className="mb-4"
+        />
       )}
 
       <DataTable
         data={users}
+        title="Users"
         loading={loading}
-        setIsModalOpen={setIsModalOpen}
+        setIsModalOpen={handleAddNew} // Use helper to clear editingUser
         onEdit={handleEditUser}
         onDeleteSuccess={fetchData}
+        onReload={fetchData} // <--- ADDED THIS
         apiBaseUrl="users"
         rowKeyField="id"
       />
@@ -104,11 +111,7 @@ const Users = () => {
         footer={null}
         width={600}
       >
-        <UserForm
-          user={editingUser}
-          onSuccess={handleSuccess}
-          roles={roles} // Pass roles to the form
-        />
+        <UserForm user={editingUser} onSuccess={handleSuccess} />
       </Modal>
     </div>
   );

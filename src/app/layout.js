@@ -5,11 +5,22 @@ import { ConfigProvider, App } from "antd";
 
 const customTheme = {
   token: {
-    colorPrimary: "black",
+    colorPrimary: "#669900",
     colorSuccess: "#52c41a",
     colorWarning: "#faad14",
     colorError: "#f5222d",
     colorInfo: "black",
+  },
+  components: {
+    Menu: {
+      // When an item is selected, make the text white
+      itemSelectedColor: "white",
+      // When an item is selected, make the background black
+      itemSelectedBg: "#669900",
+      // Optional: Change hover color if needed
+      itemHoverColor: "#000000",
+      itemHoverBg: "rgba(0, 0, 0, 0.06)",
+    },
   },
 };
 

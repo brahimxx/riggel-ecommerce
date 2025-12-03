@@ -1,9 +1,10 @@
+// app/dashboard/pages/Sales.js
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { Modal, Alert } from "antd";
+import { Modal, Alert, App } from "antd";
 import DataTable from "../components/DataTable";
 import SalesForm from "../components/SalesForm";
-import { getSales, getSaleById } from "@/lib/api"; // You'll create these API helpers
+import { getSales, getSaleById } from "@/lib/api";
 
 const Sales = () => {
   const [sales, setSales] = useState([]);
@@ -12,6 +13,8 @@ const Sales = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
   const isMounted = useRef(true);
+
+  const { message } = App.useApp();
 
   const fetchData = async () => {
     setLoading(true);
@@ -45,6 +48,9 @@ const Sales = () => {
     fetchData();
     setIsModalOpen(false);
     setEditingSale(null);
+    message.success(
+      editingSale ? "Sale updated successfully" : "Sale created successfully"
+    );
   };
 
   const handleEditSale = async (sale) => {
@@ -63,17 +69,31 @@ const Sales = () => {
     }
   };
 
+  // Ensure we clear editing state when opening modal for "Add New"
+  const handleAddNew = () => {
+    setEditingSale(null);
+    setIsModalOpen(true);
+  };
+
   return (
     <div>
       {error && (
-        <Alert message="Error" description={error} type="error" showIcon />
+        <Alert
+          message="Error"
+          description={error}
+          type="error"
+          showIcon
+          className="mb-4"
+        />
       )}
       <DataTable
         data={sales}
+        title="Sales"
         loading={loading}
-        setIsModalOpen={setIsModalOpen}
+        setIsModalOpen={handleAddNew} // Use helper to clear editingSale
         onEdit={handleEditSale}
         onDeleteSuccess={fetchData}
+        onReload={fetchData} // <--- ADDED THIS
         apiBaseUrl="sales"
         rowKeyField="id"
       />

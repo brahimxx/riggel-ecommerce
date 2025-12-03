@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react"; // Import Suspense
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
@@ -83,7 +83,8 @@ const OrderSummaryCard = ({ product }) => {
   );
 };
 
-const ThankYou = () => {
+// 1. Isolate the logic that uses useSearchParams into its own component
+const ThankYouContent = () => {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -137,7 +138,6 @@ const ThankYou = () => {
     }));
   }, [order]);
 
-  // Numeric subtotal
   const subtotalNumber = useMemo(
     () =>
       cartItems.reduce(
@@ -149,7 +149,6 @@ const ThankYou = () => {
   );
   const subtotal = subtotalNumber.toFixed(2);
 
-  // Same tax and shipping logic as checkout
   const taxNumber = useMemo(() => subtotalNumber * 0.011, [subtotalNumber]);
   const taxFormatted = taxNumber.toFixed(2);
 
@@ -161,7 +160,6 @@ const ThankYou = () => {
 
   const discount = 0;
 
-  // Total from DB is the source of truth; fall back to recomputed
   const totalAmount = order
     ? Number(order.total_amount).toFixed(2)
     : (subtotalNumber + taxNumber + shippingCostNumber).toFixed(2);
@@ -222,7 +220,6 @@ const ThankYou = () => {
 
           <hr className="my-4 border-gray-200" />
 
-          {/* Totals with full breakdown */}
           <div className="flex flex-col gap-2 text-sm sm:text-base">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
@@ -255,4 +252,20 @@ const ThankYou = () => {
   );
 };
 
-export default ThankYou;
+// 2. Create the Page Component that wraps the content in Suspense
+const ThankYouPage = () => {
+  return (
+    // Fallback UI shown while search params are being read on client
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          Loading...
+        </div>
+      }
+    >
+      <ThankYouContent />
+    </Suspense>
+  );
+};
+
+export default ThankYouPage;

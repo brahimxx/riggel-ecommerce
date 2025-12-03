@@ -26,30 +26,39 @@ const DashboardLayout = ({ children }) => {
   const [startAnim, setStartAnim] = useState(false);
 
   useEffect(() => {
-    // If page is already fully loaded (e.g. fast reload), start immediately
     if (document.readyState === "complete") {
       setStartAnim(true);
       return;
     }
-
-    // Otherwise wait for the real window "load" event
     const handleLoad = () => setStartAnim(true);
     window.addEventListener("load", handleLoad);
-
     return () => window.removeEventListener("load", handleLoad);
   }, []);
 
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { borderRadiusLG },
   } = theme.useToken();
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider trigger={null} collapsible collapsed={collapsed}>
-        <div className="bg-white h-[64px] pl-6 pr-4 flex items-center shadow-[0_0px_0px_-10px_rgba(0,0,0,0.6)]">
+      {/* STICKY SIDER */}
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        style={{
+          overflow: "auto",
+          height: "100vh",
+          position: "sticky",
+          top: 0,
+          left: 0,
+          zIndex: 101, // Higher than header if they overlap, though usually side-by-side
+          background: "white",
+        }}
+      >
+        <div className=" h-[64px]  border-b-1 border-[#e6e6e6] pl-6 pr-4 flex items-center sticky top-0 z-50">
           <Link href="/dashboard" className="flex items-center overflow-hidden">
-            {/* Fixed-width wrapper for R logo */}
-            <div className="bg-white z-10 w-[30px] h-[30px] flex-shrink-0">
+            <div className="bg-white z-10 w-[30px] h-[30px] flex-shrink-0 ">
               <Image
                 src="/logo.png"
                 alt="Riggel Logo"
@@ -58,17 +67,14 @@ const DashboardLayout = ({ children }) => {
                 priority
               />
             </div>
-
-            {/* Wrapper for fade + text */}
-            <div className="relative flex items-center">
-              {/* Static fade strip from right edge of the image */}
+            <div className="relative flex items-center ">
               <div
                 className={`z-20 pointer-events-none absolute left-0 top-0 h-full w-8 ${
                   startAnim ? "riggel-fade" : ""
                 }`}
               />
               <span
-                className={`font-integral text-2xl font-bold whitespace-nowrap opacity-0 w-0 overflow-hidden transition-all duration-500 ease-in-out ${
+                className={`text-[#669900]  font-integral text-2xl font-bold whitespace-nowrap opacity-0 w-0 overflow-hidden transition-all duration-500 ease-in-out ${
                   startAnim && !collapsed
                     ? "riggel-text-slide opacity-100 w-auto delay-150"
                     : ""
@@ -81,7 +87,6 @@ const DashboardLayout = ({ children }) => {
         </div>
 
         <Menu
-          theme="dark"
           mode="inline"
           selectedKeys={[pathname]}
           items={[
@@ -118,10 +123,19 @@ const DashboardLayout = ({ children }) => {
           ]}
         />
       </Sider>
+
       <Layout>
+        {/* STICKY HEADER */}
         <Header
-          style={{ padding: 0, background: colorBgContainer }}
-          className="flex justify-between !pr-5 shadow-[0_0px_0px_-10px_rgba(0,0,0,0.6)]"
+          style={{
+            padding: 0,
+            background: "white",
+            position: "sticky",
+            top: 0,
+            zIndex: 100,
+            width: "100%",
+          }}
+          className="flex justify-between !pr-5 border-b-1 !border-[#e6e6e6] "
         >
           <Button
             type="text"
@@ -135,13 +149,12 @@ const DashboardLayout = ({ children }) => {
           />
           <ProfileMenu />
         </Header>
+
         <Content
           style={{
-            margin: "24px 16px",
-            padding: 24,
-            minHeight: 280,
-            background: colorBgContainer,
+            margin: "16px 16px",
             borderRadius: borderRadiusLG,
+            overflow: "initial", // Allow content to scroll naturally
           }}
         >
           {children}

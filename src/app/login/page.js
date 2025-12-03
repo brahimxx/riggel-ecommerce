@@ -1,16 +1,33 @@
 "use client";
 import "@ant-design/v5-patch-for-react-19";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { LockOutlined, UserOutlined } from "@ant-design/icons";
-import { Button, Checkbox, Form, Input, Flex, Alert, App } from "antd";
+import { Button, Checkbox, Form, Input, Flex, Alert } from "antd";
 
 const LoginPage = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const { message } = App.useApp();
+
+  // Animation State
+  const [startAnim, setStartAnim] = useState(false);
+
+  useEffect(() => {
+    if (document.readyState === "complete") {
+      setStartAnim(true);
+    } else {
+      const handleLoad = () => setStartAnim(true);
+      window.addEventListener("load", handleLoad);
+      return () => window.removeEventListener("load", handleLoad);
+    }
+    // Fallback
+    const timer = setTimeout(() => setStartAnim(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const onFinish = async (values) => {
     setLoading(true);
     setError(null);
@@ -28,8 +45,6 @@ const LoginPage = () => {
         throw new Error(data.error || "Login failed. Please try again.");
       }
 
-      message?.success("Login successful! Redirecting...");
-      // Redirect to the dashboard or another protected page
       router.push("/dashboard");
     } catch (err) {
       setError(err.message);
@@ -38,64 +53,150 @@ const LoginPage = () => {
     }
   };
 
+  // We use a light gray background for the page
+  const pageBg = "#f9fafb"; // Tailwind gray-50
+
   return (
-    <Form
-      name="login"
-      initialValues={{ remember: true }}
-      style={{ maxWidth: 360, margin: "auto", paddingTop: "100px" }}
-      onFinish={onFinish}
-    >
-      {error && (
-        <Alert
-          message={error}
-          type="error"
-          showIcon
-          style={{ marginBottom: 24 }}
-        />
-      )}
+    <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 py-12 sm:px-6 lg:px-8">
+      {/* ANIMATED LOGO AREA */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md flex justify-center mb-10">
+        {/* 
+            EXACT STRUCTURE FROM HEADER 
+            Scaled up slightly (scale-125) for visibility, but structure remains identical.
+        */}
+        <div className="flex items-center overflow-hidden transform scale-125 origin-center">
+          {/* R logo container */}
+          {/* IMPORTANT: bg-transparent here so it sits on the page bg, 
+              OR match page bg if riggel-logo-bg relies on it */}
+          <div className={`z-10 relative ${startAnim ? "riggel-logo-bg" : ""}`}>
+            {/* Ensure the image sits on top of the gray background cleanly */}
+            <div className="bg-gray-50 z-10 relative">
+              <Image
+                src="/logo.png"
+                alt="Riggel Logo"
+                width={40}
+                height={40}
+                priority
+              />
+            </div>
+          </div>
 
-      <Form.Item
-        name="username"
-        rules={[{ required: true, message: "Please input your Username!" }]}
-      >
-        <Input prefix={<UserOutlined />} placeholder="Username" size="large" />
-      </Form.Item>
+          {/* Wrapper for fade + text */}
+          <div className="relative flex items-center">
+            {/* 
+               Static fade strip 
+               CRITICAL FIX: The background must match the PAGE background (gray-50 / #f9fafb)
+               otherwise the 'fade' looks like a white box.
+            */}
+            <div
+              className={`z-20 pointer-events-none absolute left-0 top-0 h-full w-8 ${
+                startAnim ? "riggel-fade" : ""
+              }`}
+              style={{
+                background: `linear-gradient(to right, ${pageBg}, transparent)`,
+              }}
+            />
 
-      <Form.Item
-        name="password"
-        rules={[{ required: true, message: "Please input your Password!" }]}
-      >
-        <Input.Password
-          prefix={<LockOutlined />}
-          placeholder="Password"
-          size="large"
-        />
-      </Form.Item>
-
-      <Form.Item>
-        <Flex justify="space-between" align="center">
-          <Form.Item name="remember" valuePropName="checked" noStyle>
-            <Checkbox>Remember me</Checkbox>
-          </Form.Item>
-          <Link href="/forgot-password">Forgot password</Link>
-        </Flex>
-      </Form.Item>
-
-      <Form.Item>
-        <Button
-          block
-          type="primary"
-          htmlType="submit"
-          loading={loading}
-          size="large"
-        >
-          {loading ? "Logging in..." : "Log in"}
-        </Button>
-        <div style={{ marginTop: "8px", textAlign: "center" }}>
-          or <Link href="/register">Register now!</Link>
+            <span
+              className={`font-integral text-[#669900] text-2xl font-bold whitespace-nowrap opacity-0 ${
+                startAnim ? "riggel-text-slide" : ""
+              }`}
+            >
+              iggel
+            </span>
+          </div>
         </div>
-      </Form.Item>
-    </Form>
+      </div>
+
+      {/* LOGIN FORM */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <Form
+            name="login"
+            initialValues={{ remember: true }}
+            layout="vertical"
+            onFinish={onFinish}
+            size="large"
+          >
+            <h2 className="mt-0 mb-6 text-center text-2xl font-bold tracking-tight text-gray-900">
+              Sign in
+            </h2>
+
+            {error && (
+              <Alert message={error} type="error" showIcon className="!mb-3" />
+            )}
+
+            <Form.Item
+              name="username"
+              rules={[
+                { required: true, message: "Please input your Username!" },
+              ]}
+            >
+              <Input
+                prefix={<UserOutlined className="text-gray-400" />}
+                placeholder="Username"
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="password"
+              rules={[
+                { required: true, message: "Please input your Password!" },
+              ]}
+            >
+              <Input.Password
+                prefix={<LockOutlined className="text-gray-400" />}
+                placeholder="Password"
+              />
+            </Form.Item>
+
+            <Form.Item>
+              <Flex justify="space-between" align="center">
+                <Form.Item name="remember" valuePropName="checked" noStyle>
+                  <Checkbox>Remember me</Checkbox>
+                </Form.Item>
+                <Link
+                  href="/forgot-password"
+                  className="text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Forgot password?
+                </Link>
+              </Flex>
+            </Form.Item>
+
+            <Form.Item className="mb-4">
+              <Button
+                block
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                className="bg-black hover:!bg-gray-800 border-none h-10 font-medium"
+              >
+                {loading ? "Logging in..." : "Log in"}
+              </Button>
+            </Form.Item>
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">or</span>
+              </div>
+            </div>
+
+            <div className="mt-4 text-center">
+              <Link
+                href="/register"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Register now!
+              </Link>
+            </div>
+          </Form>
+        </div>
+      </div>
+    </div>
   );
 };
 
