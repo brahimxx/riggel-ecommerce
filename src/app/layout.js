@@ -1,7 +1,7 @@
 // src/app/layout.js
 import AntdStyledComponentsRegistry from "../components/AntdStyledComponentsRegistry";
 import "./styles/globals.css";
-import { ConfigProvider, App } from "antd";
+import { ConfigProvider } from "antd";
 
 const customTheme = {
   token: {
@@ -38,7 +38,7 @@ export default function RootLayout({ children }) {
       <body>
         <ConfigProvider theme={customTheme}>
           <AntdStyledComponentsRegistry>
-            <App>{children}</App>
+            {children}
           </AntdStyledComponentsRegistry>
         </ConfigProvider>
       </body>

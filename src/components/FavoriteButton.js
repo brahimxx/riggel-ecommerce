@@ -56,46 +56,6 @@ const FavoriteButton = ({ product, className = "!text-2xl" }) => {
           />
         )}
       </span>
-      <style jsx>{`
-        .animate-pop {
-          animation: popFade 0.4s cubic-bezier(0.42, 0, 0.58, 1);
-        }
-        @keyframes popFade {
-          0% {
-            transform: scale(1) rotate(0deg);
-            opacity: 0.6;
-            filter: drop-shadow(0 0 0 #e11d48);
-          }
-          40% {
-            transform: scale(1.4) rotate(-10deg);
-            opacity: 1;
-            filter: drop-shadow(0 0 8px #e11d48);
-          }
-          70% {
-            transform: scale(1.15) rotate(7deg);
-            opacity: 1;
-          }
-          100% {
-            transform: scale(1) rotate(0deg);
-            opacity: 1;
-            filter: none;
-          }
-        }
-        .animate-pulse {
-          animation: pulseHeart 0.5s cubic-bezier(0.42, 0, 0.58, 1);
-        }
-        @keyframes pulseHeart {
-          0% {
-            transform: scale(1);
-          }
-          50% {
-            transform: scale(1.25);
-          }
-          100% {
-            transform: scale(1);
-          }
-        }
-      `}</style>
     </AntdClientPatch>
   );
 };

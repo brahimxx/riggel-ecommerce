@@ -4,6 +4,7 @@ import ProductShowcase from "@/components/ProductShowcase";
 import ProductReviewsTab from "@/components/ProductReviewsTab";
 import YouMightAlsoLike from "@/components/YouMightAlsoLike";
 import pool from "@/lib/db";
+import { App } from "antd";
 
 // SERVER COMPONENT: fetch product directly from database
 async function getProduct(slug) {
@@ -153,7 +154,9 @@ export default async function ProductPage({ params }) {
   return (
     <>
       <div className="flex flex-col max-w-screen-2xl mx-auto px-4 overflow-hidden">
-        <ProductShowcase product={product} />
+        <App>
+          <ProductShowcase product={product} />
+        </App>
         <ProductTabs>{tabs}</ProductTabs>
       </div>
       <YouMightAlsoLike />

@@ -3,6 +3,7 @@ import { Rate } from "antd";
 import Link from "next/link";
 import FavoriteButton from "@/components/FavoriteButton";
 import React from "react";
+import { App } from "antd";
 
 // Custom comparison function for deep object comparison
 const arePropsEqual = (prevProps, nextProps) => {
@@ -114,9 +115,9 @@ const ProductCard = React.memo(({ product }) => {
 
   return (
     <div className="mx-auto relative max-[325px]:w-[280px] w-[290px] md:min-w-[310px] lg:min-w-[250px] lg:w-auto xl:max-w-[300px]">
-      <div className="absolute z-1 right-4 top-4">
+      <App className="absolute z-1 right-4 top-4">
         <FavoriteButton product={product} />
-      </div>
+      </App>
 
       {/* Calculate Out of Stock status once */}
       {(() => {
