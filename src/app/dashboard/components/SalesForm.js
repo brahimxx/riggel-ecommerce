@@ -124,13 +124,12 @@ const SalesForm = ({ sale, onSuccess }) => {
             <Select
               placeholder="Select type"
               className="h-10"
-              popupClassName="rounded-lg shadow-lg"
+              classNames={{ popup: { root: "rounded-lg shadow-lg" } }}
             >
               <Option value="percentage">Percentage (%)</Option>
               <Option value="fixed">Fixed Amount ($)</Option>
             </Select>
           </Form.Item>
-
           <Form.Item
             name="discount_value"
             label={<span className="font-medium text-gray-700">Value</span>}
