@@ -137,7 +137,7 @@ export default async function YouMightAlsoLike() {
 
       <Link
         href="/shop?sortBy=orders_desc"
-        className="self-center font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-full lg:w-[180px] border border-black/20 rounded-full text-sm py-[10px] text-center"
+        className="self-center font-semibold text-black hover:text-white hover:bg-black cursor-pointer w-[50%] lg:w-[180px] border border-black/20 rounded-full text-sm py-[10px] text-center"
       >
         View All
       </Link>

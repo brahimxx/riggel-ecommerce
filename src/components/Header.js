@@ -13,17 +13,21 @@ const Header = () => {
   const [startAnim, setStartAnim] = useState(false);
 
   useEffect(() => {
-    // If page is already fully loaded (e.g. fast reload), start immediately
+    const triggerAnimation = () => {
+      // Force browser to paint initial state before animation
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setStartAnim(true);
+        });
+      });
+    };
+
     if (document.readyState === "complete") {
-      setStartAnim(true);
-      return;
+      triggerAnimation();
+    } else {
+      window.addEventListener("load", triggerAnimation);
+      return () => window.removeEventListener("load", triggerAnimation);
     }
-
-    // Otherwise wait for the real window "load" event
-    const handleLoad = () => setStartAnim(true);
-    window.addEventListener("load", handleLoad);
-
-    return () => window.removeEventListener("load", handleLoad);
   }, []);
 
   const toggleDrawer = () => {
@@ -85,7 +89,7 @@ const Header = () => {
             ${startAnim ? "riggel-fade" : ""}`}
                 />
                 <span
-                  className={`font-integral text-[#669900] text-2xl font-bold whitespace-nowrap opacity-0 ${
+                  className={`font-integral text-[#669900] ml-[2px] text-2xl font-bold whitespace-nowrap opacity-0 ${
                     startAnim ? "riggel-text-slide" : ""
                   }`}
                 >

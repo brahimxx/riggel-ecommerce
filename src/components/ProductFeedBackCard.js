@@ -11,16 +11,18 @@ function formatPostedDate(dateString) {
 const ProductFeedBackCard = ({ name, rating, comment, date }) => {
   return (
     <>
-      <div className="flex flex-col flex-shrink-0 border-1 border-gray-300/40 w-[98%] p-[25px]  h-[224px] lg:h-[260px] xl:h-[280px] lg:gap-5 rounded-[26px] hover:shadow-md transition-shadow duration-300 cursor-pointer justify-center">
-        <div className="relative">
-          <Rate disabled allowHalf defaultValue={Number(rating) || 0} />
-        </div>
-        <div className="flex flex-row justify-between items-center">
-          <div className="flex flex-col">
-            <span className="flex items-center gap-2 text-[18px] font-bold  lg:text-[20px]">
-              {name}
-              <CheckCircleFilled className="!text-[#01AB31]" />
-            </span>
+      <div className="flex flex-col flex-shrink-0 border-1 border-gray-300/40 w-[98%] p-[25px]  h-[224px] lg:h-[260px] xl:h-[280px] lg:gap-5 rounded-[26px] hover:shadow-md transition-shadow duration-300 cursor-pointer justify-between">
+        <div>
+          <div className="relative">
+            <Rate disabled allowHalf defaultValue={Number(rating) || 0} />
+          </div>
+          <div className="flex flex-row justify-between items-center">
+            <div className="flex flex-col">
+              <span className="flex items-center gap-2 text-[18px] font-bold  lg:text-[20px]">
+                {name}
+                <CheckCircleFilled className="!text-[#01AB31]" />
+              </span>
+            </div>
           </div>
         </div>
 

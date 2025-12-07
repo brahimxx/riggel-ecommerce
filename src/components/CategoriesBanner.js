@@ -4,7 +4,7 @@ import Link from "next/link";
 const CategoriesBanner = () => {
   return (
     <div className="mx-4">
-      <div className="flex flex-col xl:h-[800px] bg-[#F0F0F0] rounded-3xl max-w-screen-2xl xl:mx-auto pt-[70px] pb-[20px] xl:pb-auto xl:pt-auto lg:py-[40px] px-[24px] lg:px-[44px] xl:px-[64px] gap-[64px]">
+      <div className="flex flex-col xl:h-[800px] bg-[#F0F0F0] rounded-3xl max-w-screen-2xl xl:mx-auto py-[30px] xl:pb-auto xl:pt-auto lg:py-[40px] px-[24px] lg:px-[44px] xl:px-[64px] gap-[40px]">
         <h2 className="self-center font-integral leading-none text-[32px] lg:text-[40px] xl:text-[48px] font-extrabold">
           Browse by dress style
         </h2>
