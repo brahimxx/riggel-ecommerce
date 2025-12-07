@@ -1,29 +1,5 @@
 @import "tailwindcss";
 
-@font-face {
-  font-family: "Integral CF";
-  src: url("/fonts/integralcf/Integral CF.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-}
-
-.font-integral {
-  font-family: "Integral CF", sans-serif;
-}
-
-@font-face {
-  font-family: "Satoshi Variable";
-  src: url("/fonts/satoshi/Satoshi-Variable.ttf") format("truetype-variations");
-  font-weight: 100 900; /* Use full weight range */
-  font-style: normal;
-  font-display: swap;
-}
-
-body {
-  font-family: "Satoshi Variable", sans-serif;
-  font-weight: 400;
-}
-
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -45,6 +21,12 @@ body {
 }
 
 @theme {
+  /* Usage: class="font-integral" */
+  --font-integral: var(--font-integral);
+
+  /* Usage: class="font-sans" (Default font) */
+  --font-sans: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+
   /* text slide animation */
   --animate-riggel-text-slide: riggel-text-slide 0.8s ease-out 0.2s forwards;
 

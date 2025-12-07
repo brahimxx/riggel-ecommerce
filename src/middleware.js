@@ -3,48 +3,115 @@ import { jwtVerify } from "jose";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
+/**
+ * Helper to determine if an API route is public.
+ * Now handles trailing slashes and method checks more robustly.
+ */
+function isPublicApiRoute(pathname, method) {
+  // Normalize path: remove trailing slash
+  const path =
+    pathname.endsWith("/") && pathname.length > 1
+      ? pathname.slice(0, -1)
+      : pathname;
+
+  // --- 1. Authentication & Users ---
+
+  // ✅ FIX: Allow your specific login route
+  if (path === "/api/auth/login" && method === "POST") return true;
+
+  // Allow registration (if handled via POST /api/users)
+  if (path === "/api/users" && method === "POST") return true;
+
+  // --- 2. Orders (GET Public) ---
+  if (
+    (path === "/api/orders" || path.startsWith("/api/orders/")) &&
+    method === "GET"
+  ) {
+    return true;
+  }
+
+  // --- 3. Products (GET List & By-ID Public) ---
+  if (method === "GET") {
+    if (path === "/api/products") return true;
+    if (path.startsWith("/api/products/by-id/")) return true;
+  }
+
+  // --- 4. Strict List-Only GETs ---
+  if (method === "GET") {
+    const publicListRoutes = [
+      "/api/attributes",
+      "/api/categories",
+      "/api/sales",
+    ];
+    if (publicListRoutes.includes(path)) return true;
+  }
+
+  return false;
+}
+
 export async function middleware(req) {
   const token = req.cookies.get("auth-token")?.value;
   const { pathname } = req.nextUrl;
+  const method = req.method;
 
-  // If trying to access public auth pages, let them through.
-  if (["/login"].includes(pathname)) {
+  // --- 0. Allow Preflight (CORS) Requests ---
+  // If the browser sends an OPTIONS request, let it pass so CORS headers can be sent.
+  if (method === "OPTIONS") {
     return NextResponse.next();
   }
 
-  // If no token and not on a public page, redirect to login.
+  // --- 1. Public Access Check ---
+
+  // Allow Pages: Login
+  if (pathname === "/login") {
+    return NextResponse.next();
+  }
+
+  // Allow API: Check specific public rules
+  if (pathname.startsWith("/api") && isPublicApiRoute(pathname, method)) {
+    return NextResponse.next();
+  }
+
+  // --- 2. Authentication Verification ---
+
   if (!token) {
+    // Hybrid Response: JSON for API, Redirect for UI
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json(
+        { error: "Unauthorized: Login required" },
+        { status: 401 }
+      );
+    }
     const loginUrl = new URL("/login", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
   try {
-    // Verify the token and get the user's role from the payload.
     const { payload } = await jwtVerify(token, SECRET);
-    const userRole = payload.role; // Assumes your JWT payload has a 'role' property
+    const userRole = payload.role;
 
-    // --- Role-Based Access Control ---
-
-    // Example: Admins and Editors can access routes under /dashboard
+    // --- 3. Role-Based Access Control ---
     if (pathname.startsWith("/dashboard")) {
       if (!["admin", "editor"].includes(userRole)) {
-        const forbiddenUrl = new URL("/forbidden", req.url);
-        return NextResponse.redirect(forbiddenUrl);
+        return NextResponse.redirect(new URL("/forbidden", req.url));
       }
     }
 
-    // If all checks pass, allow the request to proceed.
     return NextResponse.next();
   } catch (error) {
-    // If token verification fails (e.g., expired, invalid), redirect to login.
-    console.error("JWT Verification Error:", error.message);
+    if (pathname.startsWith("/api")) {
+      return NextResponse.json(
+        { error: "Invalid or expired token" },
+        { status: 401 }
+      );
+    }
+
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("error", "session_expired");
     return NextResponse.redirect(loginUrl);
   }
 }
 
-// Config to specify which paths the middleware should run on.
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ["/dashboard/:path*", "/api/:path*"],
 };
