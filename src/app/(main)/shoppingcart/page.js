@@ -284,6 +284,7 @@ const ShoppingCart = () => {
       }
 
       const result = await res.json();
+      clearCart();
       router.push(`/thankyou?token=${result.order_token}`);
     } catch (err) {
       setError(err.message);
@@ -374,7 +375,6 @@ const ShoppingCart = () => {
                 <input
                   type="text"
                   id="name"
-                  defaultValue="yaw aw"
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your full name"
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
@@ -383,7 +383,6 @@ const ShoppingCart = () => {
                 <input
                   type="tel"
                   id="phone"
-                  defaultValue="1234567890"
                   placeholder="Your phone number"
                   onChange={(e) => setPhone(e.target.value)}
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"
@@ -419,7 +418,6 @@ const ShoppingCart = () => {
                 <input
                   type="text"
                   id="town"
-                  defaultValue="yaw aw"
                   placeholder="Your town"
                   onChange={(e) => setTown(e.target.value)}
                   className="block w-full p-2 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:outline-black"

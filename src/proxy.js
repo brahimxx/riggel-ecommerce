@@ -8,40 +8,40 @@ const SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
  * Now handles trailing slashes and method checks more robustly.
  */
 function isPublicApiRoute(pathname, method) {
-  // Normalize path: remove trailing slash
   const path =
     pathname.endsWith("/") && pathname.length > 1
       ? pathname.slice(0, -1)
       : pathname;
 
   // --- 1. Authentication & Users ---
-
-  // ✅ FIX: Allow your specific login route
   if (path === "/api/auth/login" && method === "POST") return true;
-
-  // Allow registration (if handled via POST /api/users)
   if (path === "/api/users" && method === "POST") return true;
 
-  // --- 2. Orders (GET Public) ---
-  if (
-    (path === "/api/orders" || path.startsWith("/api/orders/")) &&
-    method === "GET"
-  ) {
+  // --- 2. Orders (The Logical Fix) ---
+
+  // ✅ Allow Guest Checkout (POST)
+  if (path === "/api/orders" && method === "POST") return true;
+
+  // ✅ Allow Guest Tracking (GET Detail)
+  // Logic: Allow /api/orders/xyz, but BLOCK /api/orders (the list)
+  if (path.startsWith("/api/orders/") && method === "GET") {
     return true;
   }
+  // Note: We removed 'path === "/api/orders"' for GET.
+  // Now, GET /api/orders requires a login (to see "My History").
 
-  // --- 3. Products (GET List & By-ID Public) ---
+  // --- 3. Products ---
   if (method === "GET") {
     if (path === "/api/products") return true;
     if (path.startsWith("/api/products/by-id/")) return true;
   }
 
-  // --- 4. Strict List-Only GETs ---
+  // --- 4. Sales/Attributes/Categories ---
   if (method === "GET") {
     const publicListRoutes = [
       "/api/attributes",
       "/api/categories",
-      "/api/sales",
+      "/api/sales", // ✅ Correct: Sales (Discounts) are public
     ];
     if (publicListRoutes.includes(path)) return true;
   }
@@ -49,13 +49,13 @@ function isPublicApiRoute(pathname, method) {
   return false;
 }
 
-export async function middleware(req) {
+// ⚠️ UPDATE: Function renamed from 'middleware' to 'proxy'
+export async function proxy(req) {
   const token = req.cookies.get("auth-token")?.value;
   const { pathname } = req.nextUrl;
   const method = req.method;
 
   // --- 0. Allow Preflight (CORS) Requests ---
-  // If the browser sends an OPTIONS request, let it pass so CORS headers can be sent.
   if (method === "OPTIONS") {
     return NextResponse.next();
   }

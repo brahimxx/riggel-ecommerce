@@ -1,7 +1,7 @@
 // app/api/orders/route.js
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
-import { sendOrderConfirmationEmail } from "@/lib/brevo";
+import { sendOrderConfirmationEmail } from "@/lib/mail";
 
 // GET: Returns a summary list of all orders
 export async function GET(req) {
@@ -18,7 +18,6 @@ export async function GET(req) {
     `);
     return NextResponse.json(orders);
   } catch (error) {
-    console.log("GET /api/orders error:", error);
     return NextResponse.json(
       { error: "Failed to fetch orders." },
       { status: 500 }
@@ -42,8 +41,6 @@ export async function POST(req) {
       total_amount,
       order_items,
     } = body;
-
-    console.log(body);
 
     const parsedDate = new Date(order_date);
     if (isNaN(parsedDate.getTime())) {
@@ -167,22 +164,59 @@ export async function POST(req) {
 
     await conn.commit();
 
-    // 5. Return the newly created order with its items (including order_token)
+    // 5. Fetch Order Data
     const [orderRows] = await conn.query(
       `SELECT * FROM orders WHERE order_id = ?`,
       [order_id]
     );
+
+    // ✅ FIXED: Fetch Items with Product Name, Image, and Attributes
     const [itemsRows] = await conn.query(
-      `SELECT * FROM order_items WHERE order_id = ?`,
+      `SELECT 
+         oi.order_item_id,
+         oi.order_id,
+         oi.variant_id,
+         oi.quantity,
+         oi.price,
+         p.name AS product_name,
+         
+         -- Get the primary image URL (or first available) from product_images table
+         (
+            SELECT url 
+            FROM product_images pi 
+            WHERE pi.product_id = p.product_id 
+            ORDER BY pi.is_primary DESC, pi.sort_order ASC 
+            LIMIT 1
+         ) AS product_image,
+
+         -- Concatenate attributes (e.g. "Color: Red, Size: XL")
+         GROUP_CONCAT(
+            CONCAT(a.name, ': ', av.value) 
+            SEPARATOR ', '
+         ) AS attributes
+
+       FROM order_items oi
+       JOIN product_variants pv ON oi.variant_id = pv.variant_id
+       JOIN products p ON pv.product_id = p.product_id
+       
+       -- Join attributes chain to get "Color", "Size", etc.
+       LEFT JOIN variant_values vv ON pv.variant_id = vv.variant_id
+       LEFT JOIN attribute_values av ON vv.value_id = av.value_id
+       LEFT JOIN attributes a ON av.attribute_id = a.attribute_id
+       
+       WHERE oi.order_id = ?
+       GROUP BY oi.order_item_id`,
       [order_id]
     );
 
     conn.release();
 
     const order = orderRows[0];
+    order.order_items = itemsRows;
 
     // Send confirmation email
-    const emailResult = await sendOrderConfirmationEmail(orderRows[0]);
+    // This will now have correct product_name, product_image, and attributes!
+    const emailResult = await sendOrderConfirmationEmail(order);
     if (!emailResult.success) {
       console.warn("Email failed but order saved:", emailResult.error);
     }
