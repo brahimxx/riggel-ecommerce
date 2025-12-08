@@ -71,9 +71,10 @@ const FilterSidebar = ({
         </Button>
       </div>
 
-      <div className="lg:hidden flex justify-end pb-4">
+      <div className="lg:hidden flex justify-start">
         <Button
           type="link"
+          className="!px-0"
           danger
           disabled={!hasActiveFilters}
           onClick={(e) => {
