@@ -484,13 +484,6 @@ const ShoppingCart = () => {
                   </div>
                 </div>
               </div>
-              <div className="p-8 flex lg:hidden flex-col gap-4 justify-between border-1 border-gray-300/60 rounded-2xl text-center">
-                <p className="text-gray-600">
-                  "Each piece is carefully created with love and attention to
-                  botanical detail."
-                </p>
-                <p className="font-medium">— Elena, Botanical Artist</p>
-              </div>
             </div>
           </div>
         </div>
