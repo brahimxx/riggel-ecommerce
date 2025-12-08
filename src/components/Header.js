@@ -14,7 +14,7 @@ const Header = () => {
 
   useEffect(() => {
     const triggerAnimation = () => {
-      // Force browser to paint initial state before animation
+      // Double rAF ensures browser has completed painting
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setStartAnim(true);
@@ -22,11 +22,16 @@ const Header = () => {
       });
     };
 
+    // Wait for window load AND ensure DOM is interactive
     if (document.readyState === "complete") {
+      // Add small delay to ensure styles are applied
       triggerAnimation();
     } else {
-      window.addEventListener("load", triggerAnimation);
-      return () => window.removeEventListener("load", triggerAnimation);
+      const handleLoad = () => {
+        triggerAnimation();
+      };
+      window.addEventListener("load", handleLoad);
+      return () => window.removeEventListener("load", handleLoad);
     }
   }, []);
 
@@ -83,13 +88,9 @@ const Header = () => {
               {/* Wrapper for fade + text */}
               <div className="relative flex items-center">
                 {/* Static fade strip from right edge of the image */}
-                <div
-                  className={`
-            z-20 pointer-events-none absolute left-0 top-0 h-full w-8
-            ${startAnim ? "riggel-fade" : ""}`}
-                />
+                <div className="z-20 pointer-events-none absolute left-0 top-0 h-full w-8" />
                 <span
-                  className={`font-integral text-[#669900] ml-[2px] text-2xl font-bold whitespace-nowrap opacity-0 ${
+                  className={`font-integral text-[#669900] ml-[2px] opacity-0 text-2xl font-bold whitespace-nowrap ${
                     startAnim ? "riggel-text-slide" : ""
                   }`}
                 >

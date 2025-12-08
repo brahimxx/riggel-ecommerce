@@ -23,6 +23,7 @@ const FilterDrawer = ({
   onFavoritesToggle,
   showOnSaleOnly,
   onOnSaleToggle,
+  onClearFilters,
 }) => {
   const drawerRef = useRef(null);
   const contentRef = useRef(null);
@@ -202,6 +203,7 @@ const FilterDrawer = ({
             onFavoritesToggle={onFavoritesToggle}
             showOnSaleOnly={showOnSaleOnly}
             onOnSaleToggle={onOnSaleToggle}
+            onClearFilters={onClearFilters}
           />
         </div>
       </div>

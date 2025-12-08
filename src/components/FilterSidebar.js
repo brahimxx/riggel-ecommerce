@@ -1,7 +1,7 @@
 "use client";
-import React from "react";
-import { SlidersOutlined } from "@ant-design/icons";
-import { Slider, Checkbox } from "antd";
+import { useState, useEffect } from "react";
+import { SlidersOutlined, DeleteOutlined } from "@ant-design/icons"; // Added Delete icon
+import { Slider, Checkbox, Button } from "antd"; // Added Button
 import ColorFilter from "@/components/ColorFilter";
 import SizeFilter from "@/components/SizeFilter";
 
@@ -23,7 +23,10 @@ const FilterSidebar = ({
   onFavoritesToggle,
   showOnSaleOnly,
   onOnSaleToggle,
+  onClearFilters, // 1. New Prop: Function to reset all states in parent
 }) => {
+  const [localPrice, setLocalPrice] = useState(priceRange);
+
   const typeCategories = categories.filter(
     (cat) => cat.category_type === "type"
   );
@@ -31,15 +34,58 @@ const FilterSidebar = ({
     (cat) => cat.category_type === "style"
   );
 
+  useEffect(() => {
+    setLocalPrice(priceRange);
+  }, [priceRange[0], priceRange[1]]);
+
+  // 2. Helper to check if any filter is active (to disable button if clean)
+  const hasActiveFilters =
+    selectedTypeCategories.length > 0 ||
+    selectedStyleCategories.length > 0 ||
+    selectedColors.length > 0 ||
+    selectedSizes.length > 0 ||
+    showFavoritesOnly ||
+    showOnSaleOnly ||
+    priceRange[0] > 0 || // Assuming 0 is min
+    priceRange[1] < 500; // Assuming 500 is max
+
   return (
-    <div className=" lg:border border-gray-300/60 rounded-2xl lg:px-6">
+    <div className="lg:border border-gray-300/60 rounded-2xl lg:px-6">
       {/* Header */}
       <div className="hidden lg:flex justify-between items-center border-b border-gray-300/60 py-6">
-        <p className="font-semibold text-gray-800">Filter</p>
-        <SlidersOutlined className="!text-gray-400 text-xl" />
+        <div className="flex items-center gap-2">
+          <SlidersOutlined className="!text-gray-400 text-xl" />
+          <p className="font-semibold text-gray-800">Filter</p>
+        </div>
+
+        {/* 3. Clear Button */}
+        <Button
+          type="text"
+          size="small"
+          danger
+          disabled={!hasActiveFilters}
+          onClick={onClearFilters}
+          className="text-xs font-medium hover:bg-red-50"
+        >
+          Clear All
+        </Button>
       </div>
 
-      {/* Favorites Filter Section - FIXED */}
+      <div className="lg:hidden flex justify-end pb-4">
+        <Button
+          type="link"
+          danger
+          disabled={!hasActiveFilters}
+          onClick={(e) => {
+            e.preventDefault(); // Prevent form submission or bubbling
+            onClearFilters();
+          }}
+        >
+          Reset Filters
+        </Button>
+      </div>
+
+      {/* Favorites Filter Section */}
       <div className="border-b border-gray-300/60 py-6 flex items-center">
         <Checkbox
           checked={showFavoritesOnly}
@@ -52,7 +98,9 @@ const FilterSidebar = ({
         </Checkbox>
       </div>
 
-      {/* On Sale Filter Section - FIXED */}
+      {/* ... Rest of your component (On Sale, Price, etc.) ... */}
+
+      {/* On Sale Filter Section */}
       <div className="border-b border-gray-300/60 py-6 flex items-center">
         <Checkbox
           checked={showOnSaleOnly}
@@ -67,20 +115,24 @@ const FilterSidebar = ({
 
       {/* Price Filter Section */}
       <div className="border-b border-gray-300/60 py-6">
-        <h3 className="font-semibold text-gray-800 mb-2">Price</h3>
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-semibold text-gray-800">Price</h3>
+        </div>
         <Slider
           range
           min={0}
           max={500}
-          trackStyle={{ backgroundColor: "#4a5565" }}
-          value={priceRange}
-          onChange={onPriceChange}
+          value={localPrice}
+          onChange={(val) => setLocalPrice(val)}
+          onChangeComplete={(val) => onPriceChange(val)}
         />
         <div className="flex justify-between mt-2 text-sm text-gray-600">
-          <span>${priceRange[0]}</span>
-          <span>${priceRange[1]}</span>
+          <span>${localPrice[0]}</span>
+          <span>${localPrice[1]}</span>
         </div>
       </div>
+
+      {/* ... The rest of your sections remain exactly the same ... */}
 
       {/* Product Type Filter Section */}
       <ul className="flex flex-col gap-4 border-b border-gray-300/60 py-6">

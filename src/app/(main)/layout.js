@@ -1,6 +1,6 @@
 // src/app/(main)/layout.js
 import Header from "@/components/Header";
-import NewsLetter from "@/components/NewSletter";
+import NewsLetter from "@/components/NewsLetter";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/components/CartContext";
 

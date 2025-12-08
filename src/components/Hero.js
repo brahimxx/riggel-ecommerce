@@ -22,7 +22,7 @@ const Hero = () => {
             Shop now
           </Link>
           <div className="flex flex-wrap lg:flex-nowrap justify-center gap-4 lg:justify-start items-center text-left">
-            <div className="relative lg:px-4 pr-8 ">
+            <div className="relative lg:px-4 pr-6 ">
               <p className="text-[24px] lg:text-[30px] xl:text-[40px] font-bold">
                 200+
               </p>
@@ -31,7 +31,7 @@ const Hero = () => {
               </p>
               <div className="absolute top-1/4 right-0 h-1/2 border-r border-gray-300"></div>
             </div>
-            <div className="relative pl-8 lg:px-4 xl:px-8 ">
+            <div className="relative pl-6 lg:px-4 xl:px-8 ">
               <p className="text-[24px] lg:text-[30px] xl:text-[40px] font-bold">
                 2,000+
               </p>

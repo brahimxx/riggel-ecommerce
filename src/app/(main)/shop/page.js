@@ -22,7 +22,7 @@ const ShopPage = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { favorites, isLoaded } = useFavorites();
+  const { favorites } = useFavorites();
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -60,6 +60,41 @@ const ShopPage = () => {
       params.set(key, value);
     }
 
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  /**
+   * Clears all active filters and resets the view to default.
+   */
+  const handleClearFilters = () => {
+    console.log("Resetting filters..."); // ADD LOGGING TO DEBUG
+    // 1. Reset all local state variables
+    setPriceRange([0, 500]);
+    setSelectedTypeCategories([]);
+    setSelectedStyleCategories([]);
+    setSelectedColors([]);
+    setSelectedSizes([]);
+    setShowFavoritesOnly(false);
+    setShowOnSaleOnly(false);
+    setCurrentPage(1);
+
+    // 2. Clear all filter-related URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const keysToDelete = [
+      "price",
+      "type_category_id",
+      "style_category_id",
+      "colors",
+      "sizes",
+      "favorites",
+      "on_sale",
+      "page",
+    ];
+
+    // Note: We deliberately keep 'sortBy' so the user's sort preference persists
+    // If you want to reset sort too, add "sortBy" to the array above.
+
+    keysToDelete.forEach((key) => params.delete(key));
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -412,6 +447,7 @@ const ShopPage = () => {
             onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
             showOnSaleOnly={showOnSaleOnly}
             onOnSaleToggle={handleOnSaleToggle}
+            onClearFilters={handleClearFilters}
           />
         </div>
 
@@ -435,6 +471,7 @@ const ShopPage = () => {
           onOnSaleToggle={handleOnSaleToggle}
           showFavoritesOnly={showFavoritesOnly}
           onFavoritesToggle={(e) => handleFavoritesToggle(e.target.checked)}
+          onClearFilters={handleClearFilters}
         />
 
         <div className="w-full lg:w-[80%]">
