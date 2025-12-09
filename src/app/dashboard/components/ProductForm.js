@@ -333,6 +333,17 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
       setDeletedImageUrls([]);
 
       if (onSuccess) onSuccess();
+
+      if (!product) {
+        form.resetFields();
+        setImages([]);
+        setPendingFiles([]);
+        setDeletedImageUrls([]);
+        setVariantOptions([]);
+        setProductName("");
+        // Reset variants to initial state
+        form.setFieldsValue({ variants: [{}] });
+      }
     } catch (err) {
       setFormError(err.message || "Something went wrong."); // Set Global Error
     } finally {
@@ -639,7 +650,7 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
           >
             {product ? "Update" : "Create"}
           </Button>
-          <Button onClick={onCancel} disabled={isSubmitting}>
+          <Button htmlType="button" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         </Space>

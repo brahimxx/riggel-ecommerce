@@ -11,7 +11,7 @@ function formatPostedDate(dateString) {
 const ProductFeedBackCard = ({ name, rating, comment, date }) => {
   return (
     <>
-      <div className="flex flex-col flex-shrink-0 border-1 border-gray-300/40 w-[98%] p-[25px]  h-[224px] lg:h-[260px] xl:h-[280px] lg:gap-5 rounded-[26px] hover:shadow-md transition-shadow duration-300 cursor-pointer justify-between">
+      <div className="flex flex-col flex-shrink-0 border-1 border-gray-300/40 w-[98%] p-[25px]  gap-4 lg:gap-8 rounded-[26px] hover:shadow-md transition-shadow duration-300 cursor-pointer justify-between">
         <div>
           <div className="relative">
             <Rate disabled allowHalf defaultValue={Number(rating) || 0} />
@@ -29,7 +29,7 @@ const ProductFeedBackCard = ({ name, rating, comment, date }) => {
         <p className="text-black/60 text-[16px] overflow-y-scroll hide-scrollbar lg:text-[18px] line-clamp-3 xl:line-clamp-none ">
           "{comment}"
         </p>
-        <p className="text-black/60 text-[16px] lg:text-[18px] font-medium">
+        <p className="text-black/40 text-[14px] lg:text-[16px] font-medium">
           {formatPostedDate(date)}
         </p>
       </div>

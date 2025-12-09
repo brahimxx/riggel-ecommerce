@@ -283,6 +283,7 @@ const Products = () => {
           product={editingProduct}
           onSuccess={handleSuccess}
           categories={categories}
+          onCancel={() => setIsModalOpen(false)}
         />
       </Modal>
     </div>

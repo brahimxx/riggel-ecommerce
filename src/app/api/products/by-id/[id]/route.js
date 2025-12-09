@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 import slugify from "slugify";
 import fs from "fs/promises";
-import { randomBytes } from "crypto"; // ADD THIS
+import { randomBytes } from "crypto";
 import { unlink } from "fs/promises";
 import path from "path";
 
@@ -370,12 +370,18 @@ export async function PUT(req, { params }) {
 
         // Case 1: Existing Image (has ID and ID exists in DB)
         if (img.id && currentIds.includes(img.id)) {
+          // Convert temp variant_id to null or real ID
+          const variantIdForDb =
+            img.variant_id && !isNaN(Number(img.variant_id))
+              ? Number(img.variant_id)
+              : null;
+
           await conn.query(
             `UPDATE product_images 
-                 SET variant_id = ?, alt_text = ?, sort_order = ?, is_primary = ? 
-                 WHERE id = ?`,
+             SET variant_id = ?, alt_text = ?, sort_order = ?, is_primary = ? 
+             WHERE id = ?`,
             [
-              img.variant_id || null,
+              variantIdForDb,
               img.alt_text || "",
               img.sort_order ?? i,
               img.is_primary ? 1 : 0,
@@ -385,23 +391,36 @@ export async function PUT(req, { params }) {
         }
         // Case 2: New Image (needs insertion)
         else {
-          // ... Validate size/type (your existing validation logic) ...
           if (!img.url || !img.mimeType) continue; // Skip invalid
 
+          // Validate MIME type
+          if (!validateImageMimeType(img.mimeType)) {
+            console.warn(
+              `Invalid MIME type ${img.mimeType} for image at index ${i}`
+            );
+            continue;
+          }
+
           // Generate filenames ONLY for new images
-          const secureFilename = img.url.split("/").pop(); // e.g. "8f92a...jpg"
+          const secureFilename = img.url.split("/").pop();
           const sanitizedOriginal = img.originalName
             ? sanitizeFilename(img.originalName)
             : `image-${i}.jpg`;
 
+          // Convert temp variant_id to null or real ID
+          const variantIdForDb =
+            img.variant_id && !isNaN(Number(img.variant_id))
+              ? Number(img.variant_id)
+              : null;
+
           await conn.query(
             `INSERT INTO product_images 
-                (product_id, variant_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type) 
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              (product_id, variant_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               id,
-              img.variant_id || null,
-              img.url, // This URL comes from your upload API response
+              variantIdForDb, // ✅ Always int or null
+              img.url,
               secureFilename,
               sanitizedOriginal,
               img.alt_text || "",
@@ -480,6 +499,11 @@ export async function DELETE(req, { params }) {
       [id]
     );
     const imagesToDelete = images.map((img) => img.url);
+
+    // ---------------------------------------------------------
+    // OPTION 2 FIX: Manually remove from sales first
+    // ---------------------------------------------------------
+    await conn.query("DELETE FROM sale_product WHERE product_id = ?", [id]);
 
     // Delete product (cascades will handle variants, images, categories, etc.)
     const [result] = await conn.query(

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-export async function GET(req, { params }) {
-  try {
-    const { id: attribute_id } = params;
+export async function GET(req, context) {
+  const { id: attribute_id } = await context.params; // ✅ await
 
+  try {
     if (!attribute_id) {
       return NextResponse.json(
         { error: "Attribute ID is required." },
@@ -38,8 +38,8 @@ export async function GET(req, { params }) {
   }
 }
 
-export async function PUT(req, { params }) {
-  const { id: attribute_id } = params;
+export async function PUT(req, context) {
+  const { id: attribute_id } = await context.params; // ✅ await
   const conn = await pool.getConnection();
 
   try {
@@ -53,7 +53,6 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // 1. Update name if provided
     if (name !== undefined && name !== null && name.trim()) {
       await conn.query(
         "UPDATE attributes SET name = ? WHERE attribute_id = ?",
@@ -61,7 +60,6 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // 2. ONLY sync values if explicitly provided AND non-empty
     if (
       typeof newValues !== "undefined" &&
       Array.isArray(newValues) &&
@@ -80,7 +78,6 @@ export async function PUT(req, { params }) {
         (row) => !newValues.some((nv) => nv.trim() === row.value)
       );
 
-      // Add new values
       if (valuesToAdd.length > 0) {
         const insertData = valuesToAdd.map((value) => [
           attribute_id,
@@ -92,7 +89,6 @@ export async function PUT(req, { params }) {
         );
       }
 
-      // Safely delete old, unused values
       for (const valToDelete of valuesToCheckForDeletion) {
         const [usage] = await conn.query(
           "SELECT 1 FROM variant_values WHERE value_id = ? LIMIT 1",
@@ -123,8 +119,8 @@ export async function PUT(req, { params }) {
   }
 }
 
-export async function DELETE(req, { params }) {
-  const { id: attribute_id } = params;
+export async function DELETE(req, context) {
+  const { id: attribute_id } = await context.params; // ✅ await
 
   if (!attribute_id) {
     return NextResponse.json(

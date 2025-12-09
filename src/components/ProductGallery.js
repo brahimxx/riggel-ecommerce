@@ -1,19 +1,17 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import Image from "next/image";
 
 const ProductGallery = ({ images, selectedIndex = 0, onSelect }) => {
   const scrollContainerRef = useRef(null);
 
-  if (!images || images.length === 0) return null;
-
-  const handleThumbnailClick = (idx) => {
-    onSelect?.(idx);
-
+  // 1. Add this useEffect to trigger scroll whenever selectedIndex changes
+  useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const button = container.querySelectorAll("button")[idx];
+    // Find the thumbnail button corresponding to the selected index
+    const button = container.querySelectorAll("button")[selectedIndex];
     if (!button) return;
 
     const isMobile = window.innerWidth < 768;
@@ -35,7 +33,9 @@ const ProductGallery = ({ images, selectedIndex = 0, onSelect }) => {
         behavior: "smooth",
       });
     }
-  };
+  }, [selectedIndex]); // Run this every time selectedIndex updates
+
+  if (!images || images.length === 0) return null;
 
   return (
     <div className="flex flex-col-reverse md:flex-row gap-[12px] md:gap-8 items-start h-full lg:h-[530px]">
@@ -49,7 +49,7 @@ const ProductGallery = ({ images, selectedIndex = 0, onSelect }) => {
             <button
               type="button"
               key={image.id}
-              onClick={() => handleThumbnailClick(idx)}
+              onClick={() => onSelect?.(idx)} // 2. Simplified handler, let useEffect do the scrolling
               aria-label={`Thumbnail ${idx + 1}`}
               className={`w-[31%] h-[106px] min-[400px]:w-[21.5vw] min-[460px]:w-[22vw] min-[600px]:w-[22.7vw] min-[580px]:h-[130px] md:w-full md:h-[164px] flex-shrink-0 rounded-2xl border cursor-pointer ${
                 selectedIndex === idx

@@ -219,7 +219,6 @@ export async function DELETE(req, { params }) {
     }
 
     // 3. Delete the order and its dependents (cascade or manual)
-    await conn.query("DELETE FROM payments WHERE order_id = ?", [numericId]);
     await conn.query("DELETE FROM order_items WHERE order_id = ?", [numericId]);
     const [result] = await conn.query("DELETE FROM orders WHERE order_id = ?", [
       numericId,

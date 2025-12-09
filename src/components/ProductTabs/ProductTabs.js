@@ -4,7 +4,7 @@ import "./productTabs.css";
 
 const tabItems = (children) => [
   {
-    label: "Product Details",
+    label: "Details",
     key: "1",
     children: children[0] || <div>Product Details content</div>,
   },
@@ -21,7 +21,7 @@ const tabItems = (children) => [
 ];
 
 const ProductTabs = ({ children = [] }) => (
-  <div className="mt-[36px] lg:mt-15 ">
+  <div className="my-[36px] lg:my-15 ">
     <Tabs
       defaultActiveKey="2"
       centered

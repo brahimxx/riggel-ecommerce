@@ -33,6 +33,8 @@ const ShopHeader = ({
             onChange={onSortByChange}
             variant="borderless"
             className="lg:w-[150px]"
+            popupMatchSelectWidth={false}
+            placement="bottomLeft"
           >
             <Select.Option value="created_at_desc">Newest</Select.Option>
             <Select.Option value="popularity_desc">

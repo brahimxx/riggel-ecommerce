@@ -40,6 +40,9 @@ const ColorSelector = ({
           const available = isAvailable(color);
           const colorHex = getColorHex(color);
 
+          // Check if the color is white (case-insensitive)
+          const isWhite = colorHex.toLowerCase() === "#ffffff";
+
           return (
             <div key={color} className="relative">
               <button
@@ -51,8 +54,18 @@ const ColorSelector = ({
                 }`}
                 style={{
                   backgroundColor: colorHex,
-                  border: isSelected ? "3px solid white" : "none",
-                  boxShadow: isSelected ? `0 0 0 3px ${colorHex}` : "none",
+                  // 1. Unselected: Light grey border so white is visible.
+                  // 2. Selected: White border creates the "gap".
+                  border: isSelected
+                    ? "3px solid white"
+                    : "1px solid rgba(0,0,0,0.1)",
+
+                  // 3. The Outer Ring:
+                  // If selected AND the color is white, make the ring Grey (#E5E5E5).
+                  // Otherwise, use the color itself.
+                  boxShadow: isSelected
+                    ? `0 0 0 3px ${isWhite ? "#E5E5E5" : colorHex}`
+                    : "none",
                 }}
               />
               {!available && (
