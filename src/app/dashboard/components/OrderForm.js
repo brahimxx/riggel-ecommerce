@@ -55,6 +55,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
       form.setFieldsValue({
         ...order,
         order_date: order.order_date ? dayjs(order.order_date) : null,
+        note: order.note || "", // <--- Pre-fill Note
       });
     } else {
       form.resetFields();
@@ -136,6 +137,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
           price: Number(rest.price),
           quantity: Number(rest.quantity),
         })),
+        note: values.note, // <--- Include Note in Payload (auto included via ...values, explicit here for clarity)
       };
 
       const url = order ? `/api/orders/${order.order_id}` : "/api/orders";
@@ -281,19 +283,33 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
         </Form.Item>
       </div>
 
-      <Form.Item
-        label={
-          <span className="font-medium text-gray-700">Shipping Address</span>
-        }
-        name="shipping_address"
-        rules={[{ required: true }]}
-      >
-        <TextArea
-          rows={2}
-          className="rounded-md"
-          placeholder="Full shipping address"
-        />
-      </Form.Item>
+      {/* Shipping Address & Note */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Form.Item
+          label={
+            <span className="font-medium text-gray-700">Shipping Address</span>
+          }
+          name="shipping_address"
+          rules={[{ required: true }]}
+        >
+          <TextArea
+            rows={3}
+            className="rounded-md"
+            placeholder="Full shipping address"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={<span className="font-medium text-gray-700">Order Note</span>}
+          name="note"
+        >
+          <TextArea
+            rows={3}
+            className="rounded-md"
+            placeholder="Customer notes or special instructions..."
+          />
+        </Form.Item>
+      </div>
 
       <Divider
         orientation="left"
@@ -307,12 +323,12 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
         type="dashed"
         block
         style={{ marginBottom: 16 }}
-        className="border-gray-300 text-gray-500 hover:text-blue-500 hover:border-blue-500"
+        className="border-gray-300 text-gray-500 "
       >
         + Add Product Item
       </Button>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border border-gray-100 rounded-lg overflow-hidden">
         <Table
           dataSource={orderItems}
           columns={orderItemColumns}
@@ -328,7 +344,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
         className="bg-gray-50 p-4 rounded-lg border border-gray-100"
       >
         <span className="text-gray-500 mr-2 text-base">Total Amount:</span>
-        <strong className="text-2xl text-blue-600">
+        <strong className="text-2xl text-green-800">
           ${calcTotalAmount().toFixed(2)}
         </strong>
       </div>
@@ -338,7 +354,7 @@ const OrderForm = ({ order = null, products = [], onSuccess }) => {
           type="primary"
           htmlType="submit"
           loading={isSubmitting}
-          className="h-10 px-8 bg-blue-600 hover:bg-blue-500 font-medium rounded-md shadow-sm border-none"
+          className="h-10 px-8 font-medium rounded-md shadow-sm border-none"
         >
           {order ? "Update Order" : "Create Order"}
         </Button>

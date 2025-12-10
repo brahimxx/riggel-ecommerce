@@ -40,6 +40,7 @@ export async function POST(req) {
       status,
       total_amount,
       order_items,
+      note,
     } = body;
 
     const parsedDate = new Date(order_date);
@@ -102,9 +103,10 @@ export async function POST(req) {
          order_date,
          status,
          total_amount,
-         order_token
+         order_token,
+         note  -- <--- Add column
        )
-       VALUES (?, ?, ?, ?, ?, ?, ?, UUID())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, UUID(), ?)`,
       [
         client_name.trim(),
         email.trim(),
@@ -113,6 +115,7 @@ export async function POST(req) {
         mysqlDate,
         status.trim(),
         total_amount,
+        note?.trim() || null,
       ]
     );
 

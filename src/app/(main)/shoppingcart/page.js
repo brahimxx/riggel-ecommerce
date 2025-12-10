@@ -260,6 +260,7 @@ const ShoppingCart = () => {
         (subtotal * 1.011 + (subtotal >= 200 ? 0 : 15)).toFixed(2)
       ),
       order_items,
+      note,
     };
 
     try {

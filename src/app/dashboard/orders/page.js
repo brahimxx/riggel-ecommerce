@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Modal, App, Tag, Tooltip, Table, Spin } from "antd"; // added Table, Spin
+import { Modal, App, Tag, Tooltip, Table, Spin, Select } from "antd"; // added Table, Spin
 import DataTable from "../components/DataTable";
 import OrderForm from "../components/OrderForm";
 import { getOrders, getProducts, getOrderById } from "@/lib/api";
+import { MessageOutlined } from "@ant-design/icons";
 
 const Orders = () => {
   // Data State
@@ -14,6 +15,8 @@ const Orders = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
+
+  const [loadingStatus, setLoadingStatus] = useState({}); // Track loading per order
 
   // Expansion State (Cache for nested items)
   const [expandedOrderDetails, setExpandedOrderDetails] = useState({});
@@ -41,6 +44,32 @@ const Orders = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    setLoadingStatus((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update status");
+
+      message.success("Status updated");
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.order_id === orderId ? { ...o, status: newStatus } : o
+        )
+      );
+    } catch (err) {
+      message.error("Update failed: " + err.message);
+    } finally {
+      setLoadingStatus((prev) => ({ ...prev, [orderId]: false }));
+    }
+  };
 
   // 2. Handle Expansion (Fetch items on demand)
   const handleExpand = async (expanded, record) => {
@@ -94,15 +123,45 @@ const Orders = () => {
         dataIndex: "product_name",
         key: "product_name",
         render: (text, item) => (
-          <span>{item.product_name || "Unknown Product"}</span>
+          <div className="flex items-center gap-2">
+            {/* Show image if available */}
+            {item.product_image && (
+              <img
+                src={item.product_image}
+                alt="Product"
+                className="w-8 h-8 rounded object-cover border"
+              />
+            )}
+            <span>{item.product_name || "Unknown Product"}</span>
+          </div>
         ),
       },
       {
-        title: "Variant",
-        dataIndex: "variant_name",
-        key: "variant_name",
-        render: (text) =>
-          text ? <Tag>{text}</Tag> : <span className="text-gray-400">-</span>,
+        title: "Variant / Attributes",
+        dataIndex: "attributes", // Use the 'attributes' field from your API
+        key: "attributes",
+        render: (text, item) => (
+          <div className="flex flex-col gap-1">
+            {/* Show SKU if available */}
+            {item.sku && (
+              <span className="text-xs text-gray-400 font-mono">
+                {item.sku}
+              </span>
+            )}
+            {/* Show Attributes as Tags */}
+            {text ? (
+              <div className="flex flex-wrap gap-1">
+                {text.split(", ").map((attr, i) => (
+                  <Tag key={i} className="m-0 text-xs">
+                    {attr}
+                  </Tag>
+                ))}
+              </div>
+            ) : (
+              <span className="text-gray-400 text-xs">-</span>
+            )}
+          </div>
+        ),
       },
       {
         title: "Quantity",
@@ -144,7 +203,7 @@ const Orders = () => {
           pagination={false}
           size="small"
           rowKey={(item) => item.order_item_id || Math.random()}
-          bordered
+          variant
         />
       </div>
     );
@@ -212,6 +271,20 @@ const Orders = () => {
         ),
       },
       {
+        title: "Note",
+        dataIndex: "note",
+        key: "note",
+        ellipsis: true,
+        render: (note) =>
+          note ? (
+            <Tooltip title={note}>
+              <MessageOutlined className="text-blue-500" />
+            </Tooltip>
+          ) : (
+            <span className="text-gray-300">-</span>
+          ),
+      },
+      {
         title: "Summary",
         key: "summary",
         render: (_, record) => (
@@ -241,9 +314,9 @@ const Orders = () => {
         title: "Status",
         dataIndex: "status",
         key: "status",
-        width: 120,
+        width: 140,
         align: "center",
-        render: (status) => {
+        render: (status, record) => {
           const colors = {
             pending: "orange",
             completed: "green",
@@ -252,12 +325,26 @@ const Orders = () => {
             shipped: "cyan",
           };
           return (
-            <Tag
-              color={colors[status?.toLowerCase()] || "default"}
-              className="m-0 min-w-[80px] text-center capitalize"
-            >
-              {status}
-            </Tag>
+            <Select
+              value={status}
+              style={{ width: 130 }}
+              variant={false}
+              loading={loadingStatus[record.order_id]}
+              onChange={(val) => handleStatusChange(record.order_id, val)}
+              options={[
+                { value: "pending", label: <Tag color="orange">Pending</Tag> },
+                {
+                  value: "processing",
+                  label: <Tag color="blue">Processing</Tag>,
+                },
+                { value: "shipped", label: <Tag color="cyan">Shipped</Tag> },
+                {
+                  value: "completed",
+                  label: <Tag color="green">Completed</Tag>,
+                },
+                { value: "cancelled", label: <Tag color="red">Cancelled</Tag> },
+              ]}
+            />
           );
         },
       },
@@ -274,7 +361,7 @@ const Orders = () => {
         sorter: (a, b) => new Date(a.order_date) - new Date(b.order_date),
       },
     ],
-    []
+    [loadingStatus]
   );
 
   return (

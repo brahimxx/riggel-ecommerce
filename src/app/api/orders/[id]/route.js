@@ -2,10 +2,6 @@
 import { NextResponse } from "next/server";
 import pool from "@/lib/db";
 
-// GET: Fetches a single order with detailed variant information for each item
-// Supports BOTH:
-// - /api/orders/123          -> by order_id (number)
-// - /api/orders/<uuid-token> -> by order_token (string)
 export async function GET(req, { params }) {
   const { id } = await params; // ✅ await params
   const identifier = id;
@@ -87,8 +83,6 @@ export async function GET(req, { params }) {
   }
 }
 
-// PUT: Updates an order, correctly adjusting stock for product variants
-// Here we keep it strictly numeric (admin only)
 export async function PUT(req, { params }) {
   const { id } = await params; // ✅ await params
   const numericId = Number(id);
@@ -109,69 +103,133 @@ export async function PUT(req, { params }) {
       order_date,
       status,
       total_amount,
-      order_items, // Expects { variant_id, quantity, price }
+      order_items,
+      note,
     } = body;
 
-    // 1. Refund stock from old items using variant_id
-    const [oldItems] = await conn.query(
-      "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
-      [numericId]
-    );
-    for (const oldItem of oldItems) {
-      if (oldItem.variant_id) {
-        await conn.query(
-          "UPDATE product_variants SET quantity = quantity + ? WHERE variant_id = ?",
-          [oldItem.quantity, oldItem.variant_id]
-        );
-      }
-    }
-
-    // 2. Update the main order details
-    const mysqlDate = new Date(order_date)
-      .toISOString()
-      .slice(0, 19)
-      .replace("T", " ");
-
-    await conn.query(
-      `UPDATE orders 
-       SET client_name = ?, email = ?, phone = ?, shipping_address = ?, 
-           order_date = ?, status = ?, total_amount = ?
-       WHERE order_id = ?`,
-      [
-        client_name,
-        email,
-        phone,
-        shipping_address,
-        mysqlDate,
-        status,
-        total_amount,
-        numericId,
-      ]
-    );
-
-    // 3. Delete old order items
-    await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [numericId]);
-
-    // 4. Deduct stock and insert new items using variant_id
-    for (const item of order_items) {
-      const [updateResult] = await conn.query(
-        `UPDATE product_variants 
-         SET quantity = quantity - ? 
-         WHERE variant_id = ? AND quantity >= ?`,
-        [item.quantity, item.variant_id, item.quantity]
+    // --- CASE 1: FULL UPDATE (Items/Stock Changes) ---
+    // If order_items is provided as an array, we assume a full re-write of the order
+    if (Array.isArray(order_items)) {
+      // 1. Refund stock from old items
+      const [oldItems] = await conn.query(
+        "SELECT variant_id, quantity FROM order_items WHERE order_id = ?",
+        [numericId]
       );
-
-      if (updateResult.affectedRows === 0) {
-        throw new Error(
-          `Insufficient stock for variant ID ${item.variant_id}.`
-        );
+      for (const oldItem of oldItems) {
+        if (oldItem.variant_id) {
+          await conn.query(
+            "UPDATE product_variants SET quantity = quantity + ? WHERE variant_id = ?",
+            [oldItem.quantity, oldItem.variant_id]
+          );
+        }
       }
+
+      // 2. Update main order fields (requiring all main fields for a full update)
+      // Note: We use COALESCE or existing checks if you want to allow partials here too,
+      // but usually full form submit sends everything.
+      const mysqlDate = new Date(order_date)
+        .toISOString()
+        .slice(0, 19)
+        .replace("T", " ");
 
       await conn.query(
-        `INSERT INTO order_items (order_id, variant_id, quantity, price)
-         VALUES (?, ?, ?, ?)`,
-        [numericId, item.variant_id, item.quantity, item.price]
+        `UPDATE orders 
+         SET client_name = ?, email = ?, phone = ?, shipping_address = ?, 
+             order_date = ?, status = ?, total_amount = ?, note = ?
+         WHERE order_id = ?`,
+        [
+          client_name,
+          email,
+          phone,
+          shipping_address,
+          mysqlDate,
+          status,
+          total_amount,
+          note?.trim() || null,
+          numericId,
+        ]
       );
+
+      // 3. Delete old items
+      await conn.query(`DELETE FROM order_items WHERE order_id = ?`, [
+        numericId,
+      ]);
+
+      // 4. Deduct new stock & Insert items
+      for (const item of order_items) {
+        const [updateResult] = await conn.query(
+          `UPDATE product_variants 
+           SET quantity = quantity - ? 
+           WHERE variant_id = ? AND quantity >= ?`,
+          [item.quantity, item.variant_id, item.quantity]
+        );
+
+        if (updateResult.affectedRows === 0) {
+          throw new Error(
+            `Insufficient stock for variant ID ${item.variant_id}.`
+          );
+        }
+
+        await conn.query(
+          `INSERT INTO order_items (order_id, variant_id, quantity, price)
+           VALUES (?, ?, ?, ?)`,
+          [numericId, item.variant_id, item.quantity, item.price]
+        );
+      }
+    } else {
+      const updates = [];
+      const values = [];
+
+      if (client_name !== undefined) {
+        updates.push("client_name = ?");
+        values.push(client_name);
+      }
+      if (email !== undefined) {
+        updates.push("email = ?");
+        values.push(email);
+      }
+      if (phone !== undefined) {
+        updates.push("phone = ?");
+        values.push(phone);
+      }
+      if (shipping_address !== undefined) {
+        updates.push("shipping_address = ?");
+        values.push(shipping_address);
+      }
+      if (status !== undefined) {
+        updates.push("status = ?");
+        values.push(status);
+      }
+      if (total_amount !== undefined) {
+        updates.push("total_amount = ?");
+        values.push(total_amount);
+      }
+      if (note !== undefined) {
+        updates.push("note = ?");
+        values.push(note?.trim() || null);
+      }
+
+      if (order_date !== undefined) {
+        const mysqlDate = new Date(order_date)
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " ");
+        updates.push("order_date = ?");
+        values.push(mysqlDate);
+      }
+
+      if (updates.length > 0) {
+        const sql = `UPDATE orders SET ${updates.join(
+          ", "
+        )} WHERE order_id = ?`;
+        values.push(numericId);
+        await conn.query(sql, values);
+      } else {
+        // No fields provided to update
+        await conn.rollback();
+        conn.release();
+        return NextResponse.json({ message: "No changes detected." });
+      }
     }
 
     await conn.commit();
@@ -179,8 +237,10 @@ export async function PUT(req, { params }) {
 
     return NextResponse.json({ message: "Order updated successfully." });
   } catch (error) {
-    await conn.rollback();
-    conn.release();
+    if (conn) {
+      await conn.rollback();
+      conn.release();
+    }
     console.error("PUT /api/orders/[id] error:", error);
     return NextResponse.json(
       { error: error.message || "Failed to update order." },
@@ -189,8 +249,6 @@ export async function PUT(req, { params }) {
   }
 }
 
-// DELETE: Deletes an order and restores stock to the correct product variants
-// Also kept numeric-only (admin operation)
 export async function DELETE(req, { params }) {
   const { id } = await params; // ✅ await params
   const numericId = Number(id);
