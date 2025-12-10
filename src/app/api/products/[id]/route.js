@@ -81,22 +81,25 @@ export async function GET(req, { params }) {
           : v.attributes || [],
     }));
 
-    // Fetch images with enhanced security fields
+    // Fetch images with enhanced security fields + Many-to-Many Variant IDs
+    // UPDATED: Now fetches array of variant_ids for each image
     const [images] = await pool.query(
       `SELECT 
-        id, 
-        product_id,
-        variant_id,
-        url, 
-        filename, 
-        original_filename, 
-        alt_text, 
-        sort_order, 
-        is_primary, 
-        mime_type 
-      FROM product_images 
-      WHERE product_id = ? 
-      ORDER BY is_primary DESC, sort_order ASC, id ASC`,
+        pi.id, 
+        pi.product_id,
+        pi.url, 
+        pi.filename, 
+        pi.original_filename, 
+        pi.alt_text, 
+        pi.sort_order, 
+        pi.is_primary, 
+        pi.mime_type,
+        (SELECT JSON_ARRAYAGG(piv.variant_id) 
+         FROM product_image_variants piv 
+         WHERE piv.image_id = pi.id) as variant_ids
+      FROM product_images pi 
+      WHERE pi.product_id = ? 
+      ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC`,
       [numericId]
     );
 
@@ -120,8 +123,7 @@ export async function GET(req, { params }) {
       ...product,
       categories,
       variants,
-      images,
-      // Add sale info if exists
+      images, // Now includes variant_ids array for each image
       sale_id: saleInfo.length > 0 ? saleInfo[0].sale_id : null,
       sale_name: saleInfo.length > 0 ? saleInfo[0].sale_name : null,
       discount_type: saleInfo.length > 0 ? saleInfo[0].discount_type : null,
@@ -136,9 +138,9 @@ export async function GET(req, { params }) {
   }
 }
 
-// app/api/products/by-id/[id]/route.js
+// app/api/products/by-id/[id]/route.js (PUT)
 export async function PUT(req, { params }) {
-  // Helper function to generate secure filenames
+  // Helper: Generate secure filenames
   function generateSecureFilename(originalFilename, mimeType) {
     const randomName = randomBytes(16).toString("hex");
     const extensionMap = {
@@ -151,24 +153,21 @@ export async function PUT(req, { params }) {
     return `${randomName}.${extension}`;
   }
 
-  // Helper to validate file type
+  // Helper: Validate mime type
   function validateImageMimeType(mimeType) {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     return allowedTypes.includes(mimeType);
   }
 
-  // Sanitize filename
+  // Helper: Sanitize filename
   function sanitizeFilename(filename) {
-    let sanitized = filename.replace(/[\/\\]/g, "");
-    sanitized = sanitized.replace(/\0/g, "");
+    let sanitized = filename.replace(/[\/\\]/g, "").replace(/\0/g, "");
     sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, "_");
     sanitized = sanitized.replace(/^\.+/, "");
-
     if (sanitized.length > 200) {
       const ext = path.extname(sanitized);
       sanitized = sanitized.substring(0, 200 - ext.length) + ext;
     }
-
     return sanitized || "unnamed";
   }
 
@@ -227,6 +226,8 @@ export async function PUT(req, { params }) {
     }
 
     // 3. Handle Variants (Create, Update, Delete) with Attributes
+    const createdOrUpdatedVariants = []; // Store mapping for image assignment
+
     if (Array.isArray(variants)) {
       const [existingVariants] = await conn.query(
         "SELECT variant_id FROM product_variants WHERE product_id = ?",
@@ -247,15 +248,17 @@ export async function PUT(req, { params }) {
         );
       }
 
-      for (const variant of variants) {
+      for (let i = 0; i < variants.length; i++) {
+        const variant = variants[i];
         let variant_id = variant.variant_id;
         let sku = variant.sku;
 
-        // Auto-generate SKU if missing
-        if (!sku || sku.trim() === "") {
+        // Auto-generate SKU if missing (Your custom logic)
+        if (!sku || sku.trim() === "" || sku.startsWith("temp-")) {
           const base = slugify(name, { lower: true, strict: true })
             .replace(/-/g, "")
             .toUpperCase();
+
           const attrPart = Array.isArray(variant.attributes)
             ? variant.attributes
                 .map((a) =>
@@ -266,6 +269,7 @@ export async function PUT(req, { params }) {
                 )
                 .join("-")
             : "";
+
           sku = attrPart ? `${base}-${attrPart}` : base;
         }
 
@@ -282,6 +286,9 @@ export async function PUT(req, { params }) {
           );
           variant_id = newVariant.insertId;
         }
+
+        // Store index map: frontend index (i) -> real variant_id
+        createdOrUpdatedVariants[i] = { variant_id };
 
         // B. Handle attributes for the variant
         if (Array.isArray(variant.attributes)) {
@@ -344,7 +351,6 @@ export async function PUT(req, { params }) {
               url.replace(/^\//, "")
             );
             await unlink(filePath);
-            console.log(`✅ Deleted file: ${filePath}`);
           }
         } catch (err) {
           console.error(`❌ Failed to delete image file: ${url}`, err);
@@ -358,7 +364,6 @@ export async function PUT(req, { params }) {
     }
 
     if (Array.isArray(images)) {
-      // Get current images to check existence
       const [currentDbImages] = await conn.query(
         "SELECT id FROM product_images WHERE product_id = ?",
         [id]
@@ -367,21 +372,15 @@ export async function PUT(req, { params }) {
 
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
+        let imageId = img.id;
 
-        // Case 1: Existing Image (has ID and ID exists in DB)
+        // Case 1: Existing Image (update meta)
         if (img.id && currentIds.includes(img.id)) {
-          // Convert temp variant_id to null or real ID
-          const variantIdForDb =
-            img.variant_id && !isNaN(Number(img.variant_id))
-              ? Number(img.variant_id)
-              : null;
-
           await conn.query(
             `UPDATE product_images 
-             SET variant_id = ?, alt_text = ?, sort_order = ?, is_primary = ? 
+             SET alt_text = ?, sort_order = ?, is_primary = ? 
              WHERE id = ?`,
             [
-              variantIdForDb,
               img.alt_text || "",
               img.sort_order ?? i,
               img.is_primary ? 1 : 0,
@@ -389,37 +388,37 @@ export async function PUT(req, { params }) {
             ]
           );
         }
-        // Case 2: New Image (needs insertion)
+        // Case 2: New Image (insert)
         else {
-          if (!img.url || !img.mimeType) continue; // Skip invalid
+          if (!img.url || !img.mimeType) continue;
 
-          // Validate MIME type
-          if (!validateImageMimeType(img.mimeType)) {
-            console.warn(
-              `Invalid MIME type ${img.mimeType} for image at index ${i}`
+          // Size check
+          if (img.size && img.size > MAX_FILE_SIZE) {
+            await conn.rollback();
+            return NextResponse.json(
+              { error: `Image "${img.originalName}" is too large. Max 5MB.` },
+              { status: 400 }
             );
+          }
+
+          if (!validateImageMimeType(img.mimeType)) {
             continue;
           }
 
-          // Generate filenames ONLY for new images
-          const secureFilename = img.url.split("/").pop();
+          const secureFilename = generateSecureFilename(
+            img.originalName || `image-${i}`,
+            img.mimeType
+          );
           const sanitizedOriginal = img.originalName
             ? sanitizeFilename(img.originalName)
             : `image-${i}.jpg`;
 
-          // Convert temp variant_id to null or real ID
-          const variantIdForDb =
-            img.variant_id && !isNaN(Number(img.variant_id))
-              ? Number(img.variant_id)
-              : null;
-
-          await conn.query(
+          const [imgRes] = await conn.query(
             `INSERT INTO product_images 
-              (product_id, variant_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              (product_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               id,
-              variantIdForDb, // ✅ Always int or null
               img.url,
               secureFilename,
               sanitizedOriginal,
@@ -428,6 +427,74 @@ export async function PUT(req, { params }) {
               img.is_primary ? 1 : 0,
               img.mimeType,
             ]
+          );
+          imageId = imgRes.insertId;
+        }
+
+        // --- Handle Many-to-Many Variant Linking ---
+        // 1. Clear existing links for this image (safe reset)
+        await conn.query(
+          "DELETE FROM product_image_variants WHERE image_id = ?",
+          [imageId]
+        );
+
+        // 2. Insert new links
+        const variantLinks = [];
+        const variantIdsToLink = img.variant_ids || [];
+
+        // Also check legacy single field if frontend sends mixed data
+        if (img.variant_id && !variantIdsToLink.includes(img.variant_id)) {
+          // Try to treat as ID first
+          variantIdsToLink.push(img.variant_id);
+        }
+
+        variantIdsToLink.forEach((vIdOrIndex) => {
+          let realVariantId = null;
+
+          // If it's a number and exists in DB (passed from existing product)
+          if (typeof vIdOrIndex === "number" && vIdOrIndex > 0) {
+            // It might be a real ID, but verify it's not an index for a NEW variant
+            // Logic: If it's a large ID, assume real. If small (0-50) and matches loop index?
+            // Better: Frontend should differentiate.
+            // Assumption: If it was present in existing product, it is a real ID.
+            realVariantId = vIdOrIndex;
+          }
+
+          // If it matches a newly created/updated variant index (e.g. from frontend state)
+          // This is tricky in PUT. Frontend usually sends real IDs for existing,
+          // and temp IDs for new.
+
+          // Check mapping from the variant loop above
+          // createdOrUpdatedVariants[i] stores { variant_id }
+
+          // Handle "temp-X" strings
+          if (
+            typeof vIdOrIndex === "string" &&
+            vIdOrIndex.startsWith("temp-")
+          ) {
+            const idx = parseInt(vIdOrIndex.replace("temp-", ""), 10);
+            if (createdOrUpdatedVariants[idx]) {
+              realVariantId = createdOrUpdatedVariants[idx].variant_id;
+            }
+          } else if (
+            typeof vIdOrIndex === "number" &&
+            createdOrUpdatedVariants[vIdOrIndex] &&
+            !realVariantId
+          ) {
+            // Fallback: if it matches an index of variants array being processed
+            realVariantId = createdOrUpdatedVariants[vIdOrIndex].variant_id;
+          }
+
+          // If we found a valid ID, add to list
+          if (realVariantId) {
+            variantLinks.push([imageId, realVariantId]);
+          }
+        });
+
+        if (variantLinks.length > 0) {
+          await conn.query(
+            `INSERT INTO product_image_variants (image_id, variant_id) VALUES ?`,
+            [variantLinks]
           );
         }
       }
@@ -500,9 +567,7 @@ export async function DELETE(req, { params }) {
     );
     const imagesToDelete = images.map((img) => img.url);
 
-    // ---------------------------------------------------------
-    // OPTION 2 FIX: Manually remove from sales first
-    // ---------------------------------------------------------
+    // Remove from sales first
     await conn.query("DELETE FROM sale_product WHERE product_id = ?", [id]);
 
     // Delete product (cascades will handle variants, images, categories, etc.)
@@ -524,7 +589,6 @@ export async function DELETE(req, { params }) {
           );
           await fs.unlink(filePath);
         } catch (err) {
-          // Log but don't fail the request if file deletion fails
           console.error(`Failed to delete image file: ${url}`, err);
         }
       }

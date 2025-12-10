@@ -33,7 +33,7 @@ function isPublicApiRoute(pathname, method) {
   // --- 3. Products ---
   if (method === "GET") {
     if (path === "/api/products") return true;
-    if (path.startsWith("/api/products/by-id/")) return true;
+    if (path.startsWith("/api/products/")) return true;
   }
 
   // --- 4. Sales/Attributes/Categories ---

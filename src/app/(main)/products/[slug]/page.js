@@ -72,7 +72,14 @@ async function getProduct(slug) {
 
     // Fetch images
     const [images] = await pool.query(
-      `SELECT * FROM product_images WHERE product_id = ? ORDER BY sort_order ASC, id ASC`,
+      `SELECT 
+        pi.*,
+        (SELECT JSON_ARRAYAGG(piv.variant_id) 
+         FROM product_image_variants piv 
+         WHERE piv.image_id = pi.id) as variant_ids
+       FROM product_images pi 
+       WHERE pi.product_id = ? 
+       ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC`,
       [product.product_id]
     );
 

@@ -56,7 +56,7 @@ const Products = () => {
     setLoading(true);
     try {
       // Fetch full details including variants/images
-      const res = await fetch(`/api/products/by-id/${product.product_id}`);
+      const res = await fetch(`/api/products/${product.product_id}`);
       if (!res.ok) throw new Error("Failed to fetch product details");
       const fullProduct = await res.json();
       setEditingProduct(fullProduct);
@@ -248,7 +248,7 @@ const Products = () => {
           },
         }}
         loading={loading}
-        apiBaseUrl="products/by-id"
+        apiBaseUrl="products/"
         rowKeyField="product_id"
         // Actions
         onReload={fetchData}

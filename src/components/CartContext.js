@@ -19,7 +19,7 @@ export function CartProvider({ children }) {
   const checkStockAvailability = async (productId, variantId) => {
     try {
       // FIXED: Remove ?variant= param - your API includes all variants
-      const res = await fetch(`/api/products/by-id/${productId}`);
+      const res = await fetch(`/api/products/${productId}`);
       if (!res.ok) return 999;
 
       const product = await res.json();

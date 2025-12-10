@@ -29,8 +29,6 @@ export async function GET(req) {
     .map((id) => id.trim())
     .filter((id) => id.length > 0);
 
-  // New logic: OR within style, OR within type, AND between them
-
   const colors = searchParams.get("colors")?.split(",");
   const sizes = searchParams.get("sizes")?.split(",");
   const minPrice = searchParams.get("minPrice");
@@ -79,10 +77,7 @@ export async function GET(req) {
   }
 
   // ---- Category filtering logic ----
-  // If both style and type are selected, require at least one of each (AND between, OR within)
-  // If only one group is selected, filter by that group only
   if (styleCategoryIds.length > 0 && typeCategoryIds.length > 0) {
-    // AND: style IN (...) AND type IN (...)
     const stylePlaceholders = styleCategoryIds.map(() => "?").join(",");
     const typePlaceholders = typeCategoryIds.map(() => "?").join(",");
     whereClauses.push(`
@@ -102,7 +97,6 @@ export async function GET(req) {
     `);
     queryParams.push(...typeCategoryIds);
   } else if (styleCategoryIds.length > 0) {
-    // Only style selected
     const stylePlaceholders = styleCategoryIds.map(() => "?").join(",");
     whereClauses.push(`
       EXISTS (
@@ -113,7 +107,6 @@ export async function GET(req) {
     `);
     queryParams.push(...styleCategoryIds);
   } else if (typeCategoryIds.length > 0) {
-    // Only type selected
     const typePlaceholders = typeCategoryIds.map(() => "?").join(",");
     whereClauses.push(`
       EXISTS (
@@ -255,7 +248,6 @@ export async function GET(req) {
   // Final query params
   const countQueryParams = [...queryParams];
   const dataQueryParams = [...queryParams];
-  // Add sorting parameters if search query exists
   if (query && query.trim()) {
     const searchTerm = query.trim();
     const normalizedSearch = searchTerm.toLowerCase().replace(/[\s-]/g, "");
@@ -302,67 +294,52 @@ export async function GET(req) {
     );
   }
 }
-
-// -- POST: Create new product with variants (Adjusted for many-to-many categories)
+// -- POST: Create new product with variants, categories, and images
 export async function POST(req) {
-  // Helper function to generate secure filenames
+  // Helper: Generate secure filenames
   function generateSecureFilename(originalFilename, mimeType) {
-    // Generate a cryptographically secure random name
     const randomName = randomBytes(16).toString("hex");
-
-    // Get safe extension from MIME type (don't trust client extension)
     const extensionMap = {
       "image/jpeg": "jpg",
       "image/png": "png",
       "image/webp": "webp",
       "image/gif": "gif",
     };
-
     const extension = extensionMap[mimeType] || "jpg";
-
     return `${randomName}.${extension}`;
   }
 
-  // Helper to validate file type from content (not just extension)
+  // Helper: Validate mime type
   function validateImageMimeType(mimeType) {
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
     return allowedTypes.includes(mimeType);
   }
 
-  // Sanitize filename (if you must preserve original name)
+  // Helper: Sanitize filename
   function sanitizeFilename(filename) {
-    // Remove any path separators and null bytes
-    let sanitized = filename.replace(/[\/\\]/g, "");
-    sanitized = sanitized.replace(/\0/g, "");
-
-    // Remove special characters that could cause issues
+    let sanitized = filename.replace(/[\/\\]/g, "").replace(/\0/g, "");
     sanitized = sanitized.replace(/[^a-zA-Z0-9._-]/g, "_");
-
-    // Prevent starting with dots (hidden files)
     sanitized = sanitized.replace(/^\.+/, "");
-
-    // Limit length
     if (sanitized.length > 200) {
       const ext = path.extname(sanitized);
       sanitized = sanitized.substring(0, 200 - ext.length) + ext;
     }
-
     return sanitized || "unnamed";
   }
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
 
     const body = await req.json();
-    // MODIFICATION: Expect 'category_ids' to be an array
     const { name, description, category_ids, images, variants } = body;
 
     // Basic validation
     if (
       !name ||
       !description ||
-      !Array.isArray(category_ids) || // MODIFICATION: Check for array
-      category_ids.length === 0 || // MODIFICATION: Ensure at least one category
+      !Array.isArray(category_ids) ||
+      category_ids.length === 0 ||
       !Array.isArray(variants) ||
       variants.length === 0
     ) {
@@ -375,21 +352,21 @@ export async function POST(req) {
       );
     }
 
-    // 1) MODIFICATION: Insert base product without category_id
+    // 1) Insert base product
     const [prodRes] = await connection.query(
       `INSERT INTO products (name, description) VALUES (?, ?)`,
       [name, description]
     );
     const product_id = prodRes.insertId;
 
-    // 2) MODIFICATION: Link product to its categories in the junction table
+    // 2) Link product to categories
     const categoryValues = category_ids.map((catId) => [product_id, catId]);
     await connection.query(
       `INSERT INTO product_categories (product_id, category_id) VALUES ?`,
       [categoryValues]
     );
 
-    // 3) Build and save the slug (No changes needed here, just re-numbered)
+    // 3) Build and save slug
     const baseSlug = slugify(name, { lower: true, strict: true });
     const slug = `${product_id}-${baseSlug}`;
     await connection.query(
@@ -397,31 +374,45 @@ export async function POST(req) {
       [slug, product_id]
     );
 
-    // 4) Loop through and insert variants and their attributes (No changes needed)
-    for (const variant of variants) {
-      const { sku, price, quantity, attributes } = variant;
+    // 4) Insert Variants & Attributes
+    const createdVariants = []; // Store order to map indices later
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i];
+      const { price, quantity, attributes } = variant;
+
       if (
         typeof price !== "number" ||
         typeof quantity !== "number" ||
         !Array.isArray(attributes)
       ) {
-        // Skip invalid variants
+        createdVariants.push(null); // Keep index alignment even if skipped
         continue;
       }
 
-      // Insert the variant
+      const base = slugify(name, { lower: true, strict: true })
+        .replace(/-/g, "")
+        .toUpperCase();
+
+      const attrPart = attributes
+        .map((a) =>
+          (a.value || "").replace(/\s+/g, "").substring(0, 3).toUpperCase()
+        )
+        .join("-");
+
+      const autoSku = attrPart ? `${base}-${attrPart}` : base;
+
       const [variantRes] = await connection.query(
         `INSERT INTO product_variants (product_id, sku, price, quantity) VALUES (?, ?, ?, ?)`,
-        [product_id, sku || null, price, quantity]
+        [product_id, autoSku, price, quantity]
       );
       const variant_id = variantRes.insertId;
+      createdVariants.push({ index: i, variant_id }); // Store for image mapping
 
-      // Handle its attributes
+      // Handle attributes
       for (const attr of attributes) {
         const { name: attrName, value: attrValue } = attr;
         if (!attrName || !attrValue) continue;
 
-        // Find or create attribute (e.g., 'Color')
         let [attrRow] = await connection.query(
           `SELECT attribute_id FROM attributes WHERE name = ?`,
           [attrName]
@@ -437,7 +428,6 @@ export async function POST(req) {
           attribute_id = attrRow[0].attribute_id;
         }
 
-        // Find or create attribute value (e.g., 'Red')
         let [valRow] = await connection.query(
           `SELECT value_id FROM attribute_values WHERE attribute_id = ? AND value = ?`,
           [attribute_id, attrValue]
@@ -453,7 +443,6 @@ export async function POST(req) {
           value_id = valRow[0].value_id;
         }
 
-        // Link them in the join table
         await connection.query(
           `INSERT INTO variant_values (variant_id, value_id) VALUES (?, ?)`,
           [variant_id, value_id]
@@ -461,86 +450,44 @@ export async function POST(req) {
       }
     }
 
-    // 5) Insert images (if any) - ENHANCED VERSION
+    // 5) Insert images (Enhanced for Many-to-Many)
     if (Array.isArray(images)) {
-      // First, get all created variant IDs in order
-      const [createdVariants] = await connection.query(
-        `SELECT variant_id FROM product_variants WHERE product_id = ? ORDER BY variant_id ASC`,
-        [product_id]
-      );
-
       for (let i = 0; i < images.length; i++) {
         const img = images[i];
 
-        // Validate image before processing
-        if (!img.url || !img.mimeType) {
-          console.warn(`Skipping invalid image at index ${i}`);
-          continue;
-        }
+        if (!img.url || !img.mimeType) continue;
 
-        // Validate file size
         if (img.size && img.size > MAX_FILE_SIZE) {
-          const sizeMB = (img.size / (1024 * 1024)).toFixed(2);
-          console.warn(`Image at index ${i} exceeds size limit: ${sizeMB}MB`);
           await connection.rollback();
           return NextResponse.json(
-            {
-              error: `Image "${
-                img.originalName || `image-${i}`
-              }" is too large (${sizeMB}MB). Maximum file size is ${
-                MAX_FILE_SIZE / (1024 * 1024)
-              }MB.`,
-            },
+            { error: `Image too large. Max 5MB.` },
             { status: 400 }
           );
         }
 
-        // Validate MIME type
         if (!validateImageMimeType(img.mimeType)) {
-          console.warn(
-            `Invalid MIME type ${img.mimeType} for image at index ${i}`
-          );
           await connection.rollback();
           return NextResponse.json(
-            {
-              error: `Invalid file type for image "${
-                img.originalName || `image-${i}`
-              }". Only JPEG, PNG, WebP, and GIF are allowed.`,
-            },
+            { error: `Invalid file type.` },
             { status: 400 }
           );
         }
 
-        // Generate secure filename
         const secureFilename = generateSecureFilename(
           img.originalName || `image-${i}`,
           img.mimeType
         );
-
-        // Sanitize original filename
         const sanitizedOriginal = img.originalName
           ? sanitizeFilename(img.originalName)
           : `image-${i}.jpg`;
 
-        // NEW: Map variant_index to actual variant_id
-        let actualVariantId = img.variant_id || null;
-
-        if (img.variant_index !== null && img.variant_index !== undefined) {
-          // Use the variant index to get the actual variant_id
-          if (createdVariants[img.variant_index]) {
-            actualVariantId = createdVariants[img.variant_index].variant_id;
-          }
-        }
-
-        await connection.query(
-          `
-      INSERT INTO product_images
-        (product_id, variant_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `,
+        // Insert Image into product_images (WITHOUT variant_id)
+        const [imgRes] = await connection.query(
+          `INSERT INTO product_images
+           (product_id, url, filename, original_filename, alt_text, sort_order, is_primary, mime_type)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             product_id,
-            actualVariantId, // Use the mapped variant_id
             img.url,
             secureFilename,
             sanitizedOriginal,
@@ -550,13 +497,64 @@ export async function POST(req) {
             img.mimeType,
           ]
         );
+        const imageId = imgRes.insertId;
+
+        // Process Many-to-Many Variant Links
+        const variantLinks = [];
+
+        // Handle "variant_ids" array (if present in payload)
+        if (Array.isArray(img.variant_ids)) {
+          img.variant_ids.forEach((vIdOrIndex) => {
+            // Check if it is a "temp" index or real ID (though usually indices in POST)
+            // Frontend might send indices as numbers or "temp-X" strings
+            let realVariantId = null;
+
+            // Try to resolve if it's an index (number)
+            if (typeof vIdOrIndex === "number" && createdVariants[vIdOrIndex]) {
+              realVariantId = createdVariants[vIdOrIndex].variant_id;
+            }
+            // Try to resolve if it's a temp string like "temp-1"
+            else if (
+              typeof vIdOrIndex === "string" &&
+              vIdOrIndex.startsWith("temp-")
+            ) {
+              const idx = parseInt(vIdOrIndex.replace("temp-", ""), 10);
+              if (createdVariants[idx]) {
+                realVariantId = createdVariants[idx].variant_id;
+              }
+            }
+
+            if (realVariantId) {
+              variantLinks.push([imageId, realVariantId]);
+            }
+          });
+        }
+
+        // Also handle legacy/single "variant_index" if your frontend still sends it
+        // (Just in case mixed data comes in, though "variant_ids" is preferred now)
+        if (img.variant_index !== null && img.variant_index !== undefined) {
+          if (createdVariants[img.variant_index]) {
+            const vId = createdVariants[img.variant_index].variant_id;
+            // Avoid duplicates
+            if (!variantLinks.find((link) => link[1] === vId)) {
+              variantLinks.push([imageId, vId]);
+            }
+          }
+        }
+
+        // Bulk Insert Links
+        if (variantLinks.length > 0) {
+          await connection.query(
+            `INSERT INTO product_image_variants (image_id, variant_id) VALUES ?`,
+            [variantLinks]
+          );
+        }
       }
     }
 
     await connection.commit();
 
-    // 6) Fetch and return the full, newly created product object
-    // MODIFICATION: Fetch categories from the junction table
+    // 6) Return full product (Fetching updated many-to-many images structure)
     const [finalProduct] = await pool.query(
       `SELECT * FROM products WHERE product_id = ?`,
       [product_id]
@@ -569,8 +567,15 @@ export async function POST(req) {
       `SELECT * FROM product_variants WHERE product_id = ?`,
       [product_id]
     );
+
+    // Fetch images with their variant IDs (aggregated)
     const [finalImages] = await pool.query(
-      `SELECT * FROM product_images WHERE product_id = ?`,
+      `SELECT pi.*, 
+        (SELECT JSON_ARRAYAGG(piv.variant_id) 
+         FROM product_image_variants piv 
+         WHERE piv.image_id = pi.id) as variant_ids
+       FROM product_images pi 
+       WHERE pi.product_id = ?`,
       [product_id]
     );
 

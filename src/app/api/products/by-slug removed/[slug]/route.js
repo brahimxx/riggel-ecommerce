@@ -99,22 +99,25 @@ export async function GET(req, { params }) {
           : v.attributes || [],
     }));
 
-    // 4. Fetch all images with enhanced security fields
+    // 4. Fetch all images with enhanced security fields & Many-to-Many Variant IDs
+    // UPDATED: Now fetches array of variant_ids for each image
     const [images] = await pool.query(
       `SELECT 
-        id, 
-        product_id, 
-        variant_id,
-        url, 
-        filename, 
-        original_filename, 
-        alt_text, 
-        sort_order, 
-        is_primary, 
-        mime_type 
-      FROM product_images 
-      WHERE product_id = ? 
-      ORDER BY is_primary DESC, sort_order ASC, id ASC`,
+        pi.id, 
+        pi.product_id, 
+        pi.url, 
+        pi.filename, 
+        pi.original_filename, 
+        pi.alt_text, 
+        pi.sort_order, 
+        pi.is_primary, 
+        pi.mime_type,
+        (SELECT JSON_ARRAYAGG(piv.variant_id) 
+         FROM product_image_variants piv 
+         WHERE piv.image_id = pi.id) as variant_ids
+      FROM product_images pi 
+      WHERE pi.product_id = ? 
+      ORDER BY pi.is_primary DESC, pi.sort_order ASC, pi.id ASC`,
       [product.product_id]
     );
 

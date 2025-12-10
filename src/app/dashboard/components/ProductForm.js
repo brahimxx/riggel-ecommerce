@@ -64,15 +64,23 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
     };
     fetchAttrs();
   }, []);
-
-  // 2. Helpers
+  // 2. Variant Options Logic
   const generateVariantLabel = useCallback((variant, index) => {
     if (!variant) return `Variant ${index + 1}`;
-    if (variant.sku?.trim()) return variant.sku;
+
+    // Prefer attributes if they exist (both for new and existing products)
     if (variant.attributes) {
-      const attrValues = Object.values(variant.attributes).filter(Boolean);
+      // Handle both array format (from API) and object format (from Form)
+      const attrValues = Array.isArray(variant.attributes)
+        ? variant.attributes.map((a) => a.value).filter(Boolean)
+        : Object.values(variant.attributes).filter(Boolean);
+
       if (attrValues.length > 0) return attrValues.join(" / ");
     }
+
+    // Fallback to SKU only if attributes are missing, or just standard index label
+    if (variant.sku?.trim()) return variant.sku;
+
     return `Variant ${index + 1}`;
   }, []);
 
@@ -128,19 +136,30 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
           : v.attributes || {},
       }));
 
-      const loadedImages = (product.images || []).map((img) => ({
-        id: img.id,
-        url: img.url,
-        filename: img.filename,
-        originalName: img.original_filename || img.originalName,
-        mimeType: img.mime_type || img.mimeType,
-        size: img.size,
-        alt_text: img.alt_text || "",
-        sort_order: img.sort_order || 0,
-        is_primary: img.is_primary || false,
-        variant_id: img.variant_id ? Number(img.variant_id) : null,
-        isPending: false,
-      }));
+      const loadedImages = (product.images || []).map((img) => {
+        // Normalize variant_ids from API (handle array, or single legacy ID)
+        let vIds = [];
+        if (Array.isArray(img.variant_ids)) {
+          vIds = img.variant_ids;
+        } else if (img.variant_id) {
+          // Legacy fallback
+          vIds = [Number(img.variant_id)];
+        }
+
+        return {
+          id: img.id,
+          url: img.url,
+          filename: img.filename,
+          originalName: img.original_filename || img.originalName,
+          mimeType: img.mime_type || img.mimeType,
+          size: img.size,
+          alt_text: img.alt_text || "",
+          sort_order: img.sort_order || 0,
+          is_primary: img.is_primary || false,
+          variant_ids: vIds, // <--- Correctly map to variant_ids array
+          isPending: false,
+        };
+      });
 
       setImages(loadedImages);
       setProductName(product.name || "");
@@ -314,7 +333,7 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
       }
 
       const url = product
-        ? `/api/products/by-id/${product.product_id}`
+        ? `/api/products/${product.product_id}`
         : `/api/products`;
       const res = await fetch(url, {
         method: product ? "PUT" : "POST",
@@ -377,6 +396,7 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
           mode="multiple"
           allowClear
           placeholder="Select categories"
+          popupMatchSelectWidth={false}
           filterOption={(input, option) =>
             (option?.children ?? "").toLowerCase().includes(input.toLowerCase())
           }
@@ -405,50 +425,42 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
             {fields.map(({ key, name, ...restField }) => (
               <Space
                 key={key}
-                style={{
-                  display: "flex",
-                  marginBottom: 8,
-                  border: "1px dashed #ccc",
-                  padding: "12px",
-                  flexWrap: "wrap",
-                }}
-                align="baseline"
+                className="flex mb-8 border-dashed border-1 p-3 border-[#ccc] w-full"
               >
-                <Form.Item
-                  {...restField}
-                  name={[name, "sku"]}
-                  label="SKU"
-                  style={{ flex: 1 }}
-                >
-                  <Input placeholder="SKU" />
-                </Form.Item>
                 <Form.Item
                   {...restField}
                   name={[name, "price"]}
                   label="Price"
                   rules={[{ required: true }]}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, marginBottom: 0 }}
                 >
                   <InputNumber min={0} style={{ width: "100%" }} />
                 </Form.Item>
+
                 <Form.Item
                   {...restField}
                   name={[name, "quantity"]}
                   label="Quantity"
                   rules={[{ required: true }]}
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, marginBottom: 0 }}
                 >
                   <InputNumber min={0} style={{ width: "100%" }} />
                 </Form.Item>
+
                 {attributes.map((attr) => (
                   <Form.Item
                     key={attr.attribute_id}
                     name={[name, "attributes", attr.name]}
                     label={attr.name}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, marginBottom: 0 }}
                     rules={[{ required: true, message: `Select ${attr.name}` }]}
                   >
-                    <Select placeholder={`Select ${attr.name}`}>
+                    <Select
+                      placeholder={`Select ${attr.name}`}
+                      popupMatchSelectWidth={false}
+                      placement="bottomLeft"
+                      style={{ width: "100%" }}
+                    >
                       {attr.values.map((val) => (
                         <Select.Option key={val.value_id} value={val.value}>
                           {val.value}
@@ -457,7 +469,10 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
                     </Select>
                   </Form.Item>
                 ))}
-                <MinusCircleOutlined onClick={() => remove(name)} />
+                <MinusCircleOutlined
+                  onClick={() => remove(name)}
+                  className="mt-8  hover:bg-red-300 rounded-full cursor-pointer"
+                />
               </Space>
             ))}
             <Form.Item>
@@ -581,27 +596,25 @@ const ProductForm = ({ product = null, categories, onSuccess, onCancel }) => {
                   </div>
                 </div>
                 <Select
+                  mode="multiple"
                   style={{ width: 180 }}
-                  value={
-                    img.variant_id === null
-                      ? PRODUCT_IMAGE_VALUE
-                      : img.variant_id
-                  }
-                  onChange={(val) =>
+                  popupMatchSelectWidth={false}
+                  placement="bottomLeft"
+                  value={img.variant_ids || []}
+                  onChange={(values) =>
                     setImages((prev) =>
                       prev.map((im, i) =>
-                        i === idx
-                          ? {
-                              ...im,
-                              variant_id:
-                                val === PRODUCT_IMAGE_VALUE ? null : val,
-                            }
-                          : im
+                        i === idx ? { ...im, variant_ids: values } : im
                       )
                     )
                   }
                   placeholder="Assign to Variant"
                   disabled={isSubmitting}
+                  filterOption={(input, option) =>
+                    (option?.children ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
                 >
                   <Select.Option value={PRODUCT_IMAGE_VALUE}>
                     Product (All Variants)

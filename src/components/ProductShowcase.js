@@ -17,20 +17,27 @@ const ProductShowcase = ({ product }) => {
 
   const { addToCart } = useCartContext();
   const basePrice = selectedVariant?.price || product.price;
-  const sale = product.sale;
 
-  function getSalePrice(basePrice, sale) {
-    if (!sale) return null;
-    if (sale.discount_type === "percentage") {
-      return (basePrice * (1 - sale.discount_value / 100)).toFixed(2);
+  const productSale = product.sale_id
+    ? {
+        discount_type: product.discount_type,
+        discount_value: product.discount_value,
+        name: product.sale_name,
+      }
+    : null;
+
+  function getSalePrice(basePrice, saleInfo) {
+    if (!saleInfo) return null;
+    if (saleInfo.discount_type === "percentage") {
+      return (basePrice * (1 - saleInfo.discount_value / 100)).toFixed(2);
     }
-    if (sale.discount_type === "fixed") {
-      return (basePrice - sale.discount_value).toFixed(2);
+    if (saleInfo.discount_type === "fixed") {
+      return (basePrice - saleInfo.discount_value).toFixed(2);
     }
     return null;
   }
 
-  const salePrice = getSalePrice(basePrice, sale);
+  const salePrice = getSalePrice(basePrice, productSale || product.sale);
 
   // Build attribute options from variants (unchanged)
   useEffect(() => {
@@ -69,19 +76,57 @@ const ProductShowcase = ({ product }) => {
   useEffect(() => {
     if (!selectedVariant?.variant_id || !Array.isArray(product.images)) return;
 
-    let idx = product.images.findIndex(
-      (img) => img.variant_id === selectedVariant.variant_id
-    );
+    let idx = product.images.findIndex((img) => {
+      let ids = [];
 
+      // 1. Handle if it's already an array (Ideal case)
+      if (Array.isArray(img.variant_ids)) {
+        ids = img.variant_ids;
+      }
+      // 2. Handle if it's a number (Single ID, not aggregated as array)
+      else if (typeof img.variant_ids === "number") {
+        ids = [img.variant_ids];
+      }
+      // 3. Handle if it's a string (MySQL JSON or just a string number)
+      else if (typeof img.variant_ids === "string") {
+        const raw = img.variant_ids.trim();
+
+        // Is it a JSON array string like "[10, 11]"?
+        if (raw.startsWith("[") && raw.endsWith("]")) {
+          try {
+            const parsed = JSON.parse(raw);
+            ids = Array.isArray(parsed) ? parsed : [];
+          } catch (e) {
+            console.error("Failed to parse variant_ids JSON:", raw);
+            ids = [];
+          }
+        }
+        // Is it a simple number string like "15"?
+        else if (!isNaN(Number(raw))) {
+          ids = [Number(raw)];
+        }
+        // Is it a comma-separated string like "10,11" (GROUP_CONCAT legacy)?
+        else if (raw.includes(",")) {
+          ids = raw.split(",").map(Number);
+        }
+      }
+
+      // Check for match (ensure we compare numbers)
+      return ids.some(
+        (id) => Number(id) === Number(selectedVariant.variant_id)
+      );
+    });
+
+    // Fallback: Primary image
     if (idx === -1) {
       idx = product.images.findIndex((img) => img.is_primary);
     }
+    // Final Fallback: First image
     if (idx === -1) idx = 0;
 
     if (idx >= 0) {
       setSelectedImageIndex(idx);
     }
-    // Depend only on primitive id + images, so it fires only when variant changes
   }, [selectedVariant?.variant_id, product.images]);
 
   const handleAddToCart = async () => {
@@ -113,7 +158,7 @@ const ProductShowcase = ({ product }) => {
       </div>
 
       {/* right side unchanged, just pass handleVariantSelect instead of directly setting image */}
-      <div className="flex flex-col lg:max-w-[50%] justify-around lg:justify-between gap-[12px] lg:gap-[14px] lg:pl-10 lg:max-h-[530px] mt-[36px] lg:mt-0">
+      <div className="flex flex-col lg:max-w-[50%] w-full justify-around lg:justify-between gap-[12px] lg:gap-[14px] lg:pl-10 lg:max-h-[530px] mt-[36px] lg:mt-0">
         <h2 className="font-integral leading-none text-[24px] lg:text-[40px] font-extrabold">
           {product.name}
         </h2>
@@ -141,7 +186,7 @@ const ProductShowcase = ({ product }) => {
             </div>
 
             <span className="ml-2 bg-[#669900] text-white text-xs px-2 py-1 rounded">
-              On sale{sale?.name ? `: ${sale.name}` : ""}
+              On sale{productSale?.name ? `: ${productSale.name}` : ""}
             </span>
           </div>
         ) : (
