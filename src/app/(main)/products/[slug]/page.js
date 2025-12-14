@@ -124,7 +124,6 @@ export async function generateMetadata({ params }) {
     `Buy ${product.name} at the best price on Riggel.`;
 
   return {
-    // Layout title template will turn this into "PRODUCT NAME | Riggel"
     title: product.name,
     description: shortDescription,
     openGraph: {
