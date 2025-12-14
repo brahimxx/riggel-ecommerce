@@ -3,11 +3,13 @@ import mysql from "mysql2/promise";
 // Prevent multiple instances during Next.js hot reloads
 const globalForPool = globalThis;
 
+const isBuild = process.env.NEXT_IS_BUILD === "true";
+
 if (!globalForPool.mysqlPool) {
   globalForPool.mysqlPool = mysql.createPool({
     uri: process.env.MYSQL_URL,
     // Connection pool settings
-    connectionLimit: 5, // Max simultaneous connections
+    connectionLimit: isBuild ? 1 : 10, // Max simultaneous connections
     waitForConnections: true, // Queue requests when pool is full
     queueLimit: 0, // Unlimited queue size
     maxIdle: 10, // Max idle connections to keep

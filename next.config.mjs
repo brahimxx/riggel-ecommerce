@@ -4,6 +4,8 @@ const nextConfig = {
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     qualities: [25, 50, 75, 100], // Add the quality values your images use, including 100
+    workerThreads: false,
+    cpus: 1,
   },
 };
 
