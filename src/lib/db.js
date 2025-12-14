@@ -7,7 +7,7 @@ if (!globalForPool.mysqlPool) {
   globalForPool.mysqlPool = mysql.createPool({
     uri: process.env.MYSQL_URL,
     // Connection pool settings
-    connectionLimit: 10, // Max simultaneous connections
+    connectionLimit: 5, // Max simultaneous connections
     waitForConnections: true, // Queue requests when pool is full
     queueLimit: 0, // Unlimited queue size
     maxIdle: 10, // Max idle connections to keep
