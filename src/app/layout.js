@@ -46,9 +46,34 @@ const customTheme = {
   },
 };
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
 export const metadata = {
-  title: "Riggel ecommerce",
-  description: "An ecommerce platform",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Riggel | Premium E-Commerce",
+    template: "%s | Riggel",
+  },
+
+  description:
+    "Designed to bring out your individuality and cater to your sense of style",
+
+  openGraph: {
+    title: "Riggel | Premium E-Commerce",
+    description:
+      "Designed to bring out your individuality and cater to your sense of style",
+    url: siteUrl,
+    siteName: "Riggel",
+    images: [
+      {
+        url: "/riggel-og-1200x630.png",
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }) {

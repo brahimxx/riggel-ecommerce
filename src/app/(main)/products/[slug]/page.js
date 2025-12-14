@@ -1,4 +1,4 @@
-// src/app/products/[slug]/page.js
+import { cache } from "react";
 import ProductTabs from "@/components/ProductTabs/ProductTabs";
 import ProductShowcase from "@/components/ProductShowcase";
 import ProductReviewsTab from "@/components/ProductReviewsTab";
@@ -6,8 +6,11 @@ import YouMightAlsoLike from "@/components/YouMightAlsoLike";
 import pool from "@/lib/db";
 import { App } from "antd";
 
-// SERVER COMPONENT: fetch product directly from database
-async function getProduct(slug) {
+// Same env handling as layout
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+// 1. Memoized product fetcher
+const getProduct = cache(async (slug) => {
   if (!slug || typeof slug !== "string") {
     return null;
   }
@@ -34,7 +37,6 @@ async function getProduct(slug) {
 
     const product = rows[0];
 
-    // Fetch categories
     const [categories] = await pool.query(
       `SELECT c.* 
        FROM categories c
@@ -43,7 +45,6 @@ async function getProduct(slug) {
       [product.product_id]
     );
 
-    // Fetch variants
     const [variantsRaw] = await pool.query(
       `SELECT 
         pv.variant_id, 
@@ -70,7 +71,6 @@ async function getProduct(slug) {
           : v.attributes || [],
     }));
 
-    // Fetch images
     const [images] = await pool.query(
       `SELECT 
         pi.*,
@@ -83,14 +83,13 @@ async function getProduct(slug) {
       [product.product_id]
     );
 
-    // Fetch active sale for this product
     const [saleRows] = await pool.query(
       `SELECT s.*
-   FROM sale_product sp
-   JOIN sales s ON sp.sale_id = s.id
-   WHERE sp.product_id = ? AND s.start_date <= NOW() AND s.end_date >= NOW()
-   ORDER BY s.id DESC
-   LIMIT 1`, // picks latest sale if multiple overlap
+       FROM sale_product sp
+       JOIN sales s ON sp.sale_id = s.id
+       WHERE sp.product_id = ? AND s.start_date <= NOW() AND s.end_date >= NOW()
+       ORDER BY s.id DESC
+       LIMIT 1`,
       [product.product_id]
     );
 
@@ -101,9 +100,53 @@ async function getProduct(slug) {
     console.error("Error fetching product:", error);
     return null;
   }
+});
+
+// 2. Dynamic metadata per product
+export async function generateMetadata({ params }) {
+  const { slug } = await params;
+  const product = await getProduct(slug);
+
+  if (!product) {
+    return {
+      title: "Product Not Found",
+      description: "The product you are looking for does not exist.",
+    };
+  }
+
+  const primaryImage = product.images?.[0]?.url || "/riggel-og-1200x630.png";
+  const imageUrl = primaryImage.startsWith("http")
+    ? primaryImage
+    : `${siteUrl}${primaryImage}`;
+
+  const shortDescription =
+    product.description?.substring(0, 160) ||
+    `Buy ${product.name} at the best price on Riggel.`;
+
+  return {
+    // Layout title template will turn this into "PRODUCT NAME | Riggel"
+    title: product.name,
+    description: shortDescription,
+    openGraph: {
+      title: product.name,
+      description: shortDescription,
+      url: `${siteUrl}/products/${product.slug}`,
+      siteName: "Riggel",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: product.name,
+        },
+      ],
+      locale: "en_US",
+      type: "product",
+    },
+  };
 }
 
-// Fetch reviews directly from database
+// 3. Reviews
 async function getReviews(productId) {
   try {
     const [reviews] = await pool.query(
@@ -117,6 +160,7 @@ async function getReviews(productId) {
   }
 }
 
+// 4. Page component
 export default async function ProductPage({ params }) {
   const { slug } = await params;
 
