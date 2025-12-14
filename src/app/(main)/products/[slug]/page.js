@@ -199,6 +199,8 @@ export default async function ProductPage({ params }) {
     console.error("Error fetching reviews:", e);
   }
 
+  console.log(product);
+
   const tabs = ["", <ProductReviewsTab key="reviews" reviews={reviews} />, ""];
 
   return (
