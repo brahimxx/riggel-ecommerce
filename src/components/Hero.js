@@ -5,6 +5,7 @@ const Hero = () => {
   return (
     <div className=" bg-[#F2F0F1] overflow-hidden ">
       <div className="relative flex lg:flex-row flex-col h-[850px] lg:h-full max-w-screen-2xl mx-auto px-4 ">
+        {/* ... (Main Content Left Side) ... */}
         <div className=" flex flex-col gap-6 py-10 lg:w-[50%] xl:w-full lg:py-[50px] xl:py-[100px] z-1">
           <h1 className="font-integral leading-none text-[36px] lg:text-[40px] xl:text-[64px] font-extrabold">
             Find clothes
@@ -51,6 +52,7 @@ const Hero = () => {
           </div>
         </div>
 
+        {/* Right Side Images */}
         <div className="absolute w-[320px] min-[325px]:scale-125 min-[498px]:scale-145 min-[498px]:h-[400px]  h-[320px]  sm:w-[500px] lg:scale-100 lg:w-[440px] lg:h-[440px] xl:w-[500px] xl:h-[500px] bottom-0 left-1/2 transform -translate-x-1/2 lg:left-auto lg:transform-none lg:translate-none lg:right-0 ">
           <Image
             src="/images/decorative_images/hero_image.png"
@@ -61,7 +63,8 @@ const Hero = () => {
             className="object-contain "
             priority
           />
-          <div className="absolute xl:w-[100px] xl:h-[100px] w-[60px] h-[60px] sm:w-[80px] sm:h-[80px] lg:top-5 right-0 ">
+
+          <div className="absolute xl:w-[100px] xl:h-[100px] w-[60px] h-[60px] sm:w-[80px] sm:h-[80px] lg:top-5 right-0 animate-float">
             <Image
               src="/images/decorative_images/star.png"
               alt="star image"
@@ -71,7 +74,11 @@ const Hero = () => {
               className="object-contain "
             />
           </div>
-          <div className="absolute w-[30px] h-[30px]  bottom-50 sm:left-0 left-5 sm:w-[50px] sm:h-[50px]">
+
+          <div
+            className="absolute w-[30px] h-[30px]  bottom-50 sm:left-0 left-5 sm:w-[50px] sm:h-[50px] animate-float"
+            style={{ animationDelay: "3s" }}
+          >
             <Image
               src="/images/decorative_images/star.png"
               alt="star image"

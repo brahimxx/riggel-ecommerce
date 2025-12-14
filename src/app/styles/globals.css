@@ -36,6 +36,24 @@
   /* background of R: white -> transparent */
   --animate-riggel-logo-bg: riggel-logo-bg 0.4s ease-out 1s forwards;
 
+  /* 
+     Using cubic-bezier(0.45, 0, 0.55, 1) creates a very smooth sine-like motion 
+     where it starts velocity 0, peaks in the middle, and ends at velocity 0.
+  */
+  --animate-float: float 5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+
+  @keyframes float {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-30px);
+    }
+    100% {
+      transform: translateY(0);
+    }
+  }
+
   @keyframes riggel-text-slide {
     0% {
       opacity: 0; /* Changed from 1 to 0 - starts invisible */
