@@ -141,7 +141,7 @@ export async function generateMetadata({ params }) {
         },
       ],
       locale: "en_US",
-      type: "product",
+      type: "website",
     },
   };
 }
