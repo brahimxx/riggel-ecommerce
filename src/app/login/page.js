@@ -150,20 +150,6 @@ const LoginPage = () => {
               />
             </Form.Item>
 
-            <Form.Item>
-              <Flex justify="space-between" align="center">
-                <Form.Item name="remember" valuePropName="checked" noStyle>
-                  <Checkbox>Remember me</Checkbox>
-                </Form.Item>
-                <Link
-                  href="/forgot-password"
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Forgot password?
-                </Link>
-              </Flex>
-            </Form.Item>
-
             <Form.Item className="mb-4">
               <Button
                 block
@@ -175,24 +161,6 @@ const LoginPage = () => {
                 {loading ? "Logging in..." : "Log in"}
               </Button>
             </Form.Item>
-
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">or</span>
-              </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <Link
-                href="/register"
-                className="font-medium text-blue-600 hover:text-blue-500"
-              >
-                Register now!
-              </Link>
-            </div>
           </Form>
         </div>
       </div>
